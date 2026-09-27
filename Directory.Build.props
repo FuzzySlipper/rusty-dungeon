@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <!-- scripts/install-engine.sh installs this complete SDK/runtime pair. -->
+    <RustyEnginePackageVersion>0.1.0-dev.360a1ce508a9</RustyEnginePackageVersion>
+    <RustyEnginePairSourceRevision>360a1ce508a9d91a9deddca11a390c9198b43ddd</RustyEnginePairSourceRevision>
+  </PropertyGroup>
+</Project>
