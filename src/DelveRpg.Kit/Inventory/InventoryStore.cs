@@ -92,6 +92,21 @@ public sealed class InventoryStore
         return true;
     }
 
+    /// <summary>
+    /// Restore one slot exactly as captured. Unlike <see cref="TryAdd"/> this
+    /// never merges or compacts: save boundaries keep slot positions because
+    /// the wielded slot and the hotbar layout are identity.
+    /// </summary>
+    public void RestoreSlot(int index, ItemInstance? item)
+    {
+        if (index < 0 || index >= Capacity)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        _slots[index] = item;
+    }
+
     public bool TrySwap(int left, int right)
     {
         if (left < 0 || right < 0 || left >= Capacity || right >= Capacity)

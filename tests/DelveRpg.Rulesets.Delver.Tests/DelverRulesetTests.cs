@@ -6,7 +6,7 @@ using Xunit;
 namespace DelveRpg.Rulesets.Delver.Tests;
 
 /// <summary>Cycles through fixed draws so a weighted table is exercised from every offset.</summary>
-file sealed class CyclingRandom : Kit.Random.IRandomSource
+sealed class CyclingRandom : Kit.Random.IRandomSource
 {
     private int _value;
 
@@ -99,11 +99,7 @@ public sealed class DelverRulesetTests
             for (int draw = 0; draw < 8; draw++)
             {
                 string? rolled = ruleset.Catalog.RollLootId(random, level);
-                if (rolled is null)
-                {
-                    continue;
-                }
-
+                Assert.NotNull(rolled);
                 Assert.NotNull(ruleset.Catalog.Item(rolled));
                 Assert.Contains(composition.Pack.Loot, entry =>
                     entry.ItemId == rolled && level >= entry.MinItemLevel && level <= entry.MaxItemLevel);
@@ -114,7 +110,8 @@ public sealed class DelverRulesetTests
     [Fact]
     public void A_fresh_session_starts_on_the_first_floor_with_starting_gold()
     {
-        RunSession session = Ruleset().CreateSession(77UL, Kit.Progression.MetaProgression.Fresh);
+        RunSession session = Ruleset().CreateSession(
+            77UL, Kit.Progression.MetaProgression.Fresh, new Kit.Random.SplitMixRandom(1UL));
         Assert.Equal(0, session.RunIndex);
         Assert.Equal(RunPhase.Playing, session.Phase);
         Assert.Equal(40, session.Player.Gold);

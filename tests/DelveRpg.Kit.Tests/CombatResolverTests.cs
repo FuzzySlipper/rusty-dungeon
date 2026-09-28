@@ -53,6 +53,18 @@ public sealed class CombatResolverTests
     }
 
     [Fact]
+    public void The_attack_roll_is_one_through_attack_stat_inclusive()
+    {
+        // Pin the upper bound: roll = weapon 5 + drawn(1..attack 6).
+        var random = new ScriptedRandom(6);
+        Assert.Equal(11, CombatResolver.RollAttack(random, weaponPower: 5, attackStat: 6));
+
+        // The donor formula floors a roll of one: 5 + 1.
+        var low = new ScriptedRandom(1);
+        Assert.Equal(6, CombatResolver.RollAttack(low, weaponPower: 5, attackStat: 6));
+    }
+
+    [Fact]
     public void Experience_for_a_kill_follows_the_donor_curve()
     {
         Assert.Equal(4, CombatResolver.ExperienceForKill(1));

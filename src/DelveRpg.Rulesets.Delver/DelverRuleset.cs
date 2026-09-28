@@ -74,20 +74,31 @@ public sealed class DelverRuleset
         return new RunPlan(floors);
     }
 
-    /// <summary>Start a fresh run.</summary>
-    public RunSession CreateSession(ulong runSeed, MetaProgression meta)
+    /// <summary>Start a fresh run. Runtime draws come from the caller's source.</summary>
+    public RunSession CreateSession(ulong runSeed, MetaProgression meta, IRandomSource runtimeDraws)
     {
         RunPlan plan = BuildRunPlan(runSeed);
-        var session = new RunSession(_catalog, Tuning, plan, runSeed, meta);
+        var session = new RunSession(_catalog, Tuning, plan, runSeed, meta, runtimeDraws);
         ApplyStartingGold(session);
         return session;
     }
 
-    /// <summary>Resume a captured run over the same plan.</summary>
-    public RunSession ResumeSession(RunSnapshot snapshot, MetaProgression meta)
+    /// <summary>
+    /// Resume a captured run over the same plan. Returns null when the
+    /// snapshot is no longer compatible with the rebuilt plan or records a
+    /// finished run; the caller discards such a save (permadeath applies).
+    /// </summary>
+    public RunSession? ResumeSession(RunSnapshot snapshot, MetaProgression meta, IRandomSource runtimeDraws)
     {
+        if (snapshot.Phase is RunPhase.Dead or RunPhase.Won
+            || snapshot.RunIndex < 0
+            || snapshot.RunIndex >= BuildRunPlan(snapshot.RunSeed).FloorCount)
+        {
+            return null;
+        }
+
         RunPlan plan = BuildRunPlan(snapshot.RunSeed);
-        return new RunSession(_catalog, Tuning, plan, snapshot, meta);
+        return new RunSession(_catalog, Tuning, plan, snapshot, meta, runtimeDraws);
     }
 
     private void ApplyStartingGold(RunSession session)

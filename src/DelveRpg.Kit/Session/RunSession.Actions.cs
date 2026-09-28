@@ -128,6 +128,12 @@ public sealed partial class RunSession
                 ShowMessage("You open the door.");
                 return;
             case TileKind.StairsDown:
+                if (RunIndex + 1 >= _plan.FloorCount)
+                {
+                    ShowMessage("There is nowhere deeper to go.");
+                    return;
+                }
+
                 EnterFloor(RunIndex + 1);
                 return;
             case TileKind.StairsUp:
@@ -214,7 +220,16 @@ public sealed partial class RunSession
 
     private void CollectItemAtPlayerTile()
     {
-        GroundItem? item = GroundItemAt(Player.Body.TileX, Player.Body.TileY);
+        int tileX = Player.Body.TileX;
+        int tileY = Player.Body.TileY;
+        if (tileX == _lastCollectTileX && tileY == _lastCollectTileY)
+        {
+            return;
+        }
+
+        _lastCollectTileX = tileX;
+        _lastCollectTileY = tileY;
+        GroundItem? item = GroundItemAt(tileX, tileY);
         if (item is not null)
         {
             CollectItem(item);
@@ -321,7 +336,7 @@ public sealed partial class RunSession
             ShowMessage($"You suffer {playerDamage} damage.");
         }
 
-        foreach (MonsterState monster in _monsters)
+        foreach (MonsterState monster in _monsters.ToArray())
         {
             int damage = monster.Body.Effects.Tick();
             if (damage > 0)

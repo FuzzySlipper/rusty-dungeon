@@ -177,6 +177,11 @@ public sealed class DelveInputRouter
         return input;
     }
 
+    /// <summary>
+    /// A Clear fact (focus loss, pointer-lock loss, restart, dispose) releases
+    /// every derived held state, pending one-shot, and accumulated look delta,
+    /// so nothing pressed before the loss acts after it.
+    /// </summary>
     private void ReleaseAll()
     {
         _forward = false;
@@ -184,5 +189,15 @@ public sealed class DelveInputRouter
         _left = false;
         _right = false;
         _attackHeld = false;
+        _usePressed = false;
+        _inventoryToggled = false;
+        _mapToggled = false;
+        _menuConfirm = false;
+        _menuCancel = false;
+        _menuUp = false;
+        _menuDown = false;
+        _hotbarPressed = 0;
+        _lookYaw = 0f;
+        _lookPitch = 0f;
     }
 }

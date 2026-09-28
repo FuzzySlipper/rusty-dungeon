@@ -59,9 +59,17 @@ public sealed class DelveProduct : IEngineProduct
         RunSnapshot? saved = _saves.LoadRun();
         if (saved is not null)
         {
-            _session = _ruleset.ResumeSession(saved, meta);
-            _savedLevelRevision = _session.LevelRevision;
-            _hostPhase = PhaseRun;
+            _session = _ruleset.ResumeSession(saved, meta, DrawSource(saved.RunSeed));
+            if (_session is null)
+            {
+                // A stale or finished save cannot continue; permadeath applies.
+                _saves.DeleteRun();
+            }
+            else
+            {
+                _savedLevelRevision = _session.LevelRevision;
+                _hostPhase = PhaseRun;
+            }
         }
 
         PublishHud();
@@ -74,8 +82,14 @@ public sealed class DelveProduct : IEngineProduct
             return ProductUpdateResult.None;
         }
 
+        if (update.Facts.Mode != ProductUpdateMode.Realtime
+            || update.Facts.LifecycleState != ProductLifecycleState.Running)
+        {
+            return ProductUpdateResult.None;
+        }
+
         _router.Route(update.Input);
-        uint steps = Math.Max(1u, Math.Min(update.Facts.AdmittedStepCount, MaxCatchUpSteps));
+        uint steps = Math.Min(update.Facts.AdmittedStepCount, MaxCatchUpSteps);
         for (uint step = 0; step < steps; step++)
         {
             Step(_router.TakeTickInput());
@@ -126,7 +140,7 @@ public sealed class DelveProduct : IEngineProduct
         long draw = _engine.Random.DrawKeyed(new KeyedRngRequest(
             0xD00D_F00D_D1CE_0001UL, "run-seeds", $"run:{_runSeedCounter++}", long.MinValue, long.MaxValue)).Value;
         ulong runSeed = (ulong)draw;
-        _session = _ruleset.CreateSession(runSeed, _saves.LoadMeta());
+        _session = _ruleset.CreateSession(runSeed, _saves.LoadMeta(), DrawSource(runSeed));
         _savedLevelRevision = _session.LevelRevision;
         _hostPhase = PhaseRun;
         _saves.SaveRun(_session.Capture());
@@ -194,6 +208,10 @@ public sealed class DelveProduct : IEngineProduct
         _renderer.Dispose();
         _saves.Dispose();
     }
+
+    /// <summary>Live run draws come from the Engine's keyed random service.</summary>
+    private KeyedRandomSource DrawSource(ulong runSeed) =>
+        new(_engine.Random, runSeed, $"run-draws:{runSeed}");
 
     private void PublishHud()
     {

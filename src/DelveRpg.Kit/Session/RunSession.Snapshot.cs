@@ -56,7 +56,9 @@ public sealed record RunSnapshot(
     IReadOnlyList<SnapshotSlot> Slots,
     SnapshotFloor Floor,
     IReadOnlyList<SnapshotMonster> Monsters,
-    IReadOnlyList<SnapshotGroundItem> GroundItems);
+    IReadOnlyList<SnapshotGroundItem> GroundItems,
+    IReadOnlyList<string> LevelUpOffers,
+    int LevelUpCursor);
 
 public sealed partial class RunSession
 {
@@ -124,7 +126,9 @@ public sealed partial class RunSession
                 monster.Body.Hp,
                 monster.Body.Facing)).ToList(),
             GroundItems: _groundItems.Select(item => new SnapshotGroundItem(
-                item.Item.ArchetypeId, item.Item.Count, item.X, item.Y)).ToList());
+                item.Item.ArchetypeId, item.Item.Count, item.X, item.Y)).ToList(),
+            LevelUpOffers: LevelUpOffers.ToList(),
+            LevelUpCursor: LevelUpCursor);
     }
 
     private (int StartX, int StartY, int StairsX, int StairsY) FindMarkers()
@@ -173,7 +177,7 @@ public sealed partial class RunSession
             HoldingOrb = snapshot.HoldingOrb,
             WieldedSlot = snapshot.WieldedSlot,
         };
-        player.Body.Hp = snapshot.Hp;
+        player.Body.Hp = Math.Clamp(snapshot.Hp, 0, snapshot.MaxHp);
         player.Body.Facing = snapshot.Facing;
         player.Body.PitchDegrees = snapshot.PitchDegrees;
         player.Equipment.WeaponItemId = snapshot.WeaponItemId;
@@ -182,10 +186,14 @@ public sealed partial class RunSession
         for (int i = 0; i < snapshot.Slots.Count && i < player.Inventory.Capacity; i++)
         {
             SnapshotSlot slot = snapshot.Slots[i];
-            if (slot.ArchetypeId is not null)
-            {
-                player.Inventory.TryAdd(new ItemInstance(slot.ArchetypeId, slot.Count), _rules.IsStackable(slot.ArchetypeId));
-            }
+            player.Inventory.RestoreSlot(
+                i,
+                slot.ArchetypeId is null ? null : new ItemInstance(slot.ArchetypeId, slot.Count));
+        }
+
+        if (player.WieldedSlot >= 0 && player.Inventory.Slot(player.WieldedSlot) is null)
+        {
+            player.WieldedSlot = -1;
         }
 
         return player;
@@ -221,21 +229,36 @@ public sealed partial class RunSession
         _groundItems.Clear();
         foreach (SnapshotMonster monster in snapshot.Monsters)
         {
+            // A snapshot may name a monster the current catalog no longer
+            // carries; skip it instead of writing its facts onto another one.
+            int before = _monsters.Count;
             AddMonster(monster.ArchetypeId, (int)MathF.Floor(monster.X), (int)MathF.Floor(monster.Y));
+            if (_monsters.Count == before)
+            {
+                continue;
+            }
+
             MonsterState restored = _monsters[^1];
             restored.Body.X = monster.X;
             restored.Body.Y = monster.Y;
-            restored.Body.Hp = monster.Hp;
+            restored.Body.Hp = Math.Clamp(monster.Hp, 1, restored.Body.MaxHp);
             restored.Body.Facing = monster.Facing;
         }
 
         foreach (SnapshotGroundItem item in snapshot.GroundItems)
         {
+            if (_rules.Item(item.ArchetypeId) is not ItemArchetype)
+            {
+                continue;
+            }
+
             _groundItems.Add(new GroundItem(new ItemInstance(item.ArchetypeId, item.Count), item.X, item.Y));
         }
 
         EscapePressureTicks = snapshot.EscapePressureTicks;
-        Phase = snapshot.Phase == RunPhase.LevelUp ? RunPhase.Playing : snapshot.Phase;
+        LevelUpOffers = snapshot.LevelUpOffers.ToList();
+        LevelUpCursor = Math.Clamp(snapshot.LevelUpCursor, 0, Math.Max(0, snapshot.LevelUpOffers.Count - 1));
+        Phase = snapshot.Phase;
         _escapeSpawnRemaining = _tuning.EscapeSpawnCadenceStartTicks;
         LevelRevision++;
     }

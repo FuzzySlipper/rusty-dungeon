@@ -1,10 +1,12 @@
 namespace DelveRpg.Kit.Random;
 
 /// <summary>
-/// A small deterministic generator seeded per floor. Floor generation must
-/// replay identically when an ascended floor is regenerated, so it owns its
-/// arithmetic here; live draws (loot at runtime, AI jitter) go through the
-/// Host's Engine-random adapter instead.
+/// A small deterministic generator seeded per scope. It exists for floor
+/// generation and run-plan expansion only: a floor must replay identically
+/// when an ascended run regenerates it, independent of how many live draws
+/// happened elsewhere. Live draws (combat, loot, offers, escape spawns) go
+/// through the injected <see cref="IRandomSource"/>, which the Host answers
+/// with the Engine's keyed random service.
 /// </summary>
 public sealed class SplitMixRandom : IRandomSource
 {

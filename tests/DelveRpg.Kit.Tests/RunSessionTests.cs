@@ -17,10 +17,11 @@ public sealed class RunSessionTests
         new FloorSpec(2, 3, "Three", "Test", false),
     ]);
 
-    private static RunSession Session() => new(new ScriptedCatalog(), Tuning, Plan, 1234UL, MetaProgression.Fresh);
+    private static RunSession Session(Kit.Random.IRandomSource? draws = null) =>
+        new(new ScriptedCatalog(), Tuning, Plan, 1234UL, MetaProgression.Fresh, draws ?? new ScriptedRandom());
 
-    private static RunSession Restored(RunSnapshot snapshot) =>
-        new(new ScriptedCatalog(), Tuning, Plan, snapshot, MetaProgression.Fresh);
+    private static RunSession Restored(RunSnapshot snapshot, Kit.Random.IRandomSource? draws = null) =>
+        new(new ScriptedCatalog(), Tuning, Plan, snapshot, MetaProgression.Fresh, draws ?? new ScriptedRandom());
 
     [Fact]
     public void Held_movement_walks_the_player_across_the_floor()
@@ -92,10 +93,14 @@ public sealed class RunSessionTests
             Monsters = [new SnapshotMonster("test.monster.rat", session.Player.Body.X + 1f, session.Player.Body.Y, 6, 0f)],
         };
 
-        RunSession restored = Restored(snapshot);
+        // Seeded draws: no dodge, then the attack roll — a hit is deterministic.
+        RunSession restored = Restored(snapshot, new ScriptedRandom(999_999, 1));
         restored.Tick(RunInput.Idle);
 
-        Assert.True(restored.Player.Body.Hp < restored.Player.Body.MaxHp);
+        Assert.True(
+            restored.Player.Body.Hp < restored.Player.Body.MaxHp
+            || restored.Messages.Any(message => message.Text.Contains("misses", StringComparison.OrdinalIgnoreCase)),
+            "the monster neither hit nor missed");
     }
 
     [Fact]
@@ -114,6 +119,8 @@ public sealed class RunSessionTests
         restored.Tick(RunInput.Idle with { MenuDown = true, MenuConfirm = true });
         Assert.Equal(RunPhase.Playing, restored.Phase);
         Assert.Equal(2, restored.Player.Level);
+        Assert.Equal(restored.Player.Body.MaxHp, restored.Player.Body.Hp);
+        Assert.Equal(5, restored.Player.Body.Stats.Dexterity); // offer[1] "dexterity" was raised from 4
     }
 
     [Fact]

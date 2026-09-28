@@ -32,6 +32,7 @@ projects=(
   tests/DelveRpg.Kit.Tests/DelveRpg.Kit.Tests.csproj
   tests/DelveRpg.Rulesets.Delver.Tests/DelveRpg.Rulesets.Delver.Tests.csproj
   tests/DelveRpg.Architecture.Tests/DelveRpg.Architecture.Tests.csproj
+  tests/DelveRpg.Host.Tests/DelveRpg.Host.Tests.csproj
 )
 for project in "${projects[@]}"; do
   echo "== dotnet test $project"

@@ -100,11 +100,11 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
     /// </summary>
     public static DelverComposition Load(Func<string, string?> readText, string bundleId = "delve-run")
     {
-        string? bundleText = readText($"delve/bundles/{bundleId}.json")
-            ?? throw new InvalidOperationException($"Missing bundle manifest 'delve/bundles/{bundleId}.json'.");
-        DelverBundleDefinition bundle = JsonSerializer.Deserialize(
-            bundleText, DelverCompositionJsonContext.Default.DelverBundleDefinition)
-            ?? throw new InvalidOperationException($"Bundle manifest 'delve/bundles/{bundleId}.json' did not parse.");
+        string bundlePath = $"delve/bundles/{bundleId}.json";
+        string? bundleText = readText(bundlePath)
+            ?? throw new InvalidOperationException($"Missing bundle manifest '{bundlePath}'.");
+        DelverBundleDefinition bundle = Deserialize<DelverBundleDefinition>(
+            bundleText, DelverCompositionJsonContext.Default.DelverBundleDefinition, bundlePath);
         if (bundle.Ruleset != "delver")
         {
             throw new InvalidOperationException($"Bundle '{bundle.Id}' selects ruleset '{bundle.Ruleset}', which this product does not compile.");
@@ -115,25 +115,39 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
         {
             string? descriptorText = readText($"delve/content-packs/{packId}.json")
                 ?? throw new InvalidOperationException($"Missing content pack descriptor 'delve/content-packs/{packId}.json'.");
-            DelverPackDescriptor descriptor = JsonSerializer.Deserialize(
-                descriptorText, DelverCompositionJsonContext.Default.DelverPackDescriptor)
-                ?? throw new InvalidOperationException($"Content pack descriptor '{packId}' did not parse.");
+            DelverPackDescriptor descriptor = Deserialize<DelverPackDescriptor>(
+                descriptorText, DelverCompositionJsonContext.Default.DelverPackDescriptor,
+                $"delve/content-packs/{packId}.json");
             string? payloadText = readText($"delve/{descriptor.Payload}")
                 ?? throw new InvalidOperationException($"Missing content pack payload '{descriptor.Payload}'.");
-            DelverContentPack document = JsonSerializer.Deserialize(
-                payloadText, DelverContentJsonContext.Default.DelverContentPack)
-                ?? throw new InvalidOperationException($"Content pack payload '{descriptor.Payload}' did not parse.");
+            DelverContentPack document = Deserialize<DelverContentPack>(
+                payloadText, DelverContentJsonContext.Default.DelverContentPack, $"delve/{descriptor.Payload}");
             pack = Merge(pack, document);
         }
 
         string? tuningText = readText($"delve/tuning/{bundle.Tuning}.json")
             ?? throw new InvalidOperationException($"Missing tuning profile 'delve/tuning/{bundle.Tuning}.json'.");
-        DelverTuningDefinition tuning = JsonSerializer.Deserialize(
-            tuningText, DelverCompositionJsonContext.Default.DelverTuningDefinition)
-            ?? throw new InvalidOperationException($"Tuning profile '{bundle.Tuning}' did not parse.");
+        DelverTuningDefinition tuning = Deserialize<DelverTuningDefinition>(
+            tuningText, DelverCompositionJsonContext.Default.DelverTuningDefinition,
+            $"delve/tuning/{bundle.Tuning}.json");
 
         Validate(bundle, pack);
         return new DelverComposition(bundle, pack, tuning.ToTuning());
+    }
+
+    /// <summary>Parse one content document; a malformed file names its path.</summary>
+    private static T Deserialize<T>(string text, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> typeInfo, string path)
+        where T : class
+    {
+        try
+        {
+            return JsonSerializer.Deserialize(text, typeInfo)
+                ?? throw new InvalidOperationException($"Content document '{path}' is empty.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException($"Content document '{path}' did not parse: {exception.Message}", exception);
+        }
     }
 
     private static DelverContentPack Merge(DelverContentPack left, DelverContentPack right) => new()
@@ -178,6 +192,20 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
             if (pack.Items.All(item => item.Id != entry.ItemId))
             {
                 problems.Add($"loot entry '{entry.ItemId}' names no item");
+            }
+        }
+
+        foreach (DelverSectionDefinition section in pack.Sections)
+        {
+            int contributions = section.Floors + (section.TransitionLevel is null ? 0 : 1);
+            if (contributions <= 0)
+            {
+                problems.Add($"section '{section.Name}' contributes no floors");
+            }
+
+            if (contributions > 0 && section.LevelTemplates.Count == 0 && section.TransitionLevel is null)
+            {
+                problems.Add($"section '{section.Name}' has no level templates");
             }
         }
 

@@ -37,19 +37,22 @@ public sealed partial class RunSession
     private int _lastPlayerTileY = int.MinValue;
     private int _escapeSpawnRemaining;
     private int _fogRefreshRemaining;
+    private int _lastCollectTileX = int.MinValue;
+    private int _lastCollectTileY = int.MinValue;
 
     public RunSession(
         IRulesCatalog rules,
         GameTuning tuning,
         RunPlan plan,
         ulong runSeed,
-        MetaProgression meta)
+        MetaProgression meta,
+        IRandomSource runtimeDraws)
     {
         _rules = rules;
         _tuning = tuning;
         _plan = plan;
         _runSeed = runSeed;
-        _random = new SplitMixRandom(runSeed ^ 0xA5A5A5A5A5A5A5A5UL);
+        _random = runtimeDraws;
         Meta = meta;
         Player = new PlayerState(
             new ActorState(_nextActorId++, ActorKind.Player, 0f, 0f, 1, new StatBlock(4, 2, 4, 4, 2, 5)),
@@ -58,13 +61,26 @@ public sealed partial class RunSession
     }
 
     /// <summary>Restores a previously captured run. See <see cref="Capture"/>.</summary>
-    public RunSession(IRulesCatalog rules, GameTuning tuning, RunPlan plan, RunSnapshot snapshot, MetaProgression meta)
+    public RunSession(
+        IRulesCatalog rules,
+        GameTuning tuning,
+        RunPlan plan,
+        RunSnapshot snapshot,
+        MetaProgression meta,
+        IRandomSource runtimeDraws)
     {
+        if (snapshot.RunIndex < 0 || snapshot.RunIndex >= plan.FloorCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(snapshot),
+                $"Snapshot run index {snapshot.RunIndex} is outside the rebuilt plan ({plan.FloorCount} floors).");
+        }
+
         _rules = rules;
         _tuning = tuning;
         _plan = plan;
         _runSeed = snapshot.RunSeed;
-        _random = new SplitMixRandom(snapshot.RunSeed ^ 0x5A5A5A5A5A5A5A5AUL);
+        _random = runtimeDraws;
         Meta = meta;
         Player = RestorePlayer(snapshot);
         RestoreFloor(snapshot);
@@ -324,6 +340,8 @@ public sealed partial class RunSession
         _velocityY = 0f;
         _lastPlayerTileX = int.MinValue;
         _lastPlayerTileY = int.MinValue;
+        _lastCollectTileX = int.MinValue;
+        _lastCollectTileY = int.MinValue;
 
         foreach (MonsterSpawn spawn in generated.Monsters)
         {

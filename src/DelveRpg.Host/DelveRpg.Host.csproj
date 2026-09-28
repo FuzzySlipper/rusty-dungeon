@@ -23,7 +23,7 @@
     <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
     <!-- First-person play needs the captured cursor for mouse-look. -->
     <RustyEngineProductInputCursorMode>pointer-lock</RustyEngineProductInputCursorMode>
-    <RustyEngineWatchPaths>$(MSBuildProjectDirectory);$(RustyEngineProductUiRoot);$(RustyEngineProductContentRoot)</RustyEngineWatchPaths>
+    <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../DelveRpg.Kit'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../DelveRpg.Rulesets.Delver'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineWatchPaths>
   </PropertyGroup>
 
   <ItemGroup>

@@ -144,12 +144,29 @@ curve is smoothed (cadence 600→60 ticks, groups 3→15).
 
 Run state is snapshotted at every floor change, on pause, and on shutdown —
 the donor's save boundaries ([donor] `game/Game.java` `save`) — as player
-facts plus the current floor grid, monsters, and items. Death and victory
-delete the run save; only meta progression survives
-([donor] `gamemode/delver/DelverGameMode.java` `deleteRunSave`).
-**Deliberate divergence:** ascended floors regenerate from the run seed
-instead of loading floor snapshots (only the current floor is stored); the
-donor's save migration story (`saveVersion`) is not needed at this shape.
+facts plus the current floor grid, monsters, items, and a pending level-up
+offer. Death and victory delete the run save; only meta progression survives
+([donor] `gamemode/delver/DelverGameMode.java` `deleteRunSave`). A save whose
+run index no longer fits the rebuilt plan, or that records a finished run, is
+discarded on resume. **Deliberate divergence:** ascended floors regenerate
+from the run seed instead of loading floor snapshots (only the current floor
+is stored), and the save boundary strips transient combat state — status
+effect timers, attack charge and cooldowns, velocities, the pursuit timer —
+like the donor's `preSaveCleanup` ([donor] `game/Game.java` `save`); hit
+points clamp to [0, maxHp] on restore. The donor's save migration story
+(`saveVersion`) is not needed at this shape.
+
+## Randomness
+
+Two deterministic sources, one division. Floor generation and run-plan
+template draws use the Kit's seeded `SplitMixRandom` keyed by `(run seed,
+run index)`, because an ascended floor must replay identically no matter how
+many live draws happened elsewhere. Everything that happens *during* a run —
+combat rolls, loot, level-up offers, escape spawns — draws through the
+injected `IRandomSource`, which the Host answers with the Engine's keyed
+random service (`IRandomService.DrawKeyed`, keys counter-based per run).
+The Kit's `IRandomSource.Next` is half-open; the Host translates to the
+Engine's inclusive bounds in `KeyedRandomSource` alone.
 
 ## Presentation and audio
 

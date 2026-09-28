@@ -207,6 +207,7 @@ public sealed class DelveSceneRenderer : IDisposable
         _actorAppearances.Clear();
         _levelAppearance?.Dispose();
         _levelMesh?.Dispose();
+        _engine.CameraView.ClearActiveCamera(new ClearActiveCameraRequest(0));
         _camera.Dispose();
         _material.Dispose();
     }

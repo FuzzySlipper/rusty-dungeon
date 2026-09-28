@@ -1,8 +1,9 @@
 namespace DelveRpg.Kit.Random;
 
 /// <summary>
-/// Deterministic randomness for generation and rules. The Host adapts the
-/// Engine's keyed random service behind this; tests use a scripted source.
+/// Deterministic randomness for the run. The Host adapts the Engine's keyed
+/// random service behind this; tests use scripted doubles. Draws are
+/// half-open: [<paramref name="minimum"/>, <paramref name="maximum"/>).
 /// </summary>
 public interface IRandomSource
 {

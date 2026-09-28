@@ -9,15 +9,23 @@ which the product project stages.
 
 The projection contract is `delve.ui.snapshot.v1` on the `delve.hud` stream
 (declared in both `DelveRpg.Host.csproj` and `DelveHudProjection`). A snapshot
-carries: `phase` (`title`, `run`, `levelup`, `dead`, `won`), run facts
-(`runIndex`, `section`, `dungeonLevel`), vitals (`hp`, `maxHp`,
-`playerLevel`, `experience`, `experienceToNext`), economy (`gold`, `keys`),
-`messages`, `usePrompt`, `hotbar` (six slots with `itemId`, `name`, `kind`,
-`count`, `wielded`), `stats`, `levelUp` (`offers`, `cursor`), `holdingOrb`,
-`escapePressure`, and `minimap` (`size`, `cells`, `playerX`, `playerY`,
-`heading`). The `cells` grid is row-major around the player: blank unseen,
-`#` explored wall, `.` explored floor, `+` door, `~` water, `<`/`>` stairs,
-`@` the player's tile.
+carries: `phase` (`title`, `run`, `levelup`, `dead`, `won`) and `runPhase`
+(the Kit's `Playing`/`LevelUp`/`Dead`/`Won`), run facts (`runIndex`,
+`section`, `dungeonLevel`), vitals (`hp`, `maxHp`, `playerLevel`,
+`experience`, `experienceToNext`), economy (`gold`, `keys`), `messages`,
+`usePrompt`, `hotbar` (slots with `index`, `itemId`, `name`, `kind`, `count`,
+`wielded`), `inventoryOpen`, `mapOpen`, `stats`, `levelUp` (`offers`,
+`cursor`), `holdingOrb`, `escapePressure`, and `minimap` (`size`, `cells`,
+`playerX`, `playerY`, `heading`). The `cells` grid is row-major around the
+player: blank unseen, `#` explored wall, `.` explored floor, `+` door, `~`
+water, `<`/`>` stairs, `@` the player's tile.
+
+The inventory and map views (the donor's modal inventory and fullscreen map)
+are pending UI slices; `inventoryOpen` and `mapOpen` are already projected so
+those slices need no contract change. Keyboard hotbar intents cover the six
+base slots (`hotbar.1`–`hotbar.6`); meta-upgraded slots beyond six have no
+key path yet, and upgrades are not spendable in this slice
+(docs/gameplay-design.md).
 
 Controls claim only declared digital intents — `menu.confirm`,
 `menu.cancel`, `menu.up`, `menu.down` — the same names the staged product
