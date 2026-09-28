@@ -166,7 +166,11 @@ combat rolls, loot, level-up offers, escape spawns — draws through the
 injected `IRandomSource`, which the Host answers with the Engine's keyed
 random service (`IRandomService.DrawKeyed`, keys counter-based per run).
 The Kit's `IRandomSource.Next` is half-open; the Host translates to the
-Engine's inclusive bounds in `KeyedRandomSource` alone.
+Engine's inclusive bounds in `KeyedRandomSource` alone. **Deliberate
+divergence:** draw counters are not saved, so a resumed run restarts the
+keyed draw sequence rather than continuing the unloaded run's — the same
+transient amnesty as §Saves; runs remain fair and deterministic within one
+continuous session.
 
 ## Presentation and audio
 

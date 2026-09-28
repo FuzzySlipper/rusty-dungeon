@@ -273,6 +273,12 @@ public sealed partial class RunSession
 
     private void TickLevelUp(RunInput input)
     {
+        if (LevelUpOffers.Count == 0)
+        {
+            Phase = RunPhase.Playing;
+            return;
+        }
+
         if (input.MenuUp)
         {
             LevelUpCursor = Math.Max(0, LevelUpCursor - 1);

@@ -203,9 +203,9 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
                 problems.Add($"section '{section.Name}' contributes no floors");
             }
 
-            if (contributions > 0 && section.LevelTemplates.Count == 0 && section.TransitionLevel is null)
+            if (section.Floors > 0 && section.LevelTemplates.Count == 0)
             {
-                problems.Add($"section '{section.Name}' has no level templates");
+                problems.Add($"section '{section.Name}' contributes floors but has no level templates");
             }
         }
 

@@ -97,10 +97,8 @@ public sealed class RunSessionTests
         RunSession restored = Restored(snapshot, new ScriptedRandom(999_999, 1));
         restored.Tick(RunInput.Idle);
 
-        Assert.True(
-            restored.Player.Body.Hp < restored.Player.Body.MaxHp
-            || restored.Messages.Any(message => message.Text.Contains("misses", StringComparison.OrdinalIgnoreCase)),
-            "the monster neither hit nor missed");
+        Assert.True(restored.Player.Body.Hp < restored.Player.Body.MaxHp, "the hit did not land");
+        Assert.Contains(restored.Messages, message => message.Text.Contains("hits you", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -115,6 +113,8 @@ public sealed class RunSessionTests
 
         Assert.Equal(RunPhase.LevelUp, restored.Phase);
         Assert.Equal(3, restored.LevelUpOffers.Count);
+        // ScriptedRandom's zero fallback makes the offer shuffle deterministic:
+        // offers are [defense, dexterity, speed], so the cursor lands on 1.
 
         restored.Tick(RunInput.Idle with { MenuDown = true, MenuConfirm = true });
         Assert.Equal(RunPhase.Playing, restored.Phase);

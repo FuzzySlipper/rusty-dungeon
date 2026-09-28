@@ -37,7 +37,11 @@ public sealed class MonsterBrainTests
     [Fact]
     public void A_wounded_monster_flees_below_the_threshold()
     {
-        // 25% of 20 max hp is 5: at 4 hp the monster runs.
+        // 25% of 20 max hp is 5, and the rule is "at or below": both 5 and 4 run.
+        (MonsterState atThreshold, PlayerState thresholdPlayer, DungeonLevel thresholdLevel) = Scene(monsterHp: 5);
+        MonsterBrain.Tick(atThreshold, thresholdLevel, thresholdPlayer, Tuning, 1f);
+        Assert.Equal(MonsterBrainState.Fleeing, atThreshold.BrainState);
+
         (MonsterState monster, PlayerState player, DungeonLevel level) = Scene(monsterHp: 4);
         MonsterBrain.Tick(monster, level, player, Tuning, 1f);
         Assert.Equal(MonsterBrainState.Fleeing, monster.BrainState);

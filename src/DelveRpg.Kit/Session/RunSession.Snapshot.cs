@@ -191,7 +191,8 @@ public sealed partial class RunSession
                 slot.ArchetypeId is null ? null : new ItemInstance(slot.ArchetypeId, slot.Count));
         }
 
-        if (player.WieldedSlot >= 0 && player.Inventory.Slot(player.WieldedSlot) is null)
+        if (player.WieldedSlot < -1 || player.WieldedSlot >= player.Inventory.Capacity
+            || (player.WieldedSlot >= 0 && player.Inventory.Slot(player.WieldedSlot) is null))
         {
             player.WieldedSlot = -1;
         }
@@ -256,8 +257,8 @@ public sealed partial class RunSession
         }
 
         EscapePressureTicks = snapshot.EscapePressureTicks;
-        LevelUpOffers = snapshot.LevelUpOffers.ToList();
-        LevelUpCursor = Math.Clamp(snapshot.LevelUpCursor, 0, Math.Max(0, snapshot.LevelUpOffers.Count - 1));
+        LevelUpOffers = (snapshot.LevelUpOffers ?? (IReadOnlyList<string>)[]).ToList();
+        LevelUpCursor = Math.Clamp(snapshot.LevelUpCursor, 0, Math.Max(0, LevelUpOffers.Count - 1));
         Phase = snapshot.Phase;
         _escapeSpawnRemaining = _tuning.EscapeSpawnCadenceStartTicks;
         LevelRevision++;

@@ -217,9 +217,20 @@ public sealed class RunSessionBoundaryTests
         RunSnapshot snapshot = Snapshot(Room(doorX: 2, doorY: 2, waterX: 3, waterY: 2, stairsDownX: 3, stairsDownY: 3));
         RunSession restored = Restored(snapshot);
 
+        // One tile stays unexplored: the far corner behind the border wall.
+        RunSnapshot unexplored = Snapshot(Room()) with
+        {
+            Floor = Room() with
+            {
+                Explored = Room().Explored.Select((value, index) => index == 0 ? (byte)0 : value).ToArray(),
+            },
+        };
+        RunSession explored = Restored(unexplored);
+
         HudFacts facts = restored.BuildHudFacts();
         string cells = facts.Minimap.Cells;
 
+        Assert.Contains(' ', explored.BuildHudFacts().Minimap.Cells);
         Assert.Contains('@', cells);
         Assert.Contains('#', cells); // explored wall
         Assert.Contains('.', cells); // explored floor
@@ -227,6 +238,51 @@ public sealed class RunSessionBoundaryTests
         Assert.Contains('~', cells); // water
         Assert.Contains('<', cells); // stairs up
         Assert.Contains('>', cells); // stairs down
+    }
+
+    [Fact]
+    public void An_older_save_shape_without_offers_restores_tolerantly()
+    {
+        // A pre-offer save decodes with null offers; restore must not crash.
+        RunSnapshot snapshot = Snapshot(Room()) with
+        {
+            LevelUpOffers = null!,
+            LevelUpCursor = 3,
+        };
+
+        RunSession restored = Restored(snapshot);
+
+        Assert.Empty(restored.LevelUpOffers);
+        Assert.Equal(0, restored.LevelUpCursor);
+        Assert.Equal(RunPhase.Playing, restored.Phase);
+    }
+
+    [Fact]
+    public void An_out_of_range_wielded_slot_resets()
+    {
+        RunSnapshot high = Snapshot(Room()) with { WieldedSlot = 99 };
+        Assert.Equal(-1, Restored(high).Player.WieldedSlot);
+
+        RunSnapshot low = Snapshot(Room()) with { WieldedSlot = -5 };
+        Assert.Equal(-1, Restored(low).Player.WieldedSlot);
+    }
+
+    [Fact]
+    public void The_save_boundary_strips_transient_combat_state()
+    {
+        // Recorded divergence (docs/gameplay-design.md §Saves): charge, cooldowns,
+        // and effects do not survive a save boundary, like the donor's preSaveCleanup.
+        RunSession session = Session();
+        session.Player.AttackCharge = 7;
+        session.Player.Body.AttackCooldownRemaining = 11;
+        session.Player.Body.Effects.Apply(Kit.Effects.EffectKind.Poison, 100, 1);
+        RunSnapshot snapshot = session.Capture();
+
+        RunSession restored = Restored(snapshot);
+
+        Assert.Equal(0, restored.Player.AttackCharge);
+        Assert.Equal(0, restored.Player.Body.AttackCooldownRemaining);
+        Assert.Empty(restored.Player.Body.Effects.Active);
     }
 
     [Fact]

@@ -119,6 +119,11 @@ public sealed class DelveInputRouterTests
             Digital("use", InputEdge.Pressed, 1f),
             Digital("menu.confirm", InputEdge.Pressed, 1f),
             Digital("hotbar.2", InputEdge.Pressed, 1f),
+            Digital("inventory", InputEdge.Pressed, 1f),
+            Digital("map", InputEdge.Pressed, 1f),
+            Digital("menu.cancel", InputEdge.Pressed, 1f),
+            Digital("menu.up", InputEdge.Pressed, 1f),
+            Digital("menu.down", InputEdge.Pressed, 1f),
             Look(1.2f, 0.6f),
             Clear(InputClearReason.FocusLoss),
         ];
@@ -130,6 +135,11 @@ public sealed class DelveInputRouterTests
         Assert.False(input.AttackHeld);
         Assert.False(input.UsePressed);
         Assert.False(input.MenuConfirm);
+        Assert.False(input.MenuCancel);
+        Assert.False(input.MenuUp);
+        Assert.False(input.MenuDown);
+        Assert.False(input.InventoryToggled);
+        Assert.False(input.MapToggled);
         Assert.Equal(0, input.HotbarPressed);
         Assert.Equal(0f, input.LookYawDegrees);
         Assert.Equal(0f, input.LookPitchDegrees);

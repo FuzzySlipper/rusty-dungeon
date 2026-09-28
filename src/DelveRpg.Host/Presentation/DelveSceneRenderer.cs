@@ -191,6 +191,18 @@ public sealed class DelveSceneRenderer : IDisposable
         return new Color(Math.Clamp(r + jitter, 0f, 1f), Math.Clamp(g + jitter, 0f, 1f), Math.Clamp(b + jitter, 0f, 1f), 1f);
     }
 
+    private static void TryDispose(Action dispose, List<Exception> failures)
+    {
+        try
+        {
+            dispose();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -199,16 +211,29 @@ public sealed class DelveSceneRenderer : IDisposable
         }
 
         _disposed = true;
+        List<Exception> failures = new();
         foreach (Appearance appearance in _actorAppearances.Values)
         {
-            appearance.Dispose();
+            TryDispose(appearance.Dispose, failures);
         }
 
         _actorAppearances.Clear();
-        _levelAppearance?.Dispose();
-        _levelMesh?.Dispose();
-        _engine.CameraView.ClearActiveCamera(new ClearActiveCameraRequest(0));
-        _camera.Dispose();
-        _material.Dispose();
+        if (_levelAppearance is not null)
+        {
+            TryDispose(_levelAppearance.Dispose, failures);
+        }
+
+        if (_levelMesh is not null)
+        {
+            TryDispose(_levelMesh.Dispose, failures);
+        }
+
+        TryDispose(() => _engine.CameraView.ClearActiveCamera(new ClearActiveCameraRequest(0)), failures);
+        TryDispose(_camera.Dispose, failures);
+        TryDispose(_material.Dispose, failures);
+        if (failures.Count > 0)
+        {
+            throw new AggregateException("Scene teardown reported failures.", failures);
+        }
     }
 }
