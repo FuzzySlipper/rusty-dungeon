@@ -23,13 +23,15 @@ One admitted Engine step is one game tick at 60 Hz — the donor's tick is also
 
 ## Movement
 
-Real-time continuous movement over a tile grid with friction and wall sliding.
-The donor's velocity/friction/step-up physics
-([donor] `entities/Player.java`, `collision/Collidor.java`) are simplified to
-accelerate–friction–clamp with per-axis grid collision (body radius 0.25
-tiles). Charging a swing slows the walk
+Real-time continuous movement over a tile grid with friction and wall sliding,
+**camera-relative like an FPS**: forward follows the look yaw and strafe is
+its perpendicular (the donor's walk ([donor] `entities/Player.java`); the
+same facing basis the use-reach slice uses). The donor's velocity/friction/
+step-up physics ([donor] `entities/Player.java`, `collision/Collidor.java`)
+are simplified to accelerate–friction–clamp with per-axis grid collision
+(body radius 0.25 tiles). Charging a swing slows the walk
 ([donor] `Player.java` `walkMod`). Look pitch clamps at ±80°.
-**Approximate** (no slopes, jump, or water currents; `Water` tiles are floor
+**Approximate** (no slopes, jump, or step-up heights; `Water` tiles are floor
 with a different color).
 
 ## Level model and generation

@@ -74,3 +74,18 @@ come from the runtime pack.
 Before adding a mechanism, check both the installed safe SDK and the owners
 above. Product meaning stays downstream. A missing Engine capability is an
 upstream request, not another local host, transport, scheduler, or renderer.
+
+## Known upstream gaps
+
+- **Arrow keys in the physical keyboard vocabulary.** The product runtime's
+  mapping parser (`parse_keyboard_control`, `csharp-product-runtime`) and the
+  `KeyboardControl` enum accept letters, `digit-0`–`digit-9`,
+  space/enter/escape, and the shift/control/alt pairs — no arrow keys.
+  Products therefore double letter keys for semantic intents (W/S serve both
+  movement and menu up/down here). *Request-ready wording:* extend
+  `KeyboardControl` with `ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`,
+  accept `arrow-up`/`arrow-down`/`arrow-left`/`arrow-right` in
+  `parse_keyboard_control`, and translate the corresponding `KeyboardEvent`
+  codes in the browser shell. Owner: the Engine's input support (shared by
+  the product runtime and the playtest harness). Until then the workaround
+  is double-mapped letter keys.

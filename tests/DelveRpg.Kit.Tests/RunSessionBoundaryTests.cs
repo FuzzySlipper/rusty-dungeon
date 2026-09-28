@@ -180,6 +180,41 @@ public sealed class RunSessionBoundaryTests
     }
 
     [Fact]
+    public void Movement_is_relative_to_the_look_direction()
+    {
+        // Facing east (pi/2): forward walks +x — the donor's FPS walk, not a
+        // world-axis grid step.
+        RunSession east = Restored(Snapshot(Room()) with { Facing = MathF.PI / 2f });
+        for (int i = 0; i < 30; i++)
+        {
+            east.Tick(RunInput.Idle with { MoveY = 1f });
+        }
+
+        Assert.True(east.Player.Body.X > 2.2f, $"forward did not walk east (x {east.Player.Body.X})");
+        Assert.True(MathF.Abs(east.Player.Body.Y - 2.5f) < 0.05f, "forward drifted off the look axis");
+
+        // Facing north (0): forward walks -y.
+        RunSession north = Restored(Snapshot(Room()) with { Facing = 0f });
+        for (int i = 0; i < 30; i++)
+        {
+            north.Tick(RunInput.Idle with { MoveY = 1f });
+        }
+
+        Assert.True(north.Player.Body.Y < 1.8f, $"forward did not walk north (y {north.Player.Body.Y})");
+        Assert.True(MathF.Abs(north.Player.Body.X - 1.5f) < 0.05f, "forward drifted off the look axis");
+
+        // Strafe right while looking north walks +x.
+        RunSession strafe = Restored(Snapshot(Room()) with { Facing = 0f });
+        for (int i = 0; i < 30; i++)
+        {
+            strafe.Tick(RunInput.Idle with { MoveX = 1f });
+        }
+
+        Assert.True(strafe.Player.Body.X > 2.2f, $"strafe did not walk east (x {strafe.Player.Body.X})");
+        Assert.True(MathF.Abs(strafe.Player.Body.Y - 2.5f) < 0.05f, "strafe drifted off the look axis");
+    }
+
+    [Fact]
     public void A_full_pack_nags_once_per_item_not_once_per_tick()
     {
         SnapshotSlot[] slots = Enumerable.Repeat(new SnapshotSlot("test.item.sword", 1), 24).ToArray();
@@ -192,7 +227,7 @@ public sealed class RunSessionBoundaryTests
         RunSession restored = Restored(snapshot);
         for (int i = 0; i < 30; i++)
         {
-            restored.Tick(RunInput.Idle with { MoveX = 1f });
+            restored.Tick(RunInput.Idle with { MoveY = 1f });
         }
 
         int nags = restored.Messages.Count(message => message.Text.Contains("pack is full", StringComparison.OrdinalIgnoreCase));

@@ -209,8 +209,16 @@ public sealed partial class RunSession
             moveY /= length;
         }
 
-        _velocityX = (_velocityX * _tuning.WalkFriction) + (moveX * _tuning.WalkAcceleration);
-        _velocityY = (_velocityY * _tuning.WalkFriction) + (moveY * _tuning.WalkAcceleration);
+        // Camera-relative planar movement: forward follows the look yaw and
+        // strafe is its perpendicular (the donor's FPS walk over the tile
+        // grid; the same facing basis the reach slice uses).
+        float facingSin = MathF.Sin(body.Facing);
+        float facingCos = MathF.Cos(body.Facing);
+        float wishX = (moveY * facingSin) + (moveX * facingCos);
+        float wishY = (-moveY * facingCos) + (moveX * facingSin);
+
+        _velocityX = (_velocityX * _tuning.WalkFriction) + (wishX * _tuning.WalkAcceleration);
+        _velocityY = (_velocityY * _tuning.WalkFriction) + (wishY * _tuning.WalkAcceleration);
         float speed = MathF.Sqrt((_velocityX * _velocityX) + (_velocityY * _velocityY));
         float maxSpeed = _tuning.MaxWalkSpeed * speedMultiplier;
         if (speed > maxSpeed)
