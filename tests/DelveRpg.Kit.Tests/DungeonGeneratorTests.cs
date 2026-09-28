@@ -87,6 +87,8 @@ public sealed class DungeonGeneratorTests
         GeneratedLevel generated = DungeonGenerator.Generate(
             new SplitMixRandom(SplitMixRandom.FloorSeed(9, 0)), Config, Tuning, Floor, ["m1"], ["i1"]);
 
+        Assert.Equal(Config.MonsterCount, generated.Monsters.Count);
+        Assert.Equal(Config.ItemCount, generated.Items.Count);
         foreach (MonsterSpawn spawn in generated.Monsters)
         {
             Assert.True(generated.Level.IsWalkable(spawn.X, spawn.Y));
