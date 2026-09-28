@@ -5,9 +5,28 @@
 # Installed Engine release pairs and local runtime state.
 .runtime/
 
+# Operator-local extraction and notes; never committed. Direct rips from the
+# donor binaries (delver.jar) live here and nowhere else.
+/local
+
 # Local tooling caches and generated UI/test output.
 node_modules/
 target/
 src/ui/generated/
 playwright-report/
 test-results/
+
+# AGENTS.md is tracked even though it matches this rule: it is the working
+# contract for this repository, and the rule exists only so a local variant does
+# not appear as an untracked file. Stage it with `git add -f AGENTS.md`.
+/AGENTS.md
+
+# Throwaway probe files a review lane runs inside the tree and deletes afterwards.
+# A probe that fails still fails the suite; this only keeps it out of commits.
+tests/**/Temp*Tests.cs
+tests/**/[Tt]mp*.cs
+tests/**/Temp*.cs
+
+# Normalized donor reference packs are derived from the operator's own game
+# files and are never committed. Regenerate with scripts/import-delver.sh.
+/content/delve/imports/

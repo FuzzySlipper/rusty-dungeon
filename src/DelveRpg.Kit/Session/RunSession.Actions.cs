@@ -1,0 +1,463 @@
+using DelveRpg.Kit.Actors;
+using DelveRpg.Kit.Ai;
+using DelveRpg.Kit.Combat;
+using DelveRpg.Kit.Effects;
+using DelveRpg.Kit.Inventory;
+using DelveRpg.Kit.Rules;
+using DelveRpg.Kit.World;
+
+namespace DelveRpg.Kit.Session;
+
+public sealed partial class RunSession
+{
+    private void TickCombat(RunInput input)
+    {
+        ActorState body = Player.Body;
+        ItemArchetype? weapon = Player.Equipment.WeaponItemId is string weaponId ? _rules.Item(weaponId) : null;
+        int chargeTicks = weapon?.ChargeTicks ?? _tuning.AttackChargeTicks;
+
+        if (input.AttackHeld && body.AttackCooldownRemaining == 0)
+        {
+            Player.AttackCharge = Math.Min(chargeTicks, Player.AttackCharge + 1);
+            if (Player.AttackCharge >= chargeTicks)
+            {
+                SwingWeapon(weapon);
+                Player.AttackCharge = 0;
+                body.AttackCooldownRemaining = _tuning.AttackCooldownTicks;
+            }
+        }
+        else if (!input.AttackHeld)
+        {
+            Player.AttackCharge = 0;
+        }
+    }
+
+    private void SwingWeapon(ItemArchetype? weapon)
+    {
+        MonsterState? target = NearestTargetInReach(ReachTiles);
+        if (target is null)
+        {
+            ShowMessage("Your swing finds only air.");
+            return;
+        }
+
+        int weaponPower = weapon?.Power ?? 1;
+        int gearArmor = ArmorClassOf(target.Body);
+        AttackOutcome outcome = CombatResolver.ResolveMelee(
+            _random, Player.Body, target.Body, weaponPower, gearArmor, _tuning);
+        if (outcome.Dodged)
+        {
+            ShowMessage($"The {target.Archetype.DisplayName} dodges.");
+            return;
+        }
+
+        ShowMessage($"You hit the {target.Archetype.DisplayName} for {outcome.Damage}.");
+        target.BrainState = MonsterBrainState.Chasing;
+        if (outcome.TargetKilled)
+        {
+            KillMonster(target);
+        }
+    }
+
+    private void KillMonster(MonsterState monster)
+    {
+        _monsters.Remove(monster);
+        int experience = CombatResolver.ExperienceForKill(monster.Archetype.MonsterLevel);
+        Player.Experience += experience;
+        ShowMessage($"The {monster.Archetype.DisplayName} falls. (+{experience} xp)");
+
+        if (_random.Chance(_tuning.EnchantChance) && _rules.RollLootId(_random, Level.DifficultyLevel) is string lootId)
+        {
+            AddGroundItem(lootId, monster.Body.TileX, monster.Body.TileY);
+        }
+    }
+
+    private MonsterState? NearestTargetInReach(float reach)
+    {
+        ActorState body = Player.Body;
+        MonsterState? best = null;
+        float bestDistance = reach;
+        foreach (MonsterState monster in _monsters)
+        {
+            float dx = monster.Body.X - body.X;
+            float dy = monster.Body.Y - body.Y;
+            float distance = MathF.Sqrt((dx * dx) + (dy * dy));
+            if (distance > bestDistance)
+            {
+                continue;
+            }
+
+            float facingX = MathF.Sin(body.Facing);
+            float facingY = -MathF.Cos(body.Facing);
+            float dot = ((dx * facingX) + (dy * facingY)) / Math.Max(0.0001f, distance);
+            if (dot < 0.5f)
+            {
+                continue;
+            }
+
+            if (!LineOfSight.CanSee(Level, body.TileX, body.TileY, monster.Body.TileX, monster.Body.TileY))
+            {
+                continue;
+            }
+
+            best = monster;
+            bestDistance = distance;
+        }
+
+        return best;
+    }
+
+    private void TickInteraction(RunInput input)
+    {
+        if (!input.UsePressed)
+        {
+            return;
+        }
+
+        (int tileX, int tileY) = TileInFront(1.2f);
+        if (!Level.InBounds(tileX, tileY))
+        {
+            return;
+        }
+
+        Tile tile = Level.At(tileX, tileY);
+        switch (tile.Kind)
+        {
+            case TileKind.DoorClosed:
+                Level.TryOpenDoor(tileX, tileY);
+                ShowMessage("You open the door.");
+                return;
+            case TileKind.StairsDown:
+                EnterFloor(RunIndex + 1);
+                return;
+            case TileKind.StairsUp:
+                TryFinishRun();
+                return;
+        }
+
+        if (GroundItemAt(tileX, tileY) is GroundItem item)
+        {
+            CollectItem(item);
+            return;
+        }
+
+        ShowMessage("There is nothing to use here.");
+    }
+
+    private void TryFinishRun()
+    {
+        if (RunIndex > 0)
+        {
+            EnterFloor(RunIndex - 1);
+            return;
+        }
+
+        if (Player.HoldingOrb)
+        {
+            Phase = RunPhase.Won;
+            ShowMessage("You escape the dungeon with the orb!");
+        }
+        else
+        {
+            ShowMessage("You cannot leave without the orb.");
+        }
+    }
+
+    private void TickHotbar(RunInput input)
+    {
+        if (input.HotbarPressed < 1 || input.HotbarPressed > Player.Inventory.HotbarSize)
+        {
+            return;
+        }
+
+        int slot = input.HotbarPressed - 1;
+        ItemInstance? instance = Player.Inventory.Slot(slot);
+        if (instance is not ItemInstance item)
+        {
+            return;
+        }
+
+        ItemArchetype? archetype = _rules.Item(item.ArchetypeId);
+        if (archetype is null)
+        {
+            return;
+        }
+
+        switch (archetype.Kind)
+        {
+            case ItemKind.Potion:
+            case ItemKind.Food:
+                Player.Body.Hp = Math.Min(Player.Body.MaxHp, Player.Body.Hp + archetype.HealAmount);
+                Player.Inventory.TryConsumeOne(slot);
+                ShowMessage($"You consume the {archetype.DisplayName}.");
+                return;
+            case ItemKind.Weapon:
+            case ItemKind.RangedWeapon:
+            case ItemKind.Wand:
+                Player.Equipment.WeaponItemId = archetype.Id;
+                Player.WieldedSlot = slot;
+                ShowMessage($"You wield the {archetype.DisplayName}.");
+                return;
+            case ItemKind.Armor:
+                Player.Equipment.ArmorItemId = archetype.Id;
+                ShowMessage($"You wear the {archetype.DisplayName}.");
+                return;
+            case ItemKind.Helmet:
+                Player.Equipment.HelmetItemId = archetype.Id;
+                ShowMessage($"You wear the {archetype.DisplayName}.");
+                return;
+            default:
+                ShowMessage($"You cannot use the {archetype.DisplayName} here.");
+                return;
+        }
+    }
+
+    private void CollectItemAtPlayerTile()
+    {
+        GroundItem? item = GroundItemAt(Player.Body.TileX, Player.Body.TileY);
+        if (item is not null)
+        {
+            CollectItem(item);
+        }
+    }
+
+    private void CollectItem(GroundItem item)
+    {
+        ItemArchetype? archetype = _rules.Item(item.Item.ArchetypeId);
+        if (archetype is null)
+        {
+            return;
+        }
+
+        switch (archetype.Kind)
+        {
+            case ItemKind.Gold:
+                Player.Gold += archetype.Value;
+                _groundItems.Remove(item);
+                ShowMessage($"+{archetype.Value} gold.");
+                return;
+            case ItemKind.Key:
+                Player.Keys++;
+                _groundItems.Remove(item);
+                ShowMessage("You found a key.");
+                return;
+            case ItemKind.QuestOrb:
+                Player.HoldingOrb = true;
+                _groundItems.Remove(item);
+                ShowMessage("You take the orb. The dungeon awakens — get out!");
+                return;
+            default:
+                if (Player.Inventory.TryAdd(item.Item, _rules.IsStackable(item.Item.ArchetypeId)))
+                {
+                    _groundItems.Remove(item);
+                    ShowMessage($"You pick up the {archetype.DisplayName}.");
+                }
+                else
+                {
+                    ShowMessage("Your pack is full.");
+                }
+
+                return;
+        }
+    }
+
+    private GroundItem? GroundItemAt(int x, int y)
+    {
+        foreach (GroundItem item in _groundItems)
+        {
+            if (item.X == x && item.Y == y)
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private void TickMonsters()
+    {
+        foreach (MonsterState monster in _monsters)
+        {
+            ActorState body = monster.Body;
+            body.AttackCooldownRemaining = Math.Max(0, body.AttackCooldownRemaining - 1);
+            EffectSet effects = body.Effects;
+            float speedMultiplier = effects.SpeedMultiplier();
+            if (effects.IsParalyzed)
+            {
+                continue;
+            }
+
+            float distance = Distance(body, Player.Body);
+            if (distance < 1.2f
+                && body.AttackCooldownRemaining == 0
+                && LineOfSight.CanSee(Level, body.TileX, body.TileY, Player.Body.TileX, Player.Body.TileY))
+            {
+                int gearArmor = GearArmorClass();
+                AttackOutcome outcome = CombatResolver.ResolveMelee(
+                    _random, body, Player.Body, monster.Archetype.AttackPower, gearArmor, _tuning);
+                body.AttackCooldownRemaining = monster.Archetype.AttackCooldownTicks;
+                if (outcome.Dodged)
+                {
+                    ShowMessage($"The {monster.Archetype.DisplayName} misses you.");
+                }
+                else
+                {
+                    ShowMessage($"The {monster.Archetype.DisplayName} hits you for {outcome.Damage}.");
+                }
+
+                continue;
+            }
+
+            MonsterBrain.Tick(monster, Level, Player, _tuning, speedMultiplier);
+        }
+    }
+
+    private void TickEffects()
+    {
+        int playerDamage = Player.Body.Effects.Tick();
+        if (playerDamage > 0)
+        {
+            Player.Body.Hp = Math.Max(0, Player.Body.Hp - playerDamage);
+            ShowMessage($"You suffer {playerDamage} damage.");
+        }
+
+        foreach (MonsterState monster in _monsters)
+        {
+            int damage = monster.Body.Effects.Tick();
+            if (damage > 0)
+            {
+                monster.Body.Hp = Math.Max(0, monster.Body.Hp - damage);
+                if (!monster.Body.Alive)
+                {
+                    KillMonster(monster);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// While the objective is held, monsters press in on a cadence that
+    /// tightens the longer the escape runs, like the donor's escape arc.
+    /// </summary>
+    private void TickEscapeArc()
+    {
+        if (!Player.HoldingOrb)
+        {
+            return;
+        }
+
+        EscapePressureTicks++;
+        _escapeSpawnRemaining--;
+        if (_escapeSpawnRemaining > 0)
+        {
+            return;
+        }
+
+        int elapsed = Math.Max(1, EscapePressureTicks);
+        int cadence = Math.Max(
+            _tuning.EscapeSpawnCadenceEndTicks,
+            _tuning.EscapeSpawnCadenceStartTicks - (elapsed / 10));
+        _escapeSpawnRemaining = cadence;
+
+        int spread = Math.Max(1, _tuning.EscapeSpawnGroupEnd - _tuning.EscapeSpawnGroupStart);
+        int groupSize = Math.Min(
+            _tuning.EscapeSpawnGroupEnd,
+            _tuning.EscapeSpawnGroupStart + (elapsed / (cadence * spread)));
+        IReadOnlyList<string> eligible = _rules.MonstersForFloor(Level.DifficultyLevel + 1);
+        if (eligible.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < groupSize; i++)
+        {
+            (int x, int y) = FarOpenSpot();
+            AddMonster(eligible[_random.Next(0, eligible.Count)], x, y);
+        }
+
+        ShowMessage("You hear pursuit closing in.");
+    }
+
+    private (int X, int Y) FarOpenSpot()
+    {
+        ActorState body = Player.Body;
+        for (int attempt = 0; attempt < 32; attempt++)
+        {
+            int x = _random.Next(0, Level.Width);
+            int y = _random.Next(0, Level.Height);
+            if (!Level.IsWalkable(x, y))
+            {
+                continue;
+            }
+
+            float dx = x - body.TileX;
+            float dy = y - body.TileY;
+            if ((dx * dx) + (dy * dy) >= 64f)
+            {
+                return (x, y);
+            }
+        }
+
+        return (body.TileX, body.TileY);
+    }
+
+    private void AddMonster(string archetypeId, int tileX, int tileY)
+    {
+        if (_rules.Monster(archetypeId) is not MonsterArchetype archetype)
+        {
+            return;
+        }
+
+        int maxHp = archetype.BaseHp;
+        var body = new ActorState(
+            _nextActorId++, ActorKind.Monster, tileX + 0.5f, tileY + 0.5f, maxHp, archetype.Stats);
+        _monsters.Add(new MonsterState(body, archetype));
+    }
+
+    private void AddGroundItem(string archetypeId, int tileX, int tileY)
+    {
+        if (_rules.Item(archetypeId) is not ItemArchetype)
+        {
+            return;
+        }
+
+        _groundItems.Add(new GroundItem(ItemInstance.One(archetypeId), tileX, tileY));
+    }
+
+    private (int X, int Y) TileInFront(float distance)
+    {
+        ActorState body = Player.Body;
+        float facingX = MathF.Sin(body.Facing);
+        float facingY = -MathF.Cos(body.Facing);
+        return (TileAt(body.X + (facingX * distance)), TileAt(body.Y + (facingY * distance)));
+    }
+
+    /// <summary>Armor class from the player's gear only; the defense stat is added by the resolver.</summary>
+    private int GearArmorClass()
+    {
+        int armor = 0;
+        if (Player.Equipment.ArmorItemId is string armorId && _rules.Item(armorId) is ItemArchetype armorItem)
+        {
+            armor += armorItem.Power;
+        }
+
+        if (Player.Equipment.HelmetItemId is string helmetId && _rules.Item(helmetId) is ItemArchetype helmetItem)
+        {
+            armor += helmetItem.Power;
+        }
+
+        return armor;
+    }
+
+    private int ArmorClassOf(ActorState target) =>
+        target.Kind == ActorKind.Player ? GearArmorClass() : 0;
+
+    private void ShowMessage(string text) => _messages.Add(new RunMessage(text, MessageDurationTicks));
+
+    private static float Distance(ActorState left, ActorState right)
+    {
+        float dx = left.X - right.X;
+        float dy = left.Y - right.Y;
+        return MathF.Sqrt((dx * dx) + (dy * dy));
+    }
+}

@@ -22,15 +22,20 @@ when the active task or review workflow calls for them.
 | [Error and boundary paths](lanes/error-and-boundary-paths.md) | Changed input admission, parsing, resource lifetime, or failure paths |
 | [Runtime trust](lanes/runtime-trust.md) | Added validation, guards, snapshots, or recovery machinery |
 | [Test claims](lanes/test-claims.md) | New tests or claims that checks establish behavior |
+| [Donor fidelity](lanes/donor-fidelity.md) | Ruleset/import behavior claiming Delver donor precedent |
 
 Choose distinct questions. Do not run every lane by default, demand a fixed
 reviewer count, or turn optional interactive testing into a universal gate.
+Recorded divergences in docs/gameplay-design.md are decisions: the
+donor-fidelity lane reports unrecorded drift, not the divergence itself.
 Engine reuse asks whether the mechanism belongs upstream; product reuse asks
 whether this repository already has its owner. Keep those findings distinct.
 
 ## Reviewer packet
 
-Give each reviewer this guide and its selected lane, plus:
+Start from [reviewer-packet.md](reviewer-packet.md); it carries this
+repository's standing facts. Give each reviewer this guide and its selected
+lane, plus:
 
 - Repository path, exact commit/diff or working-tree artifact, and owned scope.
 - Original user/task requirements, exclusions, and directly applicable contracts.

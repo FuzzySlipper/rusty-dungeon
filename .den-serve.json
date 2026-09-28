@@ -1,0 +1,12 @@
+{
+  "project": "rusty-dungeon",
+  "serve": {
+    "command": "exec ./scripts/run-csharp.sh --live-debug --bind-host {host} --port {port}",
+    "preferredPort": 4178,
+    "healthUrl": "/product-ui/main.js",
+    "readyText": "mountProductUi",
+    "reusePolicy": "broker_owned",
+    "startupTimeout": "180s",
+    "healthInterval": "250ms"
+  }
+}

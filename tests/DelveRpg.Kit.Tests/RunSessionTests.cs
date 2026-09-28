@@ -1,0 +1,185 @@
+using DelveRpg.Kit.Inventory;
+using DelveRpg.Kit.Progression;
+using DelveRpg.Kit.Rules;
+using DelveRpg.Kit.Session;
+using Xunit;
+
+namespace DelveRpg.Kit.Tests;
+
+public sealed class RunSessionTests
+{
+    private static GameTuning Tuning => new() { EscapeSpawnCadenceStartTicks = 5, EscapeSpawnCadenceEndTicks = 2 };
+
+    private static RunPlan Plan => new(
+    [
+        new FloorSpec(0, 1, "One", "Test", false),
+        new FloorSpec(1, 2, "Two", "Test", false),
+        new FloorSpec(2, 3, "Three", "Test", false),
+    ]);
+
+    private static RunSession Session() => new(new ScriptedCatalog(), Tuning, Plan, 1234UL, MetaProgression.Fresh);
+
+    private static RunSession Restored(RunSnapshot snapshot) =>
+        new(new ScriptedCatalog(), Tuning, Plan, snapshot, MetaProgression.Fresh);
+
+    [Fact]
+    public void Held_movement_walks_the_player_across_the_floor()
+    {
+        RunSession session = Session();
+        float startX = session.Player.Body.X;
+        float startY = session.Player.Body.Y;
+
+        for (int i = 0; i < 60; i++)
+        {
+            session.Tick(RunInput.Idle with { MoveY = 1f });
+        }
+
+        float moved = MathF.Abs(session.Player.Body.X - startX) + MathF.Abs(session.Player.Body.Y - startY);
+        Assert.True(moved > 0.2f, $"player did not walk (moved {moved})");
+        Assert.True(session.Level.IsWalkable(session.Player.Body.TileX, session.Player.Body.TileY));
+    }
+
+    [Fact]
+    public void Using_the_stairs_down_moves_the_run_one_floor_deeper()
+    {
+        RunSession session = Session();
+        (int stairsX, int stairsY) = FindTile(session, Kit.World.TileKind.StairsDown);
+        StandBefore(session, stairsX, stairsY);
+
+        session.Tick(RunInput.Idle with { UsePressed = true });
+
+        Assert.Equal(1, session.RunIndex);
+        Assert.Equal(2, session.Level.DifficultyLevel);
+    }
+
+    [Fact]
+    public void Leaving_without_the_objective_is_refused()
+    {
+        RunSession session = Session();
+        (int startX, int startY) = FindTile(session, Kit.World.TileKind.StairsUp);
+        StandBefore(session, startX, startY);
+
+        session.Tick(RunInput.Idle with { UsePressed = true });
+
+        Assert.Equal(0, session.RunIndex);
+        Assert.Equal(RunPhase.Playing, session.Phase);
+        Assert.Contains(session.Messages, message => message.Text.Contains("cannot leave", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Walking_over_an_item_picks_it_up()
+    {
+        RunSession session = Session();
+        RunSnapshot snapshot = session.Capture() with
+        {
+            Gold = 0,
+            GroundItems = [new SnapshotGroundItem("test.item.gold", 1, (int)session.Player.Body.X, (int)session.Player.Body.Y)],
+        };
+
+        RunSession restored = Restored(snapshot);
+        restored.Tick(RunInput.Idle with { MoveX = 1f });
+
+        Assert.Empty(restored.GroundItems);
+        Assert.Equal(25, restored.Player.Gold);
+    }
+
+    [Fact]
+    public void A_monster_next_to_the_player_attacks()
+    {
+        RunSession session = Session();
+        RunSnapshot snapshot = session.Capture() with
+        {
+            Monsters = [new SnapshotMonster("test.monster.rat", session.Player.Body.X + 1f, session.Player.Body.Y, 6, 0f)],
+        };
+
+        RunSession restored = Restored(snapshot);
+        restored.Tick(RunInput.Idle);
+
+        Assert.True(restored.Player.Body.Hp < restored.Player.Body.MaxHp);
+    }
+
+    [Fact]
+    public void Earning_enough_experience_offers_a_level_up_choice()
+    {
+        RunSession session = Session();
+        // Cumulative thresholds: level 2 needs 8 total xp, level 3 needs 32.
+        RunSnapshot snapshot = session.Capture() with { Experience = 10, PlayerLevel = 1 };
+
+        RunSession restored = Restored(snapshot);
+        restored.Tick(RunInput.Idle);
+
+        Assert.Equal(RunPhase.LevelUp, restored.Phase);
+        Assert.Equal(3, restored.LevelUpOffers.Count);
+
+        restored.Tick(RunInput.Idle with { MenuDown = true, MenuConfirm = true });
+        Assert.Equal(RunPhase.Playing, restored.Phase);
+        Assert.Equal(2, restored.Player.Level);
+    }
+
+    [Fact]
+    public void Holding_the_objective_brings_pursuit()
+    {
+        RunSession session = Session();
+        RunSnapshot snapshot = session.Capture() with { HoldingOrb = true };
+        RunSession restored = Restored(snapshot);
+        int before = restored.Monsters.Count;
+
+        for (int i = 0; i < 12; i++)
+        {
+            restored.Tick(RunInput.Idle);
+        }
+
+        Assert.True(restored.Monsters.Count > before);
+    }
+
+    [Fact]
+    public void Capture_and_restore_preserves_the_run()
+    {
+        RunSession session = Session();
+        for (int i = 0; i < 30; i++)
+        {
+            session.Tick(RunInput.Idle with { MoveY = 1f, LookYawDegrees = 2f });
+        }
+
+        session.Player.Gold = 77;
+        RunSnapshot snapshot = session.Capture();
+        RunSession restored = Restored(snapshot);
+
+        Assert.Equal(session.RunIndex, restored.RunIndex);
+        Assert.Equal(session.Player.Body.X, restored.Player.Body.X);
+        Assert.Equal(session.Player.Body.Y, restored.Player.Body.Y);
+        Assert.Equal(77, restored.Player.Gold);
+        Assert.Equal(session.Level.Width, restored.Level.Width);
+        for (int y = 0; y < session.Level.Height; y++)
+        {
+            for (int x = 0; x < session.Level.Width; x++)
+            {
+                Assert.Equal(session.Level.At(x, y), restored.Level.At(x, y));
+            }
+        }
+    }
+
+    private static (int X, int Y) FindTile(RunSession session, Kit.World.TileKind kind)
+    {
+        for (int y = 0; y < session.Level.Height; y++)
+        {
+            for (int x = 0; x < session.Level.Width; x++)
+            {
+                if (session.Level.At(x, y).Kind == kind)
+                {
+                    return (x, y);
+                }
+            }
+        }
+
+        throw new InvalidOperationException($"Floor has no {kind} tile.");
+    }
+
+    /// <summary>Stand just west of a tile and face it, so "use" reaches it.</summary>
+    private static void StandBefore(RunSession session, int tileX, int tileY)
+    {
+        session.Player.Body.X = tileX - 0.5f;
+        session.Player.Body.Y = tileY + 0.5f;
+        session.Player.Body.Facing = MathF.PI / 2f;
+    }
+}

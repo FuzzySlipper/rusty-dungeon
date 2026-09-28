@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-project="$repo_root/src/RustyTemplate.Game/RustyTemplate.Game.csproj"
+project="$repo_root/src/DelveRpg.Host/DelveRpg.Host.csproj"
 target=StageRustyEngineCoreClrProduct
 case "${1:-}" in
   '') ;;

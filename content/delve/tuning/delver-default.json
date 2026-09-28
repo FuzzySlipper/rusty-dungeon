@@ -1,0 +1,17 @@
+{
+  "maxWalkSpeed": 0.06,
+  "walkAcceleration": 0.02,
+  "walkFriction": 0.8,
+  "attackChargeTicks": 40,
+  "attackCooldownTicks": 30,
+  "dodgeChance": 0.15,
+  "enchantChance": 0.2,
+  "fleeHpFraction": 0.25,
+  "escapeSpawnCadenceStartTicks": 600,
+  "escapeSpawnCadenceEndTicks": 60,
+  "escapeSpawnGroupStart": 3,
+  "escapeSpawnGroupEnd": 15,
+  "seenRadius": 5,
+  "startingGold": 40,
+  "eyeHeight": 0.5
+}

@@ -1,0 +1,7 @@
+{
+  "kind": "delve.game-bundle",
+  "id": "delve.run",
+  "ruleset": "delver",
+  "packs": ["delve-core"],
+  "tuning": "delver-default"
+}

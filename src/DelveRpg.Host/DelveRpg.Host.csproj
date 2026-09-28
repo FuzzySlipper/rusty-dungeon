@@ -1,0 +1,89 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- The immutable SDK owns generated CoreCLR and NativeAOT composition below obj. This ordinary
+         product project remains the one entry root, and the only project that declares a product. -->
+    <RustyEngineProductEntryType>DelveRpg.Host.DelveProduct</RustyEngineProductEntryType>
+    <RustyEngineProductId>rusty-dungeon-delve</RustyEngineProductId>
+    <RustyEngineProductTitle>Rusty Dungeon</RustyEngineProductTitle>
+    <RustyEngineProductUiRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui/generated'))</RustyEngineProductUiRoot>
+    <RustyEngineProductUiEntry>main.js</RustyEngineProductUiEntry>
+    <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
+    <RustyEngineProductUiProjectionStream>delve.hud</RustyEngineProductUiProjectionStream>
+    <RustyEngineProductUiProjectionContract>delve.ui.snapshot.v1</RustyEngineProductUiProjectionContract>
+    <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
+    <RustyEngineProductFixedStepHz>60</RustyEngineProductFixedStepHz>
+    <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
+    <!-- First-person play needs the captured cursor for mouse-look. -->
+    <RustyEngineProductInputCursorMode>pointer-lock</RustyEngineProductInputCursorMode>
+    <RustyEngineWatchPaths>$(MSBuildProjectDirectory);$(RustyEngineProductUiRoot);$(RustyEngineProductContentRoot)</RustyEngineWatchPaths>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Rusty.Engine" Version="$(RustyEnginePackageVersion)">
+      <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>
+    </PackageReference>
+    <ProjectReference Include="../DelveRpg.Kit/DelveRpg.Kit.csproj" />
+    <ProjectReference Include="../DelveRpg.Rulesets.Delver/DelveRpg.Rulesets.Delver.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Semantic intents; the DOM companion claims the same names. -->
+    <RustyEngineProductInputIntent Include="move.forward" Value="digital" />
+    <RustyEngineProductInputIntent Include="move.back" Value="digital" />
+    <RustyEngineProductInputIntent Include="move.left" Value="digital" />
+    <RustyEngineProductInputIntent Include="move.right" Value="digital" />
+    <RustyEngineProductInputIntent Include="attack" Value="digital" />
+    <RustyEngineProductInputIntent Include="use" Value="digital" />
+    <RustyEngineProductInputIntent Include="hotbar.1" Value="digital" />
+    <RustyEngineProductInputIntent Include="hotbar.2" Value="digital" />
+    <RustyEngineProductInputIntent Include="hotbar.3" Value="digital" />
+    <RustyEngineProductInputIntent Include="hotbar.4" Value="digital" />
+    <RustyEngineProductInputIntent Include="hotbar.5" Value="digital" />
+    <RustyEngineProductInputIntent Include="hotbar.6" Value="digital" />
+    <RustyEngineProductInputIntent Include="inventory" Value="digital" />
+    <RustyEngineProductInputIntent Include="map" Value="digital" />
+    <RustyEngineProductInputIntent Include="menu.confirm" Value="digital" />
+    <RustyEngineProductInputIntent Include="menu.cancel" Value="digital" />
+    <RustyEngineProductInputIntent Include="menu.up" Value="digital" />
+    <RustyEngineProductInputIntent Include="menu.down" Value="digital" />
+
+    <!-- Physical mappings; held triggers drive continuous movement, pressed
+         triggers are one-shot actions. The keyboard-control vocabulary the
+         runtime accepts is letters, digit-N, space/enter/escape, and the
+         modifiers; menu navigation therefore doubles the move keys, which the
+         session reads only while a menu phase is open. -->
+    <RustyEngineProductInputMapping Include="move.forward.key-w" Intent="move.forward" Trigger="key:key-w:held" />
+    <RustyEngineProductInputMapping Include="move.back.key-s" Intent="move.back" Trigger="key:key-s:held" />
+    <RustyEngineProductInputMapping Include="move.left.key-a" Intent="move.left" Trigger="key:key-a:held" />
+    <RustyEngineProductInputMapping Include="move.right.key-d" Intent="move.right" Trigger="key:key-d:held" />
+    <RustyEngineProductInputMapping Include="attack.pointer-primary" Intent="attack" Trigger="pointer-button:primary:held" />
+    <RustyEngineProductInputMapping Include="use.key-e" Intent="use" Trigger="key:key-e:pressed" />
+    <RustyEngineProductInputMapping Include="hotbar.1.digit-1" Intent="hotbar.1" Trigger="key:digit-1:pressed" />
+    <RustyEngineProductInputMapping Include="hotbar.2.digit-2" Intent="hotbar.2" Trigger="key:digit-2:pressed" />
+    <RustyEngineProductInputMapping Include="hotbar.3.digit-3" Intent="hotbar.3" Trigger="key:digit-3:pressed" />
+    <RustyEngineProductInputMapping Include="hotbar.4.digit-4" Intent="hotbar.4" Trigger="key:digit-4:pressed" />
+    <RustyEngineProductInputMapping Include="hotbar.5.digit-5" Intent="hotbar.5" Trigger="key:digit-5:pressed" />
+    <RustyEngineProductInputMapping Include="hotbar.6.digit-6" Intent="hotbar.6" Trigger="key:digit-6:pressed" />
+    <RustyEngineProductInputMapping Include="inventory.key-i" Intent="inventory" Trigger="key:key-i:pressed" />
+    <RustyEngineProductInputMapping Include="map.key-m" Intent="map" Trigger="key:key-m:pressed" />
+    <RustyEngineProductInputMapping Include="menu.confirm.enter" Intent="menu.confirm" Trigger="key:enter:pressed" />
+    <RustyEngineProductInputMapping Include="menu.cancel.escape" Intent="menu.cancel" Trigger="key:escape:pressed" />
+    <RustyEngineProductInputMapping Include="menu.up.key-w" Intent="menu.up" Trigger="key:key-w:pressed" />
+    <RustyEngineProductInputMapping Include="menu.down.key-s" Intent="menu.down" Trigger="key:key-s:pressed" />
+  </ItemGroup>
+
+  <!-- The DOM companion is TypeScript; compile it to the generated directory
+       the product stages. Generated output is ignored, never edited by hand. -->
+  <Target Name="BuildDelveProductUi" BeforeTargets="GenerateRustyEngineProductComposition">
+    <Delete Files="$(RustyEngineProductUiRoot)/main.js.map;$(RustyEngineProductUiRoot)/main.d.ts" />
+    <Exec Command="npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc -p &quot;$(MSBuildThisFileDirectory)../ui&quot;" />
+  </Target>
+</Project>

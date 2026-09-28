@@ -1,13 +1,31 @@
 # DOM companion
 
-`src/ui/main.js` exports `mountProductUi`. It submits the declared `increment` intent
-and observes the Engine-delivered counter projection. The product project
-selects this directory and module for SDK staging.
+`src/ui/main.ts` exports `mountProductUi(root, context)` and the pure
+`renderHud(doc, root, snapshot)` used by DOM tests. The companion is the HUD
+of a Delver-style descent: phase line, health, messages, the use prompt, the
+flat hotbar, stats, the escape indicator, the explored map window, and the
+level-up chooser. TypeScript compiles to the ignored `src/ui/generated/`,
+which the product project stages.
 
-Keep only browser assets in `src/ui/`. The host admits every staged file by its
-content type; documentation belongs under `docs/`.
+The projection contract is `delve.ui.snapshot.v1` on the `delve.hud` stream
+(declared in both `DelveRpg.Host.csproj` and `DelveHudProjection`). A snapshot
+carries: `phase` (`title`, `run`, `levelup`, `dead`, `won`), run facts
+(`runIndex`, `section`, `dungeonLevel`), vitals (`hp`, `maxHp`,
+`playerLevel`, `experience`, `experienceToNext`), economy (`gold`, `keys`),
+`messages`, `usePrompt`, `hotbar` (six slots with `itemId`, `name`, `kind`,
+`count`, `wielded`), `stats`, `levelUp` (`offers`, `cursor`), `holdingOrb`,
+`escapePressure`, and `minimap` (`size`, `cells`, `playerX`, `playerY`,
+`heading`). The `cells` grid is row-major around the player: blank unseen,
+`#` explored wall, `.` explored floor, `+` door, `~` water, `<`/`>` stairs,
+`@` the player's tile.
 
-Keep this lane to DOM presentation, accessibility, and semantic actions.
-Counter state lives in C#; input delivery, projection transport, the canvas,
-and rendering belong to Engine. Dispose event listeners and subscriptions
-when the host unmounts the UI.
+Controls claim only declared digital intents — `menu.confirm`,
+`menu.cancel`, `menu.up`, `menu.down` — the same names the staged product
+manifest declares, so a control cannot send something nothing handles. Run
+state lives in C#; input delivery, projection transport, the canvas, and
+rendering belong to Engine.
+
+Keep only browser assets in `src/ui/`. The host admits every staged file by
+its content type; documentation belongs under `docs/`. Keep this lane to DOM
+presentation, accessibility, and semantic actions. Dispose event listeners
+and subscriptions when the host unmounts the UI.

@@ -1,0 +1,6 @@
+{
+  "kind": "delver.content-pack",
+  "id": "delve-core",
+  "ruleset": "delver",
+  "payload": "packs/delve-core.json"
+}
