@@ -81,7 +81,31 @@ public sealed class DelveInputRouterTests
         PayloadData: default);
 
     [Fact]
-    public void Held_intents_track_until_the_release_edge()
+    public void Held_intents_persist_while_the_engine_keeps_asserting_them()
+    {
+        var router = new DelveInputRouter();
+        router.Route(new[] { Digital("move.forward", InputEdge.Held, 1f) });
+        Assert.Equal(1f, router.TakeTickInput().MoveY);
+
+        router.Route(new[] { Digital("move.forward", InputEdge.Held, 1f) });
+        Assert.Equal(1f, router.TakeTickInput().MoveY);
+    }
+
+    [Fact]
+    public void Held_intents_release_by_absence_not_by_a_release_edge()
+    {
+        // Held-trigger mappings emit nothing on release; a missing assertion
+        // must release the hold (a latched press reads as an auto-repeater).
+        var router = new DelveInputRouter();
+        router.Route(new[] { Digital("attack", InputEdge.Held, 1f) });
+        Assert.True(router.TakeTickInput().AttackHeld);
+
+        router.Route(ReadOnlySpan<ProductInputEvent>.Empty);
+        Assert.False(router.TakeTickInput().AttackHeld);
+    }
+
+    [Fact]
+    public void An_explicit_release_also_releases_the_hold()
     {
         var router = new DelveInputRouter();
         router.Route(new[] { Digital("move.forward", InputEdge.Pressed, 1f) });
@@ -151,9 +175,11 @@ public sealed class DelveInputRouterTests
         var router = new DelveInputRouter();
         router.Route(new[] { Look(1.5f, -0.5f), Look(0.5f, 0.25f) });
         var input = router.TakeTickInput();
-        // Deltas accumulate through the router's look sensitivity (0.12).
+        // Units integrate through the Engine Look service at 0.12° per unit,
+        // with the SDK's InvertVertical convention: moving the mouse up
+        // (negative Y) pitches the camera up (positive degrees).
         Assert.True(MathF.Abs(input.LookYawDegrees - (2f * 0.12f)) < 1e-4f);
-        Assert.True(MathF.Abs(input.LookPitchDegrees - (-0.25f * 0.12f)) < 1e-4f);
+        Assert.True(MathF.Abs(input.LookPitchDegrees - (0.25f * 0.12f)) < 1e-4f);
         Assert.Equal(0f, router.TakeTickInput().LookYawDegrees);
     }
 

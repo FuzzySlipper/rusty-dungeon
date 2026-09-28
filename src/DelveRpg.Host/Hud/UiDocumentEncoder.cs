@@ -57,13 +57,18 @@ public static class UiDocumentEncoder
         {
             case UiDocument.Obj obj:
             {
-                uint firstEdge = (uint)edges.Count;
+                // Children encode depth-first; their edge runs belong to them.
+                // This node's edge block is written as one contiguous run after
+                // its whole subtree, because consumers read exactly
+                // [firstEdge, firstEdge + childCount).
+                var children = new List<uint>(obj.Fields.Count);
                 foreach ((string fieldKey, UiDocument value) in obj.Fields)
                 {
-                    uint child = EncodeNode(value, fieldKey, nodes, edges, utf8);
-                    edges.Add(child);
+                    children.Add(EncodeNode(value, fieldKey, nodes, edges, utf8));
                 }
 
+                uint firstEdge = (uint)edges.Count;
+                edges.AddRange(children);
                 nodes[(int)nodeIndex] = new StructuredValueNode(
                     StructuredValueKind.Object, 0, 0, keyOffset, keyLength, 0, 0, firstEdge, (uint)obj.Fields.Count);
                 break;
@@ -71,13 +76,14 @@ public static class UiDocumentEncoder
 
             case UiDocument.Arr arr:
             {
-                uint firstEdge = (uint)edges.Count;
+                var children = new List<uint>(arr.Items.Count);
                 foreach (UiDocument item in arr.Items)
                 {
-                    uint child = EncodeNode(item, null, nodes, edges, utf8);
-                    edges.Add(child);
+                    children.Add(EncodeNode(item, null, nodes, edges, utf8));
                 }
 
+                uint firstEdge = (uint)edges.Count;
+                edges.AddRange(children);
                 nodes[(int)nodeIndex] = new StructuredValueNode(
                     StructuredValueKind.Array, 0, 0, keyOffset, keyLength, 0, 0, firstEdge, (uint)arr.Items.Count);
                 break;

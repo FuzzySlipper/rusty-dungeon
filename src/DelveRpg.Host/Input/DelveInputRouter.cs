@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text;
 using DelveRpg.Kit.Session;
 using Rusty.Engine;
@@ -6,12 +7,27 @@ namespace DelveRpg.Host.Input;
 
 /// <summary>
 /// Translates Engine input events into one tick of semantic <see cref="RunInput"/>.
-/// Held intents keep derived state that every <c>Clear</c> fact releases.
+/// Held intents keep derived state that every <c>Clear</c> fact releases. Look
+/// deltas run through the Engine's <see cref="Look"/> integrator so axis signs,
+/// pitch clamping, and yaw wrap follow the SDK's conventions rather than local
+/// arithmetic.
 /// </summary>
 public sealed class DelveInputRouter
 {
     private const float DigitalThreshold = 0.5f;
-    private const float LookSensitivity = 0.12f;
+
+    /// <summary>Pointer units to radians; matches the reference FPS convention of 0.12° per unit.</summary>
+    private const float LookRadiansPerInputUnit = 0.12f * (MathF.PI / 180f);
+
+    private static readonly LookConfig LookConfiguration = new(
+        LookRadiansPerInputUnit,
+        LookRadiansPerInputUnit,
+        MinimumPitchRadians: (-80f * (MathF.PI / 180f)),
+        MaximumPitchRadians: 80f * (MathF.PI / 180f),
+        MaximumDeltaRadians: MathF.PI,
+        InvertHorizontal: false,
+        InvertVertical: true,
+        WrapYaw: true);
 
     private static readonly byte[] MoveForward = "move.forward"u8.ToArray();
     private static readonly byte[] MoveBack = "move.back"u8.ToArray();
@@ -39,12 +55,25 @@ public sealed class DelveInputRouter
     private bool _menuUp;
     private bool _menuDown;
     private int _hotbarPressed;
-    private float _lookYaw;
-    private float _lookPitch;
+    private float _lookYawUnits;
+    private float _lookPitchUnits;
+    private LookState _look = new(0f, 0f);
 
-    /// <summary>Route one update's events into the pending tick state.</summary>
+    /// <summary>
+    /// Route one update's events into the pending tick state. Held-trigger
+    /// mappings are level signals: the engine re-emits them once per step while
+    /// the control is down and emits nothing when it comes up, so absence is
+    /// the release — the derived held state is rebuilt from each update's
+    /// evidence rather than latched from the last envelope.
+    /// </summary>
     public void Route(ReadOnlySpan<ProductInputEvent> events)
     {
+        _forward = false;
+        _back = false;
+        _left = false;
+        _right = false;
+        _attackHeld = false;
+
         foreach (ProductInputEvent input in events)
         {
             switch (input.Kind)
@@ -53,8 +82,8 @@ public sealed class DelveInputRouter
                     ReleaseAll();
                     continue;
                 case InputEventKind.PointerDelta:
-                    _lookYaw += input.X * LookSensitivity;
-                    _lookPitch += input.Y * LookSensitivity;
+                    _lookYawUnits += input.X;
+                    _lookPitchUnits += input.Y;
                     continue;
                 case InputEventKind.MappedDigital:
                 case InputEventKind.DirectDigital:
@@ -149,11 +178,28 @@ public sealed class DelveInputRouter
     /// <summary>Consume the pending state into one tick of run input.</summary>
     public RunInput TakeTickInput()
     {
+        LookReceipt look = Look.IntegrateClamped(new LookRequest(
+            _look, new Vector2(_lookYawUnits, _lookPitchUnits), LookConfiguration));
+        _look = look.After;
+
+        // Wrap-aware delta out of the integrated state, in degrees.
+        float yawRadians = look.After.YawRadians - look.Before.YawRadians;
+        if (yawRadians > MathF.PI)
+        {
+            yawRadians -= 2f * MathF.PI;
+        }
+        else if (yawRadians < -MathF.PI)
+        {
+            yawRadians += 2f * MathF.PI;
+        }
+
+        float pitchDegrees = (look.After.PitchRadians - look.Before.PitchRadians) * (180f / MathF.PI);
+
         var input = new RunInput(
             MoveX: (_right ? 1f : 0f) - (_left ? 1f : 0f),
             MoveY: (_forward ? 1f : 0f) - (_back ? 1f : 0f),
-            LookYawDegrees: _lookYaw,
-            LookPitchDegrees: _lookPitch,
+            LookYawDegrees: yawRadians * (180f / MathF.PI),
+            LookPitchDegrees: pitchDegrees,
             AttackHeld: _attackHeld,
             UsePressed: _usePressed,
             HotbarPressed: _hotbarPressed,
@@ -164,8 +210,8 @@ public sealed class DelveInputRouter
             MenuUp: _menuUp,
             MenuDown: _menuDown);
 
-        _lookYaw = 0f;
-        _lookPitch = 0f;
+        _lookYawUnits = 0f;
+        _lookPitchUnits = 0f;
         _usePressed = false;
         _hotbarPressed = 0;
         _inventoryToggled = false;
@@ -197,7 +243,7 @@ public sealed class DelveInputRouter
         _menuUp = false;
         _menuDown = false;
         _hotbarPressed = 0;
-        _lookYaw = 0f;
-        _lookPitch = 0f;
+        _lookYawUnits = 0f;
+        _lookPitchUnits = 0f;
     }
 }

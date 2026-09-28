@@ -28,6 +28,8 @@ public sealed class DelveSceneRenderer : IDisposable
     private readonly Camera _camera;
     private readonly Material _material;
     private readonly Dictionary<ulong, Appearance> _actorAppearances = new();
+    private readonly List<Appearance> _retiredAppearances = new();
+    private readonly List<MeshResource> _retiredMeshes = new();
     private MeshResource? _levelMesh;
     private Appearance? _levelAppearance;
     private ulong _loadedLevelRevision;
@@ -142,25 +144,60 @@ public sealed class DelveSceneRenderer : IDisposable
 
         foreach (ulong stale in _actorAppearances.Keys.Where(id => !live.Contains(id)).ToList())
         {
-            _actorAppearances[stale].Dispose();
+            _retiredAppearances.Add(_actorAppearances[stale]);
             _actorAppearances.Remove(stale);
         }
 
         _engine.Graphics.PublishSnapshot(facts.ToArray());
+
+        // A retained appearance must leave the published snapshot before
+        // disposal; the publish above is the first that excludes these.
+        RetireDrain();
     }
 
+    private void RetireDrain()
+    {
+        List<Exception> failures = new();
+        foreach (Appearance appearance in _retiredAppearances)
+        {
+            TryDispose(appearance.Dispose, failures);
+        }
+
+        foreach (MeshResource mesh in _retiredMeshes)
+        {
+            TryDispose(mesh.Dispose, failures);
+        }
+
+        _retiredAppearances.Clear();
+        _retiredMeshes.Clear();
+        if (failures.Count > 0)
+        {
+            throw new AggregateException("Retired scene resource disposal failed.", failures);
+        }
+    }
+
+    /// <summary>
+    /// Swap in a new floor's geometry. The replaced resources are retired and
+    /// only disposed after the next publish drops them (the publish at the end
+    /// of this render).
+    /// </summary>
     private void LoadLevel(DungeonLevel level, string theme)
     {
         if (_levelAppearance is not null)
         {
-            _levelAppearance.Dispose();
+            _retiredAppearances.Add(_levelAppearance);
             _levelAppearance = null;
         }
 
-        _levelMesh?.Dispose();
+        if (_levelMesh is not null)
+        {
+            _retiredMeshes.Add(_levelMesh);
+            _levelMesh = null;
+        }
+
         foreach (Appearance appearance in _actorAppearances.Values)
         {
-            appearance.Dispose();
+            _retiredAppearances.Add(appearance);
         }
 
         _actorAppearances.Clear();
@@ -212,12 +249,31 @@ public sealed class DelveSceneRenderer : IDisposable
 
         _disposed = true;
         List<Exception> failures = new();
+
+        // A retained appearance must leave the published snapshot before
+        // disposal; publish the empty scene first.
+        TryDispose(
+            () => _engine.Graphics.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty),
+            failures);
+
         foreach (Appearance appearance in _actorAppearances.Values)
         {
             TryDispose(appearance.Dispose, failures);
         }
 
         _actorAppearances.Clear();
+        foreach (Appearance appearance in _retiredAppearances)
+        {
+            TryDispose(appearance.Dispose, failures);
+        }
+
+        foreach (MeshResource mesh in _retiredMeshes)
+        {
+            TryDispose(mesh.Dispose, failures);
+        }
+
+        _retiredAppearances.Clear();
+        _retiredMeshes.Clear();
         if (_levelAppearance is not null)
         {
             TryDispose(_levelAppearance.Dispose, failures);
