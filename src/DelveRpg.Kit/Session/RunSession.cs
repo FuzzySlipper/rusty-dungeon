@@ -112,7 +112,13 @@ public sealed partial class RunSession
     public IReadOnlyList<RunMessage> Messages => _messages;
 
     /// <summary>Bumped every time a floor is generated or restored.</summary>
-    public ulong LevelRevision { get; private set; }
+    /// <summary>
+    /// Monotonic scene-staleness marker: floor changes plus every grid change
+    /// on the current floor (a door opening, wherever it was opened from).
+    /// </summary>
+    public ulong LevelRevision => _levelRevision + Level.Revision;
+
+    private ulong _levelRevision;
 
     public bool InventoryOpen { get; private set; }
 
@@ -380,7 +386,7 @@ public sealed partial class RunSession
         }
 
         _escapeSpawnRemaining = _tuning.EscapeSpawnCadenceStartTicks;
-        LevelRevision++;
+        _levelRevision++;
         ShowMessage($"{floor.SectionName} — dungeon level {floor.DungeonLevel}.");
     }
 }

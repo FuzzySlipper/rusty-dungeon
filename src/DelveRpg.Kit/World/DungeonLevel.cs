@@ -58,9 +58,20 @@ public sealed class DungeonLevel
 
     public string Theme { get; }
 
+    /// <summary>
+    /// Monotonic change counter for the grid. Presentation rebuilds the scene
+    /// when it moves, so every visible tile change (door open, new floor) must
+    /// pass through a mutator — a stale mesh leaves phantom walls standing.
+    /// </summary>
+    public ulong Revision { get; private set; }
+
     public Tile At(int x, int y) => _tiles[(y * Width) + x];
 
-    public void Set(int x, int y, Tile tile) => _tiles[(y * Width) + x] = tile;
+    public void Set(int x, int y, Tile tile)
+    {
+        _tiles[(y * Width) + x] = tile;
+        Revision++;
+    }
 
     public bool InBounds(int x, int y) => x >= 0 && y >= 0 && x < Width && y < Height;
 

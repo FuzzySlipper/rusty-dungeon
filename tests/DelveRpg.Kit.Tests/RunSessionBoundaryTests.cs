@@ -247,6 +247,21 @@ public sealed class RunSessionBoundaryTests
     }
 
     [Fact]
+    public void Opening_a_door_marks_the_scene_stale()
+    {
+        // Presentation rebuilds only when LevelRevision moves; a door opening
+        // that misses it leaves a phantom wall box standing in the doorway.
+        RunSnapshot snapshot = Snapshot(Room(doorX: 2, doorY: 2));
+        RunSession restored = Restored(snapshot);
+        ulong before = restored.LevelRevision;
+
+        restored.Tick(RunInput.Idle with { UsePressed = true });
+
+        Assert.Equal(TileKind.DoorOpen, restored.Level.At(2, 2).Kind);
+        Assert.True(restored.LevelRevision > before, "a door opening must move the scene revision");
+    }
+
+    [Fact]
     public void The_minimap_covers_every_documented_glyph()
     {
         RunSnapshot snapshot = Snapshot(Room(doorX: 2, doorY: 2, waterX: 3, waterY: 2, stairsDownX: 3, stairsDownY: 3));

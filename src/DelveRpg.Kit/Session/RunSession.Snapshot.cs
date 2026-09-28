@@ -261,6 +261,6 @@ public sealed partial class RunSession
         LevelUpCursor = Math.Clamp(snapshot.LevelUpCursor, 0, Math.Max(0, LevelUpOffers.Count - 1));
         Phase = snapshot.Phase;
         _escapeSpawnRemaining = _tuning.EscapeSpawnCadenceStartTicks;
-        LevelRevision++;
+        _levelRevision++;
     }
 }
