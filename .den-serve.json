@@ -2,7 +2,7 @@
   "project": "rusty-dungeon",
   "serve": {
     "command": "exec ./scripts/run-csharp.sh --live-debug --bind-host {host} --port {port}",
-    "preferredPort": 4178,
+    "preferredPort": 4179,
     "healthUrl": "/product-ui/main.js",
     "readyText": "mountProductUi",
     "reusePolicy": "broker_owned",
