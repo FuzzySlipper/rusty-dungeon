@@ -54,8 +54,15 @@ public sealed partial class RunSession
         _runSeed = runSeed;
         _random = runtimeDraws;
         Meta = meta;
+        StatBlock startingStats = new(4, 2, 4, 4, 2, 5);
         Player = new PlayerState(
-            new ActorState(_nextActorId++, ActorKind.Player, 0f, 0f, 1, new StatBlock(4, 2, 4, 4, 2, 5)),
+            new ActorState(
+                _nextActorId++,
+                ActorKind.Player,
+                0f,
+                0f,
+                LevelProgression.MaxHitPoints(startingStats, 1),
+                startingStats),
             new InventoryStore(meta.HotbarSize, meta.BackpackSize));
         EnterFloor(0);
     }

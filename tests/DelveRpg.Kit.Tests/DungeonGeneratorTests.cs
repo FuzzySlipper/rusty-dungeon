@@ -92,12 +92,34 @@ public sealed class DungeonGeneratorTests
         foreach (MonsterSpawn spawn in generated.Monsters)
         {
             Assert.True(generated.Level.IsWalkable(spawn.X, spawn.Y));
-            Assert.True(Math.Abs(spawn.X - generated.StartX) + Math.Abs(spawn.Y - generated.StartY) >= 4);
+            Assert.True(BfsDistance(generated, generated.StartX, generated.StartY, spawn.X, spawn.Y) >= 6);
         }
 
         foreach (ItemSpawn spawn in generated.Items)
         {
             Assert.True(generated.Level.IsWalkable(spawn.X, spawn.Y));
+        }
+    }
+
+    [Fact]
+    public void The_entrance_room_hosts_no_hostile_spawns()
+    {
+        // The run must be able to look around before anything comes for it.
+        for (int seed = 1; seed <= 12; seed++)
+        {
+            GeneratedLevel generated = DungeonGenerator.Generate(
+                new SplitMixRandom(SplitMixRandom.FloorSeed((ulong)seed, 0)), Config, Tuning, Floor, ["m1"], ["i1"]);
+
+            Assert.True(generated.EntranceRoom.Contains(generated.StartX, generated.StartY));
+            Assert.Equal(Config.MonsterCount, generated.Monsters.Count);
+            foreach (MonsterSpawn spawn in generated.Monsters)
+            {
+                Assert.False(
+                    generated.EntranceRoom.Contains(spawn.X, spawn.Y),
+                    $"monster at {spawn.X},{spawn.Y} landed in the entrance room (seed {seed})");
+                int distance = BfsDistance(generated, generated.StartX, generated.StartY, spawn.X, spawn.Y);
+                Assert.True(distance >= 6, $"monster at {spawn.X},{spawn.Y} is only {distance} tiles from start (seed {seed})");
+            }
         }
     }
 
@@ -126,6 +148,10 @@ public sealed class DungeonGeneratorTests
         return count;
     }
 
+    /// <summary>
+    /// Navigation distance: any actor can open a closed door, so doors count
+    /// as reachable ground here.
+    /// </summary>
     private static int BfsDistance(GeneratedLevel generated, int fromX, int fromY, int toX, int toY)
     {
         var seen = new HashSet<(int X, int Y)> { (fromX, fromY) };
@@ -141,7 +167,7 @@ public sealed class DungeonGeneratorTests
 
             foreach ((int nextX, int nextY) in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
             {
-                if (generated.Level.IsWalkable(nextX, nextY) && seen.Add((nextX, nextY)))
+                if (generated.Level.IsNavigable(nextX, nextY) && seen.Add((nextX, nextY)))
                 {
                     queue.Enqueue((nextX, nextY, distance + 1));
                 }

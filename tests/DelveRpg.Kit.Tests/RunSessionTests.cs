@@ -24,6 +24,19 @@ public sealed class RunSessionTests
         new(new ScriptedCatalog(), Tuning, Plan, snapshot, MetaProgression.Fresh, draws ?? new ScriptedRandom());
 
     [Fact]
+    public void A_fresh_character_starts_with_full_hit_points()
+    {
+        RunSession session = Session();
+        // Donor-derived starting durability: maxHp from the starting stats at
+        // level 1, and the bar starts full. Starting at 1 hp is a death spiral.
+        Assert.Equal(
+            Kit.Progression.LevelProgression.MaxHitPoints(session.Player.Body.Stats, 1),
+            session.Player.Body.MaxHp);
+        Assert.Equal(session.Player.Body.MaxHp, session.Player.Body.Hp);
+        Assert.True(session.Player.Body.MaxHp >= 10);
+    }
+
+    [Fact]
     public void Held_movement_walks_the_player_across_the_floor()
     {
         RunSession session = Session();

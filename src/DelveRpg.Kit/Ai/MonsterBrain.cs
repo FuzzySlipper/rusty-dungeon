@@ -86,6 +86,12 @@ public static class MonsterBrain
         }
 
         (int nextX, int nextY) = monster.Path[monster.PathIndex];
+        if (level.At(nextX, nextY).Kind == World.TileKind.DoorClosed)
+        {
+            // A chase goes through doors; the donor's monsters open them too.
+            level.TryOpenDoor(nextX, nextY);
+        }
+
         float speed = 0.03f * speedMultiplier * monster.Archetype.Stats.Speed / 4f;
         if (MoveTowards(monster.Body, nextX + 0.5f, nextY + 0.5f, speed, level))
         {

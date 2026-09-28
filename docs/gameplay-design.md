@@ -40,7 +40,12 @@ This port owns a flat tile-kind grid (`Wall`, `Floor`, `DoorClosed`,
 `DoorOpen`, `StairsDown`, `StairsUp`, `Water`) and generates rooms +
 L-corridors with door seams, stairs from far exit candidates, and bonus loot
 at leftover candidates ([donor] `gamemode/delver/DelverGameMode.java`
-`placeStairsDown`). Generation is validated: disconnected or unusable floors
+`placeStairsDown`). Closed doors are *navigable* seams — connectivity and
+monster paths run through them because any actor can open them — while
+sight and player movement stay blocked until the door is opened. The run
+starts on safe ground: no hostile spawns land in the entrance room or its
+doorway seams, and every other monster spawn sits at least six navigation
+tiles away. Generation is validated: disconnected or unusable floors
 regenerate, and an impossible config fails loudly.
 **Approximate** — the guarantees (connected floor, exits far from start,
 seams become doors) are kept; the chunk-prefab system is not.
@@ -82,8 +87,9 @@ damage are a later slice. Item conditions/degradation
 
 ## Monster AI
 
-Idle until the player is detected (range + line of sight), then chase along a
-bounded grid BFS path; flee below 25% HP
+Idle until the player is detected (range + line of sight — a closed door
+blocks detection), then chase along a bounded grid BFS path, opening closed
+doors in the path; flee below 25% HP
 ([donor] `entities/Monster.java` flee threshold). **Deliberate divergence:**
 the donor's node-graph paths and steering sweeps
 ([donor] `game/pathfinding/NodeGraphPathfinding.java`,

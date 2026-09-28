@@ -65,6 +65,28 @@ public sealed class MonsterBrainTests
     }
 
     [Fact]
+    public void A_chasing_monster_opens_the_door_in_its_path()
+    {
+        // Detection needs line of sight (a closed door blocks it); once the
+        // chase is on, a closed door in the path gets opened, not obeyed.
+        (MonsterState monster, PlayerState player, DungeonLevel level) = Scene(monsterHp: 20);
+        level.Set(5, 4, Tile.DoorOpen);
+        monster.Body.X = 4.5f;
+        player.Body.X = 7.5f;
+
+        MonsterBrain.Tick(monster, level, player, Tuning, 1f);
+        Assert.Equal(MonsterBrainState.Chasing, monster.BrainState);
+
+        level.Set(5, 4, Tile.DoorClosed);
+        for (int i = 0; i < 40; i++)
+        {
+            MonsterBrain.Tick(monster, level, player, Tuning, 1f);
+        }
+
+        Assert.Equal(TileKind.DoorOpen, level.At(5, 4).Kind);
+    }
+
+    [Fact]
     public void A_chase_closes_the_distance()
     {
         (MonsterState monster, PlayerState player, DungeonLevel level) = Scene(monsterHp: 20);

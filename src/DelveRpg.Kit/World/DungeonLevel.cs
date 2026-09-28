@@ -66,6 +66,13 @@ public sealed class DungeonLevel
 
     public bool IsWalkable(int x, int y) => InBounds(x, y) && At(x, y).IsWalkable;
 
+    /// <summary>
+    /// Reachable ground for connectivity and navigation: walkable tiles plus
+    /// closed doors, which any actor can open. Spawn placement and monster
+    /// paths care about this; movement and sight do not.
+    /// </summary>
+    public bool IsNavigable(int x, int y) => InBounds(x, y) && (At(x, y).IsWalkable || At(x, y).Kind == TileKind.DoorClosed);
+
     public bool BlocksSight(int x, int y) => !InBounds(x, y) || At(x, y).BlocksSight;
 
     /// <summary>Open a closed door in place; returns false when there is none.</summary>

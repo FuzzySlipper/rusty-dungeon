@@ -19,7 +19,18 @@ public sealed record MonsterSpawn(string ArchetypeId, int X, int Y);
 
 public sealed record ItemSpawn(string ArchetypeId, int X, int Y);
 
-/// <summary>One finished floor: the grid plus where the run starts and ends.</summary>
+/// <summary>One room rectangle on the grid.</summary>
+public readonly record struct RoomBounds(int X, int Y, int Width, int Height)
+{
+    /// <summary>Whether a tile sits in the room or on its immediate seams.</summary>
+    public bool Contains(int x, int y) =>
+        x >= X - 1 && x <= X + Width && y >= Y - 1 && y <= Y + Height;
+}
+
+/// <summary>
+/// One finished floor: the grid, where the run starts and ends, and the
+/// entrance room bounds (the spawn-free safe ground at the start).
+/// </summary>
 public sealed record GeneratedLevel(
     DungeonLevel Level,
     int StartX,
@@ -28,7 +39,8 @@ public sealed record GeneratedLevel(
     int StairsY,
     IReadOnlyList<MonsterSpawn> Monsters,
     IReadOnlyList<ItemSpawn> Items,
-    IReadOnlyList<ItemSpawn> BonusLoot);
+    IReadOnlyList<ItemSpawn> BonusLoot,
+    RoomBounds EntranceRoom);
 
 /// <summary>
 /// Room-and-corridor floor generation. The donor grows prefab chunks through a
@@ -117,7 +129,10 @@ public static class DungeonGenerator
             }
         }
 
-        List<(int X, int Y)> spawnSpots = OpenSpots(level, distances, minimumDistance: 4);
+        (int entranceX, int entranceY, int entranceWidth, int entranceHeight) = rooms[0];
+        List<(int X, int Y)> spawnSpots = OpenSpots(level, distances, minimumDistance: 6)
+            .Where(spot => !InsideEntrance(entranceX, entranceY, entranceWidth, entranceHeight, spot.X, spot.Y))
+            .ToList();
         var monsters = new List<MonsterSpawn>();
         var items = new List<ItemSpawn>();
         foreach ((int x, int y) in TakeShuffled(random, spawnSpots, config.MonsterCount))
@@ -136,7 +151,16 @@ public static class DungeonGenerator
             }
         }
 
-        return new GeneratedLevel(level, startX, startY, stairsX, stairsY, monsters, items, bonusLoot);
+        return new GeneratedLevel(
+            level,
+            startX,
+            startY,
+            stairsX,
+            stairsY,
+            monsters,
+            items,
+            bonusLoot,
+            new RoomBounds(entranceX, entranceY, entranceWidth, entranceHeight));
     }
 
     private static List<(int X, int Y, int Width, int Height)> PlaceRooms(IRandomSource random, GenerationConfig config)
@@ -247,7 +271,7 @@ public static class DungeonGenerator
             int distance = distances[(y * level.Width) + x];
             foreach ((int nextX, int nextY) in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
             {
-                if (!level.IsWalkable(nextX, nextY))
+                if (!level.IsNavigable(nextX, nextY))
                 {
                     continue;
                 }
@@ -284,6 +308,13 @@ public static class DungeonGenerator
         candidates.Sort((left, right) => right.Distance.CompareTo(left.Distance));
         return candidates.Take(5).ToList();
     }
+
+    /// <summary>
+    /// The entrance room plus its doorway seams: the safe ground the run
+    /// starts on. No hostile spawns land here.
+    /// </summary>
+    private static bool InsideEntrance(int roomX, int roomY, int roomWidth, int roomHeight, int x, int y) =>
+        x >= roomX - 1 && x <= roomX + roomWidth && y >= roomY - 1 && y <= roomY + roomHeight;
 
     private static List<(int X, int Y)> OpenSpots(DungeonLevel level, int[] distances, int minimumDistance)
     {

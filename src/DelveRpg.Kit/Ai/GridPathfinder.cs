@@ -19,7 +19,7 @@ public static class GridPathfinder
         int toY,
         int maxSteps)
     {
-        if ((fromX == toX && fromY == toY) || !level.IsWalkable(toX, toY))
+        if ((fromX == toX && fromY == toY) || !level.IsNavigable(toX, toY))
         {
             return Array.Empty<(int X, int Y)>();
         }
@@ -36,7 +36,7 @@ public static class GridPathfinder
             (int x, int y) = queue.Dequeue();
             foreach ((int nextX, int nextY) in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
             {
-                if (!level.IsWalkable(nextX, nextY) || previous.ContainsKey((nextX, nextY)))
+                if (!level.IsNavigable(nextX, nextY) || previous.ContainsKey((nextX, nextY)))
                 {
                     continue;
                 }
