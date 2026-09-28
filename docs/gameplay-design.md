@@ -185,10 +185,18 @@ continuous session.
 The first-person view is retained Engine geometry: tile floor quads and wall
 boxes, actor plates, one perspective camera with distance fog handled by the
 host background ([donor] `gfx/GlRenderer.java` distance fog is a shader
-mix). **Deliberate divergence:** authored placeholder colors stand in for the
-donor's texture atlases and light-mapped billboards; donor art and audio are
-never committed (see AGENTS.md fidelity rules). Audio, music, and screen
-flashes ([donor] `Audio.java`, `Game.flash`) are **deferred**.
+mix). Level tiles carry the donor's tile atlases ([donor] `data/tiles.dat`,
+`data/walltextures.dat` fixed-grid sheets): the authored manifest
+`content/delve/art/tiles.json` maps tile roles (floor, wall, water, door) to
+atlas cells, the extract script stages the named sheets into the gitignored
+`content/delve/imports/art/` (Engine textures open from product content
+only), and theme tints multiply the texture. With no staged art the level
+keeps its authored placeholder colors — the product runs identically without
+donor pixels, which are never committed (see AGENTS.md fidelity rules).
+**Deliberate divergence:** one cell per role rather than the donor's
+per-theme `texturePainters` ([donor] `generator/*/info.dat`) and light-mapped
+billboards; actor plates and stairs stay vertex-colored. Audio, music, and
+screen flashes ([donor] `Audio.java`, `Game.flash`) are **deferred**.
 
 ## Content and mods
 

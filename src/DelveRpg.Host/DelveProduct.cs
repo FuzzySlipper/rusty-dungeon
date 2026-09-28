@@ -35,16 +35,21 @@ public sealed class DelveProduct : IEngineProduct
     private ulong _savedLevelRevision;
     private string _hostPhase = PhaseTitle;
     private bool _shutdown;
+    private readonly Func<string, string?> _readText;
 
     public DelveProduct(ProductCreateContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         _engine = context.Engine;
-        DelverComposition composition = DelverComposition.Load(path =>
-            context.Content.TryReadFile(path, out ProductContentFile file) ? file.ReadText() : null);
+        _readText = path =>
+            context.Content.TryReadFile(path, out ProductContentFile file) ? file.ReadText() : null;
+        DelverComposition composition = DelverComposition.Load(_readText);
         _ruleset = new DelverRuleset(composition);
         _saves = new DelveSaveStore(_engine);
-        _renderer = new DelveSceneRenderer(_engine);
+        _renderer = new DelveSceneRenderer(
+            _engine,
+            _readText,
+            path => context.Content.TryReadFile(path, out ProductContentFile _));
         _uiStream = _engine.Ui.OpenStream(new UiStreamRequest(DelveHudProjection.StreamId, DelveHudProjection.Contract));
     }
 

@@ -93,4 +93,24 @@ echo "Delver reference material written to:"
 echo "  $OUT/extracted    donor entries (dat, bin, png, obj, json, atlas, fnt)"
 echo "  $OUT/jsonschema   engine content schemas"
 echo "  $OUT/normalized   normalized strict-JSON reference tables"
-echo "Note: donor rips must never be committed; the repo's local/ directory is gitignored."
+
+# Stage the tile atlases the authored art manifest names into the gitignored
+# content import area: Engine textures open from product content only, and
+# donor pixels must never be committed.
+ART_STAGE="$REPO_ROOT/content/delve/imports/art"
+mkdir -p "$ART_STAGE"
+staged=0
+for atlas in $(python3 - "$REPO_ROOT/content/delve/art/tiles.json" <<'PYEOF'
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+for name in manifest.get("atlases", {}):
+    print(name)
+PYEOF
+); do
+  if [[ -f "$OUT/extracted/$atlas" ]]; then
+    cp "$OUT/extracted/$atlas" "$ART_STAGE/$atlas"
+    staged=$((staged + 1))
+  fi
+done
+echo "  content/delve/imports/art   $staged staged tile atlas file(s) for the level art"
+echo "Note: donor rips must never be committed; local/ and content/delve/imports/ are gitignored."

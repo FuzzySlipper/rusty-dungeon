@@ -1,0 +1,61 @@
+{
+  "schema": "delve.art.tiles.v1",
+  "description": "Maps level tile roles into texture atlases staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). The art is donor-derived and never committed. Without staged art the level keeps its authored placeholder colors.",
+  "artContentPrefix": "delve/imports/art",
+  "atlases": {
+    "textures.png": {
+      "columns": 4,
+      "rows": 16
+    },
+    "textures1.png": {
+      "columns": 4,
+      "rows": 4
+    }
+  },
+  "tiles": {
+    "floor": {
+      "atlas": "textures.png",
+      "column": 0,
+      "row": 7,
+      "tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "wall": {
+      "atlas": "textures.png",
+      "column": 0,
+      "row": 0,
+      "tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "water": {
+      "atlas": "textures.png",
+      "column": 2,
+      "row": 6,
+      "tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "door": {
+      "atlas": "textures.png",
+      "column": 2,
+      "row": 10,
+      "tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  }
+}

@@ -27,6 +27,7 @@ public sealed class DelveSceneRenderer : IDisposable
     private readonly IEngineContext _engine;
     private readonly Camera _camera;
     private readonly Material _material;
+    private readonly DelveArtAssets _art;
     private readonly Dictionary<ulong, Appearance> _actorAppearances = new();
     private readonly List<Appearance> _retiredAppearances = new();
     private readonly List<MeshResource> _retiredMeshes = new();
@@ -35,9 +36,10 @@ public sealed class DelveSceneRenderer : IDisposable
     private ulong _loadedLevelRevision;
     private bool _disposed;
 
-    public DelveSceneRenderer(IEngineContext engine)
+    public DelveSceneRenderer(IEngineContext engine, Func<string, string?> readText, Func<string, bool> contentExists)
     {
         _engine = engine;
+        _art = DelveArtAssets.Load(engine, readText, contentExists);
         _material = engine.Graphics.CreateMaterial(new MaterialRequest(
             new Color(1f, 1f, 1f, 1f),
             default,
@@ -202,15 +204,23 @@ public sealed class DelveSceneRenderer : IDisposable
 
         _actorAppearances.Clear();
 
-        (Vector3[] positions, Vector3[] normals, Vector2[] uvs, Color[] colors, uint[] indices) = LevelMesh.Build(level, theme);
+        LevelMesh.LevelGeometry geometry = LevelMesh.Build(level, theme, _art.RectFor);
+        var bindings = new List<MeshMaterialBinding>();
+        foreach ((string role, MeshGroup _) in geometry.Groups)
+        {
+            bindings.Add(new MeshMaterialBinding(
+                (uint)LevelMesh.SlotFor(role),
+                _art.MaterialFor(role) ?? _material));
+        }
+
         _levelMesh = _engine.Graphics.CreateMeshResource(new MeshResourceCreateRequest(
-            positions,
-            normals,
-            uvs,
-            colors,
-            indices,
-            new[] { new MeshGroup(0, 0, (uint)indices.Length) },
-            new[] { new MeshMaterialBinding(0, _material) }));
+            geometry.Positions,
+            geometry.Normals,
+            geometry.Uvs,
+            geometry.Colors,
+            geometry.Indices,
+            geometry.Groups.Select(entry => entry.Group).ToArray(),
+            bindings.ToArray()));
         _levelAppearance = _engine.Graphics.CreateMeshAppearance(_levelMesh);
     }
 
@@ -286,6 +296,7 @@ public sealed class DelveSceneRenderer : IDisposable
 
         TryDispose(() => _engine.CameraView.ClearActiveCamera(new ClearActiveCameraRequest(0)), failures);
         TryDispose(_camera.Dispose, failures);
+        TryDispose(_art.Dispose, failures);
         TryDispose(_material.Dispose, failures);
         if (failures.Count > 0)
         {
