@@ -68,15 +68,14 @@ Recorded divergences from the donor (never to be "corrected" silently):
 ## Develop and verify
 
 The supported runtime pair targets Linux x64. Install the .NET 10 SDK, Node.js
-(with npm), GitHub CLI (`gh`, authenticated for release access), `jq`, `tar`,
-`unzip`, and standard shell utilities. NativeAOT also needs Clang and zlib
-development headers.
+(with npm), `curl` and `tar`. NativeAOT also needs Clang and zlib development
+headers. Get the Engine's `rusty` command once with
+`curl -fsSL https://raw.githubusercontent.com/FuzzySlipper/rusty-engine/main/scripts/install-rusty.sh | bash`.
 
 ```bash
-./scripts/install-engine.sh     # install the pinned, verified Engine pair
-export PATH="$HOME/.dotnet:$PATH"   # and DOTNET_ROOT if it is not on a default path
-./scripts/verify.sh             # pair identity, all suites, CoreCLR staging
-./scripts/run-csharp.sh --port 8787
+rusty install                   # install the pinned Engine pair into the shared cache
+./scripts/verify.sh             # all suites, CoreCLR staging
+rusty dev --project src/DelveRpg.Host/DelveRpg.Host.csproj --port 8787
 ```
 
 Open the URL printed by the host. WASD walks, the mouse looks (pointer lock),
@@ -85,11 +84,10 @@ are hotbar slots, `I` inventory, `M` map, `Enter`/`W`/`S` drive menus. `rusty
 dev` rebuilds and restarts the product when declared C#, UI, or content inputs
 change.
 
-The installer downloads and verifies the immutable SDK/runtime pair pinned in
-`Directory.Build.props`; `./scripts/install-engine.sh --update` adopts the
-newest published pair deliberately and rewrites the pin only after success.
-`./scripts/verify.sh --aot` additionally publishes NativeAOT as a fidelity
-check. Normal product builds consume the installed package; an adjacent Engine
+`Directory.Build.props` pins the immutable SDK/runtime pair; `rusty update`
+adopts the newest published pair deliberately, rewrites the pin, and lists the
+release notes to read. `./scripts/verify.sh --aot` additionally publishes
+NativeAOT as a fidelity check. Normal product builds consume the installed package; an adjacent Engine
 checkout is never a build dependency.
 
 To pull donor reference material for research (into gitignored `local/`):
@@ -102,7 +100,7 @@ To pull donor reference material for research (into gitignored `local/`):
 ## Evidence posture
 
 A check that only compiles is not verification, and a demonstration is not
-completion. `./scripts/verify.sh` names what it covers: the pair identity, the
+completion. `./scripts/verify.sh` names what it covers: the pinned pair install, the
 Kit/ruleset/import/architecture/UI suites, and product staging. Visible
 interaction claims need a live host run; build/staging and host launch are
 reported separately.

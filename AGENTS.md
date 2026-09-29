@@ -96,8 +96,8 @@ composition validates all-or-nothing at load and names what is missing.
 ## Engine dependencies and gaps
 
 `Directory.Build.props` owns the exact SDK/runtime pin. Install it with
-`./scripts/install-engine.sh`; deliberately advance it with its update mode,
-then run `./scripts/verify.sh`. Keep exact versions in executable
+`rusty install`; deliberately advance it with `rusty update`, read the release
+notes it lists, then run `./scripts/verify.sh`. Keep exact versions in executable
 configuration and evidence, not duplicated in prose. Normal development uses
 the matched runtime pack through `rusty dev`. NativeAOT is an explicit
 fidelity/release check (`./scripts/verify.sh --aot`). Never make an adjacent

@@ -1,7 +1,7 @@
 {
   "project": "rusty-dungeon",
   "serve": {
-    "command": "exec ./scripts/run-csharp.sh --live-debug --bind-host {host} --port {port}",
+    "command": "PATH=\"$HOME/.local/bin:$HOME/.dotnet:$PATH\" exec rusty dev --project ./src/DelveRpg.Host/DelveRpg.Host.csproj --live-debug --bind-host {host} --port {port}",
     "preferredPort": 4179,
     "healthUrl": "/product-ui/main.js",
     "readyText": "mountProductUi",

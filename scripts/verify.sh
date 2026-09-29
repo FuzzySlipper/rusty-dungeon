@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Focused verification for this repository: pair identity, all test suites, and
+# Focused verification for this repository: pinned pair install, all test suites, and
 # CoreCLR staging. The project and suite lists are deliberate — a discovery
 # based loop silently stops covering a project when one disappears.
 #
@@ -10,22 +10,15 @@ aot=false
 case "${1:-}" in
   '') ;;
   --aot) aot=true ;;
-  -h|--help) echo "usage: $0 [--aot] (pair identity, tests, staging; optionally NativeAOT)"; exit 0 ;;
+  -h|--help) echo "usage: $0 [--aot] (pinned pair install, tests, staging; optionally NativeAOT)"; exit 0 ;;
   *) echo "usage: $0 [--aot]" >&2; exit 2 ;;
 esac
 [[ $# -le 1 ]] || { echo 'Too many arguments.' >&2; exit 2; }
 
-version=$(sed -n 's|.*<RustyEnginePackageVersion>\([^<]*\)</RustyEnginePackageVersion>.*|\1|p' "$repo_root/Directory.Build.props")
-revision=$(sed -n 's|.*<RustyEnginePairSourceRevision>\([^<]*\)</RustyEnginePairSourceRevision>.*|\1|p' "$repo_root/Directory.Build.props")
-pair="$repo_root/.runtime/pairs/$version"
-[[ -d "$pair" ]] || { echo "Install the pinned Engine pair first: ./scripts/install-engine.sh" >&2; exit 1; }
-"$pair/verify-pair.sh" --directory "$pair"
-jq -e --arg version "$version" --arg revision "$revision" \
-  '.package.id == "Rusty.Engine" and .package.version == $version and
-   .sourceRevision == $revision and .runtime.sourceRevision == $revision' \
-  "$pair/pair-manifest.json" >/dev/null \
-  || { echo "Installed Engine pair does not match Directory.Build.props." >&2; exit 1; }
-echo "Engine pair identity ok: $version"
+# Installs the pinned pair when it is missing (a no-op offline once installed)
+# and gives the plain dotnet commands below the pair's SDK package source.
+(cd "$repo_root" && rusty install)
+export $(cd "$repo_root" && rusty env)
 
 projects=(
   tests/Delver.Import.Tests/Delver.Import.Tests.csproj
@@ -44,10 +37,10 @@ npm --prefix "$repo_root" exec -- tsc -p "$repo_root/src/ui"
 node --test "$repo_root"/tests/DelveRpg.Ui.Tests/*.test.mjs
 
 echo "== build and stage the product"
+host_project="$repo_root/src/DelveRpg.Host/DelveRpg.Host.csproj"
+dotnet msbuild "$host_project" -restore -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
 if [[ "$aot" == true ]]; then
-  "$repo_root/scripts/build-csharp.sh" --aot
-else
-  "$repo_root/scripts/build-csharp.sh"
+  dotnet msbuild "$host_project" -restore -t:VerifyRustyEngineAot -p:Configuration=Release
 fi
 
 echo "verify: all checks green."

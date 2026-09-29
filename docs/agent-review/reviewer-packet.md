@@ -15,7 +15,7 @@ the task explicitly assigns a fix.
   `DelveRpg.Rulesets.Delver/Content/`; input manifest in
   `DelveRpg.Host.csproj`.
 - **Engine identity.** The pinned SDK/runtime pair in
-  `Directory.Build.props` (installed under `.runtime/pairs/<version>`).
+  `Directory.Build.props` (installed by `rusty install`; `rusty status` shows where).
   Boundary claims must be checked against the pinned package, not an adjacent
   Engine checkout.
 - **Checks already run.** `./scripts/verify.sh` (pair identity, import/Kit/

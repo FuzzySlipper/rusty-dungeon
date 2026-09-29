@@ -57,17 +57,17 @@ Death and victory delete the run save and update meta progression
 
 ## Build and host
 
-`Directory.Build.props` selects one immutable SDK/runtime pair; the installer
-verifies it before installing, and `NuGet.Config` resolves the SDK from the
-installed feed. The product's package reference supplies the public services
-and build targets; generated bindings and composition are ignored output,
-never edited sources.
+`Directory.Build.props` pins one immutable SDK/runtime pair. The Engine `rusty`
+command installs it into its shared cache and supplies its SDK package source
+to restores. The product's package reference supplies the public services and
+build targets; generated bindings are ignored output, never edited sources.
 
-`scripts/build-csharp.sh` compiles and stages CoreCLR through
-`StageRustyEngineCoreClrProduct` (also compiling the TypeScript companion into
-`src/ui/generated`). `scripts/run-csharp.sh` invokes the matched pack's
-`rusty dev`, which owns staging, watching, worker replacement, and serving.
-`VerifyRustyEngineAot` publishes NativeAOT for explicit fidelity checks. The
+`rusty build --project src/DelveRpg.Host/DelveRpg.Host.csproj` compiles and
+stages CoreCLR through `StageRustyEngineCoreClrProduct` (also compiling the
+TypeScript companion into `src/ui/generated`). `rusty dev` runs the pinned
+pair's runtime and owns staging, watching, worker replacement, and serving.
+`rusty build --aot` (`VerifyRustyEngineAot`) publishes NativeAOT for explicit
+fidelity checks. The
 product supplies only its C#, DOM UI, and content; browser assets and transport
 come from the runtime pack.
 
