@@ -27,7 +27,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Rusty.Engine" Version="$(RustyEnginePackageVersion)">
+    <PackageReference Include="Rusty.Engine" Version="[$(RustyEnginePackageVersion)]">
       <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>
     </PackageReference>
     <ProjectReference Include="../DelveRpg.Kit/DelveRpg.Kit.csproj" />

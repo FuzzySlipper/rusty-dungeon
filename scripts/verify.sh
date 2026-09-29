@@ -15,10 +15,8 @@ case "${1:-}" in
 esac
 [[ $# -le 1 ]] || { echo 'Too many arguments.' >&2; exit 2; }
 
-# Installs the pinned pair when it is missing (a no-op offline once installed)
-# and gives the plain dotnet commands below the pair's SDK package source.
+# Installs the pinned pair when it is missing (a no-op offline once installed).
 (cd "$repo_root" && rusty install)
-export $(cd "$repo_root" && rusty env)
 
 projects=(
   tests/Delver.Import.Tests/Delver.Import.Tests.csproj
