@@ -30,13 +30,14 @@ for project in "${projects[@]}"; do
   dotnet test "$repo_root/$project" --configuration Release --nologo
 done
 
-echo "== node --test tests/DelveRpg.Ui.Tests"
-npm --prefix "$repo_root" exec -- tsc -p "$repo_root/src/ui"
-node --test "$repo_root"/tests/DelveRpg.Ui.Tests/*.test.mjs
-
+# Staging compiles the DOM companion through the SDK's UI build, which the DOM
+# suite then imports.
 echo "== build and stage the product"
 host_project="$repo_root/src/DelveRpg.Host/DelveRpg.Host.csproj"
 dotnet msbuild "$host_project" -restore -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
+
+echo "== node --test tests/DelveRpg.Ui.Tests"
+node --test "$repo_root"/tests/DelveRpg.Ui.Tests/*.test.mjs
 if [[ "$aot" == true ]]; then
   dotnet msbuild "$host_project" -restore -t:VerifyRustyEngineAot -p:Configuration=Release
 fi

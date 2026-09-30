@@ -15,6 +15,11 @@
     <RustyEngineProductTitle>Rusty Dungeon</RustyEngineProductTitle>
     <RustyEngineProductUiRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui/generated'))</RustyEngineProductUiRoot>
     <RustyEngineProductUiEntry>main.js</RustyEngineProductUiEntry>
+    <!-- The DOM companion is compiled TypeScript. The SDK runs this command only
+         when a UI input is newer than its last build, and `rusty dev` reloads
+         the UI alone when only UI sources change. -->
+    <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'))</RustyEngineProductUiSourceRoot>
+    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../..'))&quot; exec -- tsc -p &quot;$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'))&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
     <RustyEngineProductUiProjectionStream>delve.hud</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>delve.ui.snapshot.v1</RustyEngineProductUiProjectionContract>
@@ -23,6 +28,9 @@
     <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
     <!-- First-person play needs the captured cursor for mouse-look. -->
     <RustyEngineProductInputCursorMode>pointer-lock</RustyEngineProductInputCursorMode>
+    <!-- The SDK default watches the Host, the UI source root, and content;
+         `rusty dev` does not follow project references, so the Kit and the
+         ruleset are listed too. -->
     <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../DelveRpg.Kit'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../DelveRpg.Rulesets.Delver'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineWatchPaths>
   </PropertyGroup>
 
@@ -80,10 +88,8 @@
     <RustyEngineProductInputMapping Include="menu.down.key-s" Intent="menu.down" Trigger="key:key-s:pressed" />
   </ItemGroup>
 
-  <!-- The DOM companion is TypeScript; compile it to the generated directory
-       the product stages. Generated output is ignored, never edited by hand. -->
-  <Target Name="BuildDelveProductUi" BeforeTargets="GenerateRustyEngineProductComposition">
-    <Delete Files="$(RustyEngineProductUiRoot)/main.js.map;$(RustyEngineProductUiRoot)/main.d.ts" />
-    <Exec Command="npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc -p &quot;$(MSBuildThisFileDirectory)../ui&quot;" />
-  </Target>
+  <!-- UI build inputs outside the UI source root: the compiler and its lockfile. -->
+  <ItemGroup>
+    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json" />
+  </ItemGroup>
 </Project>

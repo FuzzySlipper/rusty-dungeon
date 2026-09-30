@@ -4,8 +4,9 @@
 `renderHud(doc, root, snapshot)` used by DOM tests. The companion is the HUD
 of a Delver-style descent: phase line, health, messages, the use prompt, the
 flat hotbar, stats, the escape indicator, the explored map window, and the
-level-up chooser. TypeScript compiles to the ignored `src/ui/generated/`,
-which the product project stages.
+level-up chooser. Staging the Host compiles the TypeScript to the ignored
+`src/ui/generated/` through the SDK's UI build (only when a UI input changed)
+and stages that output.
 
 The projection contract is `delve.ui.snapshot.v1` on the `delve.hud` stream
 (declared in both `DelveRpg.Host.csproj` and `DelveHudProjection`). A snapshot

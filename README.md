@@ -81,8 +81,9 @@ rusty dev --project src/DelveRpg.Host/DelveRpg.Host.csproj --port 8787
 Open the URL printed by the host. WASD walks, the mouse looks (pointer lock),
 hold the primary button to charge a swing, `E` uses doors and stairs, `1`-`6`
 are hotbar slots, `I` inventory, `M` map, `Enter`/`W`/`S` drive menus. `rusty
-dev` rebuilds and restarts the product when declared C#, UI, or content inputs
-change.
+dev` rebuilds and restarts the product when C# under the Host, Kit, or ruleset
+changes; a UI or content edit is recompiled/restaged and reloaded without a C#
+build.
 
 `Directory.Build.props` pins the immutable SDK/runtime pair; `rusty update`
 adopts the newest published pair deliberately, rewrites the pin, and lists the

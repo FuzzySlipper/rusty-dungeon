@@ -63,8 +63,10 @@ to restores. The product's package reference supplies the public services and
 build targets; generated bindings are ignored output, never edited sources.
 
 `rusty build --project src/DelveRpg.Host/DelveRpg.Host.csproj` compiles and
-stages CoreCLR through `StageRustyEngineCoreClrProduct` (also compiling the
-TypeScript companion into `src/ui/generated`). `rusty dev` runs the pinned
+stages CoreCLR through `StageRustyEngineCoreClrProduct`. Staging compiles the
+TypeScript companion into `src/ui/generated` through the SDK's UI build
+(`RustyEngineProductUiBuildCommand`), and only when a UI input changed; a plain
+`dotnet build` does not stage or compile the UI. `rusty dev` runs the pinned
 pair's runtime and owns staging, watching, worker replacement, and serving.
 `rusty build --aot` (`VerifyRustyEngineAot`) publishes NativeAOT for explicit
 fidelity checks. The
