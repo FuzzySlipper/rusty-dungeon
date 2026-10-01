@@ -131,4 +131,12 @@ PYEOF
   fi
 done
 echo "  content/delve/imports/art   $staged staged atlas file(s) for the level and sprite art"
+
+# Lit sprites read a normal sheet per sprite sheet, derived from the staged
+# colour sheet (also donor-derived, so it stays in the gitignored stage).
+if python3 -c 'import numpy, PIL' 2>/dev/null; then
+  python3 "$REPO_ROOT/scripts/derive-sprite-normals.py" "$REPO_ROOT/content/delve/art/sprites.json" "$ART_STAGE"
+else
+  echo "warning: numpy/Pillow missing; sprites will draw unlit (no derived normal sheets)" >&2
+fi
 echo "Note: donor rips must never be committed; local/ and content/delve/imports/ are gitignored."

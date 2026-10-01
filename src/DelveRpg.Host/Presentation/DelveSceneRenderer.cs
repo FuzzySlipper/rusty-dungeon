@@ -27,10 +27,12 @@ public sealed class DelveSceneRenderer : IDisposable
     private const ulong ItemObjectBase = 2_000_000;
     private const ulong WeaponObjectId = 3_000_000_000;
     private const ulong AmbientLightId = 4_000_000_000;
+    private const ulong TorchLightId = 4_000_000_001;
 
     private readonly IEngineContext _engine;
     private readonly Camera _camera;
     private readonly Light _ambient;
+    private readonly Light _torch;
     private readonly Material _material;
     private readonly DelveArtAssets _art;
     private readonly DelveSpriteAssets _sprites;
@@ -93,6 +95,8 @@ public sealed class DelveSceneRenderer : IDisposable
                 0f,
                 0f,
                 LightShadowIntent.Disabled)));
+
+        _torch = engine.Graphics.CreateLight(TorchRequest(Vector3.Zero));
         engine.CameraView.SetBackgroundColor(new SetBackgroundColorRequest(new Color(0.02f, 0.02f, 0.05f, 1f)));
     }
 
@@ -123,6 +127,9 @@ public sealed class DelveSceneRenderer : IDisposable
                 default,
                 new CameraProjection(CameraProjectionKind.Perspective, 75.0, 0.0, 0.05, 120.0),
                 new CameraViewport(0, 0, 1, 1))));
+
+        _engine.Graphics.UpdateLight(new LightUpdateRequest(
+            _torch, TorchRequest(new Vector3(player.X, eyeHeight, player.Y))));
 
         var facts = new List<AppearanceFact>();
         var live = new HashSet<ulong>();
@@ -332,7 +339,7 @@ public sealed class DelveSceneRenderer : IDisposable
             0,
             SpriteDepthPolicy.Default,
             new Color(1f, 1f, 1f, 1f),
-            DelveSpriteAssets.CutoutMaterial)));
+            sprite.Material)));
         ShowFrame(WeaponObjectId, appearance, sprite, (uint)sprite.Definition.Frame);
 
         HeldPose pose = HeldWeaponPose(
@@ -348,6 +355,32 @@ public sealed class DelveSceneRenderer : IDisposable
             true,
             RenderLayer.Viewmodel));
     }
+
+    /// <summary>
+    /// The player's torch: a warm point light carried at eye height, the
+    /// donor's player light ([donor] entities/Player.java:173-176 torchColor
+    /// (1, 0.8, 0.4) and torchRange 3, updatePlayerLight).
+    /// </summary>
+    private static LightRequest TorchRequest(Vector3 position) => new(
+        TorchLightId,
+        false,
+        0,
+        new LightDescriptor(
+            LightKind.Point,
+            new Vector3(1f, 0.8f, 0.4f),
+            TorchIntensity,
+            true,
+            position,
+            -Vector3.UnitY,
+            true,
+            TorchRange,
+            1f,
+            0f,
+            0f,
+            LightShadowIntent.Disabled));
+
+    private const float TorchIntensity = 1.0f;
+    private const float TorchRange = 4f;
 
     /// <summary>Camera-local weapon pose; the viewmodel camera looks down -Z.</summary>
     public readonly record struct HeldPose(Vector3 Position, float RollDegrees);
@@ -378,7 +411,7 @@ public sealed class DelveSceneRenderer : IDisposable
             0,
             SpriteDepthPolicy.Default,
             new Color(1f, 1f, 1f, 1f),
-            DelveSpriteAssets.CutoutMaterial));
+            sprite.Material));
 
     /// <summary>
     /// Switch a sprite's cell only when it changes; the update applies in
@@ -490,6 +523,7 @@ public sealed class DelveSceneRenderer : IDisposable
             TryDispose(_levelMesh.Dispose, failures);
         }
 
+        TryDispose(_torch.Dispose, failures);
         TryDispose(_ambient.Dispose, failures);
         TryDispose(() => _engine.CameraView.ClearActiveCamera(new ClearActiveCameraRequest(0)), failures);
         TryDispose(_camera.Dispose, failures);

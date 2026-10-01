@@ -1,16 +1,17 @@
 {
   "schema": "delve.art.sprites.v1",
-  "description": "Maps content sprite ids to cells of donor sprite sheets staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). Sheets are fixed 32px grids; a cell index is column + row * columns, as in the donor's TextureAtlas. Monster cells and walk/attack ranges follow donor data/monsters.dat where a donor monster exists; rat, ogre and golem have no donor monster and borrow the worm, zombie and eye art. The art is donor-derived and never committed. Without staged art, actors keep their placeholder plates.",
+  "description": "Maps content sprite ids to cells of donor sprite sheets staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). Sheets are fixed 32px grids; a cell index is column + row * columns, as in the donor's TextureAtlas. Monster cells and walk/attack ranges follow donor data/monsters.dat where a donor monster exists; rat, ogre and golem have no donor monster and borrow the worm, zombie and eye art. Sprites are lit through each sheet's normal sheet, derived offline by scripts/derive-sprite-normals.py; without staged normals they draw unlit. The art and its derivatives are donor-derived and never committed. Without staged art, actors keep their placeholder plates.",
   "artContentPrefix": "delve/imports/art",
+  "lighting": { "mode": "authored-normal", "strength": 1.5 },
   "atlases": {
-    "entities_dungeon.png": { "columns": 16, "rows": 16 },
-    "entities_sewer.png": { "columns": 16, "rows": 16 },
-    "entities_cave.png": { "columns": 16, "rows": 8 },
-    "entities_undead.png": { "columns": 16, "rows": 8 },
-    "items.png": { "columns": 8, "rows": 20 },
-    "melee.png": { "columns": 8, "rows": 4 },
-    "armor.png": { "columns": 8, "rows": 5 },
-    "wands.png": { "columns": 8, "rows": 4 }
+    "entities_dungeon.png": { "columns": 16, "rows": 16, "normals": "entities_dungeon.normals.png" },
+    "entities_sewer.png": { "columns": 16, "rows": 16, "normals": "entities_sewer.normals.png" },
+    "entities_cave.png": { "columns": 16, "rows": 8, "normals": "entities_cave.normals.png" },
+    "entities_undead.png": { "columns": 16, "rows": 8, "normals": "entities_undead.normals.png" },
+    "items.png": { "columns": 8, "rows": 20, "normals": "items.normals.png" },
+    "melee.png": { "columns": 8, "rows": 4, "normals": "melee.normals.png" },
+    "armor.png": { "columns": 8, "rows": 5, "normals": "armor.normals.png" },
+    "wands.png": { "columns": 8, "rows": 4, "normals": "wands.normals.png" }
   },
   "sprites": {
     "monster.rat": { "atlas": "entities_cave.png", "frame": 0, "size": 1.0, "walk": { "start": 0, "end": 3, "speed": 30 }, "attack": { "start": 4, "end": 10, "speed": 65 } },

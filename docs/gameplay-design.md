@@ -228,6 +228,13 @@ rig, standing in for the donor's level ambient. **Deliberate divergence:** no
 per-theme ceiling painters (the Sewer theme's cells 10/11 live in an atlas
 this slice does not stage) and no sky tiles.
 
+**Torch.** The player carries a warm point light at eye height, the
+donor's player light ([donor] `entities/Player.java:173-176` `torchColor`
+(1, 0.8, 0.4), `torchRange` 3, `updatePlayerLight`). **Approximate:** range 4
+at intensity 1.0 under the Engine's falloff, tuned by eye; no flicker, and
+the Engine's default rig still lights the level from above (the donor bakes
+light maps instead).
+
 **Sprites.** Monsters and ground items are Y-locked Engine billboard sprites
 over donor sheet cells; the held weapon is a sprite in the Engine's
 camera-local viewmodel layer. `content/delve/art/sprites.json` maps each
@@ -236,9 +243,20 @@ content `sprite` id to a sheet and cell; sheets are fixed 32px grids indexed
 monster walk/attack ranges and their timing (speed = whole sequence in ticks,
 [donor] `gfx/animation/SpriteAnimation.java:79-102`) follow
 [data] `data/monsters.dat`. Attack cells play right after a blow, the walk
-cycle while hunting, the resting cell while idle. **Deliberate divergences:**
-sprites are unlit (no light map) and use whole cells rather than the donor's
-alpha-trimmed regions; the held weapon follows a simple charge-rise and
+cycle while hunting, the resting cell while idle.
+
+Sprites are lit by the scene's lights through a normal sheet per sprite sheet
+(`lighting.mode` `authored-normal`, strength 1.5). The normal sheets are
+derived offline by `scripts/derive-sprite-normals.py` — a dome over each
+sprite's silhouette plus a little luminance relief — and staged beside the
+donor sheets; without them sprites draw unlit. Compared in play under the
+torch: `derived-gradient` (the shader bumps the colour's red channel) embosses
+the pixel grid and dark outlines into grooves; `synthetic` is visually flat
+on atlas sprites, because the Engine's dome spans the whole atlas UV rather
+than the cell; authored normals give the soft rounded volume the donor's
+light-mapped billboards suggest. **Deliberate divergences:** lit normals
+rather than the donor's light-map tint, and whole cells rather than the
+donor's alpha-trimmed regions; the held weapon follows a simple charge-rise and
 cooldown-sweep pose instead of the donor's keyframed `daggerCharge` /
 `daggerAttack` animations ([data] `data/animations.dat`); the giant rat,
 ogre and stone golem have no donor monster and borrow the worm, zombie and

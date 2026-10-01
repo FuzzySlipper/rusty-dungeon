@@ -103,3 +103,39 @@ public sealed class ArtManifestDefaultsTests
         Assert.Empty(manifest.Tiles);
     }
 }
+
+public sealed class SpriteLightingTests
+{
+    [Fact]
+    public void A_manifest_without_lighting_draws_sprites_unlit()
+    {
+        DelveSpriteManifest manifest = System.Text.Json.JsonSerializer.Deserialize(
+            """{"sprites":{}}""", DelveSpriteJsonContext.Default.DelveSpriteManifest)!;
+        Assert.Equal(SpriteLightingMode.Unlit, manifest.Lighting.EngineMode);
+    }
+
+    [Theory]
+    [InlineData("derived-gradient", SpriteLightingMode.DerivedGradient)]
+    [InlineData("authored-normal", SpriteLightingMode.AuthoredNormal)]
+    [InlineData("synthetic", SpriteLightingMode.Synthetic)]
+    public void Lighting_modes_name_the_engine_modes(string mode, SpriteLightingMode expected) =>
+        Assert.Equal(expected, new DelveSpriteLighting { Mode = mode }.EngineMode);
+
+    [Fact]
+    public void An_unknown_lighting_mode_is_refused_by_name()
+    {
+        var lighting = new DelveSpriteLighting { Mode = "glossy" };
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => lighting.EngineMode);
+        Assert.Contains("glossy", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Authored_normals_without_a_staged_normal_sheet_draw_unlit()
+    {
+        var lighting = new DelveSpriteLighting { Mode = "authored-normal", Strength = 1.5f };
+        SpriteMaterialDescriptor material = DelveSpriteAssets.CutoutMaterial(lighting, null);
+
+        Assert.Equal(SpriteLightingMode.Unlit, material.Lighting);
+        Assert.Equal(SpriteAlphaMode.Mask, material.AlphaMode);
+    }
+}

@@ -39,6 +39,13 @@ public sealed class DelveArtAtlas
 
     [JsonPropertyName("rows")]
     public int Rows { get; init; }
+
+    /// <summary>
+    /// Optional normal-map sheet aligned cell-for-cell with this one (sprite
+    /// sheets only; derived offline by scripts/derive-sprite-normals.py).
+    /// </summary>
+    [JsonPropertyName("normals")]
+    public string? Normals { get; init; }
 }
 
 public sealed class DelveArtTile
