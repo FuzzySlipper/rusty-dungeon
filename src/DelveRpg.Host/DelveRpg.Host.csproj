@@ -15,11 +15,12 @@
     <RustyEngineProductTitle>Rusty Dungeon</RustyEngineProductTitle>
     <RustyEngineProductUiRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui/generated'))</RustyEngineProductUiRoot>
     <RustyEngineProductUiEntry>main.js</RustyEngineProductUiEntry>
-    <!-- The DOM companion is compiled TypeScript. The SDK runs this command only
-         when a UI input is newer than its last build, and `rusty dev` reloads
-         the UI alone when only UI sources change. -->
+    <!-- The DOM companion is compiled TypeScript, typed against the pair's own
+         UI declarations. The SDK runs this command only when a UI input is
+         newer than its last build, and `rusty dev` reloads the UI alone when
+         only UI sources change. -->
     <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'))</RustyEngineProductUiSourceRoot>
-    <RustyEngineProductUiBuildCommand>npm --prefix &quot;$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../..'))&quot; exec -- tsc -p &quot;$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'))&quot;</RustyEngineProductUiBuildCommand>
+    <RustyEngineProductUiBuildCommand>bash &quot;$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../scripts/build-ui.sh'))&quot; &quot;$(RustyEngineProductUiTypes)&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
     <RustyEngineProductUiProjectionStream>delve.hud</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>delve.ui.snapshot.v1</RustyEngineProductUiProjectionContract>
@@ -28,10 +29,6 @@
     <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
     <!-- First-person play needs the captured cursor for mouse-look. -->
     <RustyEngineProductInputCursorMode>pointer-lock</RustyEngineProductInputCursorMode>
-    <!-- The SDK default watches the Host, the UI source root, and content;
-         `rusty dev` does not follow project references, so the Kit and the
-         ruleset are listed too. -->
-    <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../DelveRpg.Kit'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../DelveRpg.Rulesets.Delver'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineWatchPaths>
   </PropertyGroup>
 
   <ItemGroup>
@@ -88,8 +85,9 @@
     <RustyEngineProductInputMapping Include="menu.down.key-s" Intent="menu.down" Trigger="key:key-s:pressed" />
   </ItemGroup>
 
-  <!-- UI build inputs outside the UI source root: the compiler and its lockfile. -->
+  <!-- UI build inputs outside the UI source root: the compiler, its lockfile,
+       the build script, and the pair's declarations (so a pin move rebuilds). -->
   <ItemGroup>
-    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json" />
+    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(MSBuildThisFileDirectory)../../scripts/build-ui.sh;$(RustyEngineProductUiTypes)" />
   </ItemGroup>
 </Project>

@@ -9,19 +9,7 @@
  * and input delivery stay with the Engine; run state stays with C#.
  */
 
-interface ProjectionEnvelope {
-  readonly contract: string;
-  readonly value: unknown;
-}
-
-interface ProductUiContext {
-  readonly projection?: {
-    subscribe(listener: (projection: ProjectionEnvelope | null) => void): () => void;
-  };
-  readonly intents?: {
-    claim(intent: string, value: { kind: 'digital'; active: boolean }): void;
-  };
-}
+import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 
 interface HudSlot {
   readonly index: number;
@@ -76,7 +64,7 @@ const INTENTS = {
 } as const;
 
 /** Claim one declared digital intent as a press. */
-function claim(context: ProductUiContext | undefined, intent: string): void {
+function claim(context: RustyApplicationUiContext | undefined, intent: string): void {
   context?.intents?.claim(intent, { kind: "digital", active: true });
 }
 
@@ -218,7 +206,7 @@ function renderMinimap(doc: Document, minimap: MinimapFacts): HTMLElement {
  * Mount the HUD. Renders only from admitted projections; menu buttons claim
  * declared intents; disposal removes every listener and node.
  */
-export function mountProductUi(root: HTMLElement, context?: ProductUiContext): { dispose(): void } {
+export function mountProductUi(root: HTMLElement, context?: RustyApplicationUiContext): { dispose(): void } {
   const doc = root.ownerDocument;
   const panel = el(doc, 'aside', 'delve-hud');
   panel.setAttribute('aria-label', 'Rusty Dungeon status');
@@ -249,7 +237,9 @@ export function mountProductUi(root: HTMLElement, context?: ProductUiContext): {
     if (envelope === null || envelope.contract !== CONTRACT) {
       return;
     }
-    renderHud(doc, body, envelope.value as HudSnapshot);
+    // The contract identity is the gate: an admitted delve.ui.snapshot.v1
+    // value is the C# HUD projection's shape.
+    renderHud(doc, body, envelope.value as unknown as HudSnapshot);
   });
 
   return Object.freeze({
