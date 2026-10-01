@@ -87,6 +87,29 @@ and bows currently swing like melee weapons; ranged bolts and elemental
 damage are a later slice. Item conditions/degradation
 ([donor] `entities/items/Item.java` `ItemCondition`) are **deferred**.
 
+**Monster stats — faithful.** Each monster carries its donor counterpart's
+base hit points and `atk` ([data] `data/monsters.dat`), armor class 0 (no
+donor monster sets `ac`), no weapon power, and the donor's 60-tick
+`attackTime` ([donor] `entities/Monster.java:83`). A monster spawns at
+`max(floor(dungeonLevel*1.5), baseLevel)`, bumped by 30% of any lead the
+player has over that difficulty ([donor] `Monster.java:346-366` `Init`), and
+each level past the first adds 2 hit points and widens its attack roll by 2
+([donor] `entities/Actor.java:122-139` `initLevel` raises `atk` by the level
+and `Monster.java:1240` rolls `atk + level`); `MonsterScaling` keeps that as
+written. Our stand-ins map to donor monsters: giant rat = WORM, slime =
+SLIME, cave bat = the CAVE BAT, kobold = GOBLIN, giant spider = SPIDER,
+skeleton = SKELETON, wraith = GHOST; the ogre and stone golem have no donor
+monster and take the ZOMBIE and EYE stats that match their art.
+**Approximate:** the donor's ±1 random level jitter above difficulty 4 and
+its 0–9 tick attack-timer jitter are left out (a regenerated floor's
+monsters come back at the same level), and movement speed and detect range
+stay authored (the donor's `speed` is an acceleration in a different
+movement model). **Known divergence, not yet decided:** the player's melee
+roll is `weapon power + roll(1..attack stat)`, about twice the donor's
+`baseDamage*charge + roll(0..randDamage + max(0, ATK-4))`
+([donor] `entities/items/Weapon.java:93-104`), so early fights are easier
+than the donor's.
+
 ## Monster AI
 
 Idle until the player is detected (range + line of sight — a closed door
@@ -128,8 +151,9 @@ shops are **skipped/deferred**.
 
 ## Progression
 
-**Faithful formulas.** Kill experience `3 + monsterLevel`
-([donor] `entities/Actor.java` `addExperience`); cumulative level threshold
+**Faithful formulas.** Kill experience `3 + level`, where the donor's
+`level` field is the spawn level minus one ([donor]
+`gamemode/delver/DelverGameMode.java:123`, `entities/Actor.java` `initLevel`); cumulative level threshold
 `(level*4)*(level*2)`; level-up heals to full and offers one of three shuffled
 stats ([donor] `overlays/LevelUpOverlay.java:204`);
 `maxHp = (int)(END*(END/3f)) + 4` then `+= (level-1)*0.5f`

@@ -3,6 +3,7 @@ using DelveRpg.Kit.Ai;
 using DelveRpg.Kit.Combat;
 using DelveRpg.Kit.Effects;
 using DelveRpg.Kit.Inventory;
+using DelveRpg.Kit.Progression;
 using DelveRpg.Kit.Rules;
 using DelveRpg.Kit.World;
 
@@ -62,7 +63,9 @@ public sealed partial class RunSession
     private void KillMonster(MonsterState monster)
     {
         _monsters.Remove(monster);
-        int experience = CombatResolver.ExperienceForKill(monster.Archetype.MonsterLevel);
+        // The donor awards 3 + its zero-based level field, which initLevel sets
+        // to the spawn level minus one ([donor] DelverGameMode.java:123).
+        int experience = CombatResolver.ExperienceForKill(monster.Level - 1);
         Player.Experience += experience;
         ShowMessage($"The {monster.Archetype.DisplayName} falls. (+{experience} xp)");
 
@@ -416,17 +419,28 @@ public sealed partial class RunSession
         return (body.TileX, body.TileY);
     }
 
-    private void AddMonster(string archetypeId, int tileX, int tileY)
+    /// <summary>
+    /// Spawn a monster levelled for this floor and the player, or at a saved
+    /// level when restoring one.
+    /// </summary>
+    private void AddMonster(string archetypeId, int tileX, int tileY, int savedLevel = 0)
     {
         if (_rules.Monster(archetypeId) is not MonsterArchetype archetype)
         {
             return;
         }
 
-        int maxHp = archetype.BaseHp;
+        int level = savedLevel > 0
+            ? savedLevel
+            : MonsterScaling.SpawnLevel(Level.DifficultyLevel, Player.Level, archetype.MonsterLevel);
         var body = new ActorState(
-            _nextActorId++, ActorKind.Monster, tileX + 0.5f, tileY + 0.5f, maxHp, archetype.Stats);
-        _monsters.Add(new MonsterState(body, archetype));
+            _nextActorId++,
+            ActorKind.Monster,
+            tileX + 0.5f,
+            tileY + 0.5f,
+            MonsterScaling.MaxHitPoints(archetype.BaseHp, level),
+            MonsterScaling.Stats(archetype.Stats, level));
+        _monsters.Add(new MonsterState(body, archetype, level));
     }
 
     private void AddGroundItem(string archetypeId, int tileX, int tileY)

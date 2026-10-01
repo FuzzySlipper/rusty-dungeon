@@ -92,15 +92,19 @@ public sealed class PlayerState
 /// <summary>A monster instance on the current floor.</summary>
 public sealed class MonsterState
 {
-    public MonsterState(ActorState body, MonsterArchetype archetype)
+    public MonsterState(ActorState body, MonsterArchetype archetype, int level = 1)
     {
         Body = body;
         Archetype = archetype;
+        Level = level;
     }
 
     public ActorState Body { get; }
 
     public MonsterArchetype Archetype { get; }
+
+    /// <summary>The level this monster spawned at (see <see cref="Progression.MonsterScaling"/>).</summary>
+    public int Level { get; }
 
     public MonsterBrainState BrainState { get; set; } = MonsterBrainState.Idle;
 

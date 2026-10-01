@@ -9,7 +9,7 @@ namespace DelveRpg.Kit.Session;
 public sealed record SnapshotSlot(string? ArchetypeId, int Count);
 
 /// <summary>Serializable shape of one monster at a save boundary.</summary>
-public sealed record SnapshotMonster(string ArchetypeId, float X, float Y, int Hp, float Facing);
+public sealed record SnapshotMonster(string ArchetypeId, float X, float Y, int Hp, float Facing, int Level = 0);
 
 /// <summary>Serializable shape of one floor item at a save boundary.</summary>
 public sealed record SnapshotGroundItem(string ArchetypeId, int Count, int X, int Y);
@@ -124,7 +124,8 @@ public sealed partial class RunSession
                 monster.Body.X,
                 monster.Body.Y,
                 monster.Body.Hp,
-                monster.Body.Facing)).ToList(),
+                monster.Body.Facing,
+                monster.Level)).ToList(),
             GroundItems: _groundItems.Select(item => new SnapshotGroundItem(
                 item.Item.ArchetypeId, item.Item.Count, item.X, item.Y)).ToList(),
             LevelUpOffers: LevelUpOffers.ToList(),
@@ -233,7 +234,7 @@ public sealed partial class RunSession
             // A snapshot may name a monster the current catalog no longer
             // carries; skip it instead of writing its facts onto another one.
             int before = _monsters.Count;
-            AddMonster(monster.ArchetypeId, (int)MathF.Floor(monster.X), (int)MathF.Floor(monster.Y));
+            AddMonster(monster.ArchetypeId, (int)MathF.Floor(monster.X), (int)MathF.Floor(monster.Y), monster.Level);
             if (_monsters.Count == before)
             {
                 continue;
