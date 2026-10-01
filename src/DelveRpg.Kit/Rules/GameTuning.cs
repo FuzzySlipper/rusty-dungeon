@@ -42,6 +42,13 @@ public sealed record GameTuning
     /// <summary>Monsters per escape-arc spawn at full pressure.</summary>
     public int EscapeSpawnGroupEnd { get; init; } = 15;
 
+    /// <summary>
+    /// Closest two bodies come, centre to centre, in tiles. A chasing monster
+    /// holds here instead of walking into the player, and the player cannot
+    /// walk closer to a monster than this. Below the monsters' attack range.
+    /// </summary>
+    public float ActorSeparationTiles { get; init; } = 0.75f;
+
     /// <summary>Radius, in tiles, of the remembered map window around the player.</summary>
     public int SeenRadius { get; init; } = 5;
 

@@ -98,7 +98,12 @@ the donor's node-graph paths and steering sweeps
 `DoomStylePathfinding.java`) are replaced by grid BFS; the donor's light-based
 stealth (detection radius from light level,
 [donor] `entities/Player.java` `updatePlayerLight`) is replaced by a fixed
-per-archetype `detectRange`. Sleep/ambush flags are **deferred**.
+per-archetype `detectRange`. Bodies do not overlap, like the donor's entity
+collision ([donor] `entities/Monster.java` `checkEntityCollision`): a chasing
+monster holds once it is within `actorSeparationTiles` (0.75) of the player
+and fights from there, and the player cannot walk closer to a monster than
+that (stepping away is always allowed). **Approximate** — monsters may still
+overlap each other. Sleep/ambush flags are **deferred**.
 
 ## Items and inventory
 
@@ -106,7 +111,16 @@ The flat slot array on the HUD — hotbar first, then backpack — with named
 equipment slots is **faithful in shape** ([donor] `ui/Hotbar.java`,
 `ui/EquipLoc.java`, `managers/HUDManager.java`); slot counts grow with meta
 upgrades ([donor] `game/Progression.java`). Walk-over pickup, number-key
-use/wield, stackable gold/keys/potions. Loot rolls use weighted tables over a
+use/wield, stackable gold/keys/potions.
+
+A fresh character starts with the pack's `startingKit`, in slot order, with
+the first weapon wielded and the first armor worn — the donor's
+`startingInventory` ([data] `data/player.dat`, [donor]
+`entities/Player.java:297-334` `makeStartingInventory`). **Approximate**: the
+donor gives an iron dagger, leather armor, leather pants, and a random potion,
+wand and food; ours is the rusty dagger, leather armor, a potion of healing
+and bread. There is no pants slot, the wand waits on the ranged slice, and
+potions are not shuffled per run. Loot rolls use weighted tables over a
 per-item level window ([donor] `helpers/LootListHelper.java` level buckets).
 Prefix/suffix enchantments ([donor] `entities/items/ItemModification.java`)
 are **deferred** (the `enchantChance` tuning knob exists); uniques, bags, and
@@ -182,12 +196,38 @@ continuous session.
 
 ## Presentation and audio
 
-The first-person view is retained Engine geometry: tile floor quads and wall
-boxes, actor plates, one perspective camera with distance fog handled by the
+**Ceilings.** Every open tile gets a ceiling quad at wall height, as the
+donor tesselates one per tile ([donor] `gfx/Tesselator.java:430-472`),
+textured with the donor's default ceiling cell (t1 cell 1). One retained
+ambient light keeps the downward faces readable under the Engine's default
+rig, standing in for the donor's level ambient. **Deliberate divergence:** no
+per-theme ceiling painters (the Sewer theme's cells 10/11 live in an atlas
+this slice does not stage) and no sky tiles.
+
+**Sprites.** Monsters and ground items are Y-locked Engine billboard sprites
+over donor sheet cells; the held weapon is a sprite in the Engine's
+camera-local viewmodel layer. `content/delve/art/sprites.json` maps each
+content `sprite` id to a sheet and cell; sheets are fixed 32px grids indexed
+`column + row * columns` ([donor] `gfx/TextureAtlas.java:195-213`), and
+monster walk/attack ranges and their timing (speed = whole sequence in ticks,
+[donor] `gfx/animation/SpriteAnimation.java:79-102`) follow
+[data] `data/monsters.dat`. Attack cells play right after a blow, the walk
+cycle while hunting, the resting cell while idle. **Deliberate divergences:**
+sprites are unlit (no light map) and use whole cells rather than the donor's
+alpha-trimmed regions; the held weapon follows a simple charge-rise and
+cooldown-sweep pose instead of the donor's keyframed `daggerCharge` /
+`daggerAttack` animations ([data] `data/animations.dat`); the giant rat,
+ogre and stone golem have no donor monster and borrow the worm, zombie and
+eye art. Palette-mode sheets (armor.png) are expanded to RGBA when staged,
+since the Engine admits RGB/RGBA PNGs.
+
+
+The first-person view is retained Engine geometry: tile floor and ceiling quads and wall
+boxes, actor sprites, one perspective camera with distance fog handled by the
 host background ([donor] `gfx/GlRenderer.java` distance fog is a shader
 mix). Level tiles carry the donor's tile atlases ([donor] `data/tiles.dat`,
 `data/walltextures.dat` fixed-grid sheets): the authored manifest
-`content/delve/art/tiles.json` maps tile roles (floor, wall, water, door) to
+`content/delve/art/tiles.json` maps tile roles (floor, wall, water, door, ceiling) to
 atlas cells, the extract script stages the named sheets into the gitignored
 `content/delve/imports/art/` (Engine textures open from product content
 only), and theme tints multiply the texture. With no staged art the level
@@ -195,7 +235,8 @@ keeps its authored placeholder colors — the product runs identically without
 donor pixels, which are never committed (see AGENTS.md fidelity rules).
 **Deliberate divergence:** one cell per role rather than the donor's
 per-theme `texturePainters` ([donor] `generator/*/info.dat`) and light-mapped
-billboards; actor plates and stairs stay vertex-colored. Audio, music, and
+billboards; stairs stay vertex-colored, and actors without staged sheets fall
+back to placeholder plates. Audio, music, and
 screen flashes ([donor] `Audio.java`, `Game.flash`) are **deferred**.
 
 ## Content and mods

@@ -24,7 +24,7 @@ Run domain and rules (C#, DelveRpg.Kit + Rulesets.Delver)
 | `DelveRpg.Rulesets.Delver/` | Content schemas and composition loader, catalog tables, run-plan expansion (`DelverRuleset`) |
 | `DelveRpg.Host/DelveProduct.cs` | Lifecycle, run policy (title, permadeath, meta), update admission |
 | `DelveRpg.Host/Input/` | Engine input events → semantic `RunInput` |
-| `DelveRpg.Host/Presentation/` | Level mesh, actor plates, camera — Engine graphics only |
+| `DelveRpg.Host/Presentation/` | Level mesh, actor and held-weapon sprites, camera — Engine graphics only |
 | `DelveRpg.Host/Hud/` | `HudFacts` → `delve.ui.snapshot.v1` projection |
 | `DelveRpg.Host/Save/` | Run snapshot and meta stores over Engine persistence |
 | `src/ui/main.ts` | DOM HUD: renders the projection, claims declared intents |

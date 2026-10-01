@@ -94,23 +94,41 @@ echo "  $OUT/extracted    donor entries (dat, bin, png, obj, json, atlas, fnt)"
 echo "  $OUT/jsonschema   engine content schemas"
 echo "  $OUT/normalized   normalized strict-JSON reference tables"
 
-# Stage the tile atlases the authored art manifest names into the gitignored
-# content import area: Engine textures open from product content only, and
-# donor pixels must never be committed.
+# Stage the tile atlases and sprite sheets the authored art manifests name
+# into the gitignored content import area: Engine textures open from product
+# content only, and donor pixels must never be committed.
 ART_STAGE="$REPO_ROOT/content/delve/imports/art"
 mkdir -p "$ART_STAGE"
 staged=0
-for atlas in $(python3 - "$REPO_ROOT/content/delve/art/tiles.json" <<'PYEOF'
+for atlas in $(python3 - "$REPO_ROOT/content/delve/art/tiles.json" "$REPO_ROOT/content/delve/art/sprites.json" <<'PYEOF'
 import json, sys
-manifest = json.load(open(sys.argv[1]))
-for name in manifest.get("atlases", {}):
-    print(name)
+for path in sys.argv[1:]:
+    manifest = json.load(open(path))
+    for name in manifest.get("atlases", {}):
+        print(name)
 PYEOF
 ); do
   if [[ -f "$OUT/extracted/$atlas" ]]; then
-    cp "$OUT/extracted/$atlas" "$ART_STAGE/$atlas"
+    # The Engine admits RGB/RGBA PNGs; donor sheets saved palette-mode
+    # (armor.png) are expanded to RGBA, keeping their transparency.
+    python3 - "$OUT/extracted/$atlas" "$ART_STAGE/$atlas" <<'PYEOF'
+import shutil, sys
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+source, target = sys.argv[1], sys.argv[2]
+if Image is None:
+    shutil.copyfile(source, target)
+    sys.exit(0)
+with Image.open(source) as image:
+    if image.mode in ("RGB", "RGBA"):
+        shutil.copyfile(source, target)
+    else:
+        image.convert("RGBA").save(target)
+PYEOF
     staged=$((staged + 1))
   fi
 done
-echo "  content/delve/imports/art   $staged staged tile atlas file(s) for the level art"
+echo "  content/delve/imports/art   $staged staged atlas file(s) for the level and sprite art"
 echo "Note: donor rips must never be committed; local/ and content/delve/imports/ are gitignored."

@@ -139,6 +139,26 @@ public sealed class LevelMeshTests
         Assert.Contains(geometry.Groups, entry => entry.Role == "wall");
         Assert.Contains(geometry.Groups, entry => entry.Role == "water");
         Assert.Contains(geometry.Groups, entry => entry.Role == "door");
+        Assert.Contains(geometry.Groups, entry => entry.Role == "ceiling");
+    }
+
+    [Fact]
+    public void Ceiling_quads_sit_at_wall_height_and_face_down()
+    {
+        LevelMesh.LevelGeometry geometry = LevelMesh.Build(SmallLevel(), "Test", _ => Cell);
+        MeshGroup ceiling = geometry.Groups.Single(entry => entry.Role == "ceiling").Group;
+
+        for (uint i = ceiling.Start; i < ceiling.Start + ceiling.Count; i += 3)
+        {
+            Vector3 a = geometry.Positions[geometry.Indices[i]];
+            Vector3 b = geometry.Positions[geometry.Indices[i + 1]];
+            Vector3 c = geometry.Positions[geometry.Indices[i + 2]];
+            Assert.Equal(1f, a.Y);
+            Assert.Equal(-Vector3.UnitY, geometry.Normals[geometry.Indices[i]]);
+
+            // Counter-clockwise seen from below: the winding's normal points down.
+            Assert.True(Vector3.Cross(b - a, c - a).Y < 0f);
+        }
     }
 
     [Fact]

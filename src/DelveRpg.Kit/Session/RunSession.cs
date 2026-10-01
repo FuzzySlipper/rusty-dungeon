@@ -133,9 +133,48 @@ public sealed partial class RunSession
 
     public FloorSpec CurrentFloor => _plan.FloorAt(RunIndex);
 
+    /// <summary>
+    /// Admitted ticks this session has run. Presentation reads it for sprite
+    /// animation; it is not saved, so a resumed run counts from zero.
+    /// </summary>
+    public long ElapsedTicks { get; private set; }
+
+    /// <summary>
+    /// Hand a fresh character its starting kit: each item goes to the first
+    /// free slot, and the first weapon, body armor, and helmet are put on,
+    /// like the donor's starting inventory.
+    /// </summary>
+    public void GiveStartingKit(IReadOnlyList<string> itemIds)
+    {
+        foreach (string itemId in itemIds)
+        {
+            ItemArchetype archetype = _rules.Item(itemId)
+                ?? throw new InvalidOperationException($"Starting kit item '{itemId}' is not in the catalog.");
+            if (!Player.Inventory.TryAdd(ItemInstance.One(itemId), _rules.IsStackable(itemId)))
+            {
+                throw new InvalidOperationException($"Starting kit item '{itemId}' does not fit the inventory.");
+            }
+
+            switch (archetype.Kind)
+            {
+                case ItemKind.Weapon or ItemKind.RangedWeapon or ItemKind.Wand when Player.Equipment.WeaponItemId is null:
+                    Player.Equipment.WeaponItemId = itemId;
+                    Player.WieldedSlot = Player.Inventory.Find(itemId);
+                    break;
+                case ItemKind.Armor when Player.Equipment.ArmorItemId is null:
+                    Player.Equipment.ArmorItemId = itemId;
+                    break;
+                case ItemKind.Helmet when Player.Equipment.HelmetItemId is null:
+                    Player.Equipment.HelmetItemId = itemId;
+                    break;
+            }
+        }
+    }
+
     /// <summary>Advance one tick of the run.</summary>
     public void Tick(RunInput input)
     {
+        ElapsedTicks++;
         for (int i = _messages.Count - 1; i >= 0; i--)
         {
             RunMessage message = _messages[i];
@@ -246,7 +285,7 @@ public sealed partial class RunSession
     {
         ActorState body = Player.Body;
         float newX = body.X + deltaX;
-        if (IsFree(newX, body.Y))
+        if (IsFree(newX, body.Y) && !CrowdsMonster(body.X, body.Y, newX, body.Y))
         {
             body.X = newX;
         }
@@ -256,7 +295,7 @@ public sealed partial class RunSession
         }
 
         float newY = body.Y + deltaY;
-        if (IsFree(body.X, newY))
+        if (IsFree(body.X, newY) && !CrowdsMonster(body.X, body.Y, body.X, newY))
         {
             body.Y = newY;
         }
@@ -273,6 +312,29 @@ public sealed partial class RunSession
         && Level.IsWalkable(TileAt(x + BodyRadius), TileAt(y - BodyRadius))
         && Level.IsWalkable(TileAt(x - BodyRadius), TileAt(y + BodyRadius))
         && Level.IsWalkable(TileAt(x + BodyRadius), TileAt(y + BodyRadius));
+
+    /// <summary>
+    /// True when a step ends inside a monster's separation and closer than it
+    /// started; stepping away from an overlap stays free so nothing sticks.
+    /// </summary>
+    private bool CrowdsMonster(float fromX, float fromY, float toX, float toY)
+    {
+        float separation = _tuning.ActorSeparationTiles;
+        foreach (MonsterState monster in _monsters)
+        {
+            float after = DistanceSquared(monster.Body.X, monster.Body.Y, toX, toY);
+            if (after < separation * separation
+                && after < DistanceSquared(monster.Body.X, monster.Body.Y, fromX, fromY))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static float DistanceSquared(float ax, float ay, float bx, float by) =>
+        ((ax - bx) * (ax - bx)) + ((ay - by) * (ay - by));
 
     private static int TileAt(float coordinate) => (int)MathF.Floor(coordinate);
 

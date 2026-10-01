@@ -80,6 +80,7 @@ public sealed class DelverRuleset
         RunPlan plan = BuildRunPlan(runSeed);
         var session = new RunSession(_catalog, Tuning, plan, runSeed, meta, runtimeDraws);
         ApplyStartingGold(session);
+        session.GiveStartingKit(_composition.Pack.StartingKit);
         return session;
     }
 

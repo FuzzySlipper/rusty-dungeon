@@ -68,6 +68,7 @@ public sealed class DelveArtAssets : IDisposable
         ["wall"] = new UvRect(0f, 0f, 1f, 1f),
         ["water"] = new UvRect(0f, 0f, 1f, 1f),
         ["door"] = new UvRect(0f, 0f, 1f, 1f),
+        ["ceiling"] = new UvRect(0f, 0f, 1f, 1f),
     };
 
     private readonly Dictionary<string, UvRect> _rects = new(StringComparer.Ordinal);

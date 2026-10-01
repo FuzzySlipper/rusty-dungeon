@@ -71,6 +71,13 @@ public static class MonsterBrain
         GameTuning tuning,
         float speedMultiplier)
     {
+        // Bodies do not overlap (the donor's entity collision); a monster
+        // already beside its target holds and fights from there.
+        if (Distance(monster.Body, target) <= tuning.ActorSeparationTiles)
+        {
+            return;
+        }
+
         monster.PathRefreshRemaining--;
         if (monster.PathRefreshRemaining <= 0 || monster.PathIndex >= monster.Path.Count)
         {

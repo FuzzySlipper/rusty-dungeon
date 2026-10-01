@@ -354,6 +354,12 @@
       "transitionLevel": { "theme": "Cold", "generated": true }
     }
   ],
+  "startingKit": [
+    "delve.item.rusty-dagger",
+    "delve.item.leather-armor",
+    "delve.item.potion-of-healing",
+    "delve.item.bread"
+  ],
   "loot": [
     { "itemId": "delve.item.rusty-dagger", "weight": 4, "minItemLevel": 1, "maxItemLevel": 5 },
     { "itemId": "delve.item.short-sword", "weight": 3, "minItemLevel": 2, "maxItemLevel": 9 },

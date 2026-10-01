@@ -11,6 +11,7 @@
   "escapeSpawnCadenceEndTicks": 60,
   "escapeSpawnGroupStart": 3,
   "escapeSpawnGroupEnd": 15,
+  "actorSeparationTiles": 0.75,
   "seenRadius": 5,
   "startingGold": 40,
   "eyeHeight": 0.5

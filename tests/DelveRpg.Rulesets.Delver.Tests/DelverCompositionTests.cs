@@ -116,6 +116,23 @@ public sealed class DelverCompositionTests
     }
 
     [Fact]
+    public void A_starting_kit_entry_without_an_item_names_the_entry()
+    {
+        string pack = ContentFixtures.FixturePackJson.Replace(
+            "\"monsters\": [", "\"startingKit\": [\"i.nothing\"],\n  \"monsters\": [");
+        var load = () => DelverComposition.Load(path => path switch
+        {
+            "delve/bundles/delve-run.json" => ContentFixtures.FixtureBundleJson,
+            "delve/content-packs/delve-core.json" => ContentFixtures.FixturePackDescriptorJson,
+            "delve/packs/test.json" => pack,
+            "delve/tuning/test.json" => ContentFixtures.FixtureTuningJson,
+            _ => null,
+        });
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(load);
+        Assert.Contains("i.nothing", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_missing_payload_names_the_missing_path()
     {
         Func<string, string?> read = path => path == "delve/packs/test.json" ? null

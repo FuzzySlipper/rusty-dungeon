@@ -47,8 +47,10 @@ Recorded divergences from the donor (never to be "corrected" silently):
   later capability.
 - Ascended floors regenerate from the run seed instead of being restored from
   snapshots; only the current floor is snapshotted at save boundaries.
-- Ripped art and audio are never committed; actor and tile presentation is
-  authored placeholder geometry until this repo's own art slice lands.
+- Ripped art and audio are never committed. With the operator's donor files
+  staged (gitignored), tiles, ceilings, monsters, items and the held weapon
+  use donor sheet cells named by authored manifests; without them the game
+  runs on authored placeholder colors and plates.
 
 ## Repository layout
 

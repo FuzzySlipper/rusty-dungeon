@@ -5,16 +5,16 @@ using Rusty.Engine;
 namespace DelveRpg.Host.Presentation;
 
 /// <summary>
-/// Turns one tile grid into a retained static mesh: floor quads for walkable
-/// tiles and wall boxes for solids that touch open space. Geometry is emitted
-/// in role blocks (floor, wall, water, door) so each block can bind its own
+/// Turns one tile grid into a retained static mesh: floor and ceiling quads
+/// for open tiles and wall boxes for solids that touch open space. Geometry is
+/// emitted in role blocks (floor, wall, water, door, ceiling) so each block can bind its own
 /// material; UVs map every face into the role's atlas cell when local art is
 /// present. Vertex colors carry the theme tint either way.
 /// </summary>
 public static class LevelMesh
 {
     /// <summary>Material slot per tile role; slot order is the geometry order.</summary>
-    public static readonly string[] Roles = ["floor", "wall", "water", "door"];
+    public static readonly string[] Roles = ["floor", "wall", "water", "door", "ceiling"];
 
     public static int SlotFor(string role) => Array.IndexOf(Roles, role);
 
@@ -70,6 +70,7 @@ public static class LevelMesh
                 {
                     "wall" => WallColor(tile, r, g, b),
                     "door" => WallColor(tile, r, g, b),
+                    "ceiling" => Clamped(r * 0.8f, g * 0.8f, b * 0.82f),
                     _ => FloorColor(tile, r, g, b),
                 };
 
@@ -79,7 +80,7 @@ public static class LevelMesh
                 }
                 else
                 {
-                    AddQuad(positions, normals, uvs, colors, indices, x, y, color, rect);
+                    AddQuad(positions, normals, uvs, colors, indices, x, y, role == "ceiling", color, rect);
                 }
             }
 
@@ -112,6 +113,7 @@ public static class LevelMesh
                     "door" => tile.Kind == TileKind.DoorClosed && TouchesOpen(level, x, y),
                     "floor" => !tile.BlocksMovement && tile.Kind != TileKind.Water,
                     "water" => tile.Kind == TileKind.Water,
+                    "ceiling" => !tile.BlocksMovement,
                     _ => false,
                 };
 
@@ -155,17 +157,22 @@ public static class LevelMesh
         List<uint> indices,
         int x,
         int y,
+        bool ceiling,
         Color color,
         UvRect rect)
     {
+        // A floor quad sits at 0 facing up; a ceiling quad sits at the wall
+        // top facing down, wound the other way so back-face culling keeps the
+        // side seen from below.
+        float height = ceiling ? 1f : 0f;
         uint start = (uint)positions.Count;
-        positions.Add(new Vector3(x, 0f, y));
-        positions.Add(new Vector3(x + 1, 0f, y));
-        positions.Add(new Vector3(x + 1, 0f, y + 1));
-        positions.Add(new Vector3(x, 0f, y + 1));
+        positions.Add(new Vector3(x, height, y));
+        positions.Add(new Vector3(x + 1, height, y));
+        positions.Add(new Vector3(x + 1, height, y + 1));
+        positions.Add(new Vector3(x, height, y + 1));
         for (int i = 0; i < 4; i++)
         {
-            normals.Add(Vector3.UnitY);
+            normals.Add(ceiling ? -Vector3.UnitY : Vector3.UnitY);
             colors.Add(color);
         }
 
@@ -173,7 +180,9 @@ public static class LevelMesh
         uvs.Add(new Vector2(rect.U1, rect.V0));
         uvs.Add(new Vector2(rect.U1, rect.V1));
         uvs.Add(new Vector2(rect.U0, rect.V1));
-        indices.AddRange(new uint[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+        indices.AddRange(ceiling
+            ? new uint[] { start, start + 1, start + 2, start, start + 2, start + 3 }
+            : new uint[] { start, start + 2, start + 1, start, start + 3, start + 2 });
     }
 
     private static void AddBox(

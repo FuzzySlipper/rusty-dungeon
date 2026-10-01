@@ -48,6 +48,7 @@ public sealed class DelveProduct : IEngineProduct
         _saves = new DelveSaveStore(_engine);
         _renderer = new DelveSceneRenderer(
             _engine,
+            _ruleset.Catalog,
             _readText,
             path => context.Content.TryReadFile(path, out ProductContentFile _));
         _uiStream = _engine.Ui.OpenStream(new UiStreamRequest(DelveHudProjection.StreamId, DelveHudProjection.Contract));
@@ -102,7 +103,7 @@ public sealed class DelveProduct : IEngineProduct
 
         if (_session is not null)
         {
-            _renderer.Render(_session, _ruleset.Tuning.EyeHeight);
+            _renderer.Render(_session, _ruleset.Tuning);
         }
 
         PublishHud();

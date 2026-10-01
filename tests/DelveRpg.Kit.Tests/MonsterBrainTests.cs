@@ -65,6 +65,22 @@ public sealed class MonsterBrainTests
     }
 
     [Fact]
+    public void A_chasing_monster_stops_beside_the_player_instead_of_inside()
+    {
+        (MonsterState monster, PlayerState player, DungeonLevel level) = Scene(monsterHp: 20);
+        for (int tick = 0; tick < 600; tick++)
+        {
+            MonsterBrain.Tick(monster, level, player, Tuning, 1f);
+        }
+
+        float dx = monster.Body.X - player.Body.X;
+        float dy = monster.Body.Y - player.Body.Y;
+        float distance = MathF.Sqrt((dx * dx) + (dy * dy));
+        Assert.Equal(MonsterBrainState.Chasing, monster.BrainState);
+        Assert.InRange(distance, Tuning.ActorSeparationTiles - 0.05f, Tuning.ActorSeparationTiles + 0.001f);
+    }
+
+    [Fact]
     public void A_chasing_monster_opens_the_door_in_its_path()
     {
         // Detection needs line of sight (a closed door blocks it); once the

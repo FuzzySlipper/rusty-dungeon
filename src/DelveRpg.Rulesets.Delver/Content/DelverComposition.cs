@@ -58,6 +58,8 @@ public sealed class DelverTuningDefinition
 
     public int EscapeSpawnGroupEnd { get; init; } = 15;
 
+    public float ActorSeparationTiles { get; init; } = 0.75f;
+
     public int SeenRadius { get; init; } = 5;
 
     public int StartingGold { get; init; } = 40;
@@ -78,6 +80,7 @@ public sealed class DelverTuningDefinition
         EscapeSpawnCadenceEndTicks = EscapeSpawnCadenceEndTicks,
         EscapeSpawnGroupStart = EscapeSpawnGroupStart,
         EscapeSpawnGroupEnd = EscapeSpawnGroupEnd,
+        ActorSeparationTiles = ActorSeparationTiles,
         SeenRadius = SeenRadius,
         StartingGold = StartingGold,
         EyeHeight = EyeHeight,
@@ -156,6 +159,7 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
         Items = left.Items.Concat(right.Items).ToList(),
         Sections = left.Sections.Concat(right.Sections).ToList(),
         Loot = left.Loot.Concat(right.Loot).ToList(),
+        StartingKit = left.StartingKit.Concat(right.StartingKit).ToList(),
     };
 
     /// <summary>All-or-nothing validation at load; a bad pack fails the load, not a run.</summary>
@@ -192,6 +196,14 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
             if (pack.Items.All(item => item.Id != entry.ItemId))
             {
                 problems.Add($"loot entry '{entry.ItemId}' names no item");
+            }
+        }
+
+        foreach (string itemId in pack.StartingKit)
+        {
+            if (pack.Items.All(item => item.Id != itemId))
+            {
+                problems.Add($"starting kit entry '{itemId}' names no item");
             }
         }
 

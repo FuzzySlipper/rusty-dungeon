@@ -116,4 +116,17 @@ public sealed class DelverRulesetTests
         Assert.Equal(RunPhase.Playing, session.Phase);
         Assert.Equal(40, session.Player.Gold);
     }
+
+    [Fact]
+    public void A_fresh_character_wields_its_starting_weapon_and_wears_its_armor()
+    {
+        RunSession session = Ruleset().CreateSession(
+            77UL, Kit.Progression.MetaProgression.Fresh, new Kit.Random.SplitMixRandom(1UL));
+
+        // Donor data/player.dat: a dagger in hand and leather armor on.
+        Assert.Equal("delve.item.rusty-dagger", session.Player.Equipment.WeaponItemId);
+        Assert.Equal("delve.item.rusty-dagger", session.Player.Inventory.Slot(session.Player.WieldedSlot)?.ArchetypeId);
+        Assert.Equal("delve.item.leather-armor", session.Player.Equipment.ArmorItemId);
+        Assert.True(session.Player.Inventory.Find("delve.item.potion-of-healing") >= 0);
+    }
 }

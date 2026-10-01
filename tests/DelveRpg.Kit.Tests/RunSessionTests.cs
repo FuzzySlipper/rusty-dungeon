@@ -54,6 +54,63 @@ public sealed class RunSessionTests
     }
 
     [Fact]
+    public void The_starting_kit_is_carried_and_the_first_weapon_is_wielded()
+    {
+        RunSession session = Session();
+        session.GiveStartingKit(["test.item.potion", "test.item.sword"]);
+
+        Assert.Equal("test.item.sword", session.Player.Equipment.WeaponItemId);
+        Assert.Equal(1, session.Player.WieldedSlot);
+        Assert.Equal("test.item.potion", session.Player.Inventory.Slot(0)?.ArchetypeId);
+    }
+
+    [Fact]
+    public void Walking_into_a_monster_stops_at_the_separation_distance()
+    {
+        RunSnapshot start = Session().Capture();
+        RunSession probe = Restored(start);
+        float px = probe.Player.Body.X;
+        float py = probe.Player.Body.Y;
+
+        // Pick a heading with open floor ahead, and put a monster two tiles out.
+        float facing = 0f;
+        bool found = false;
+        for (int quarter = 0; quarter < 4 && !found; quarter++)
+        {
+            facing = quarter * (MathF.PI / 2f);
+            found = true;
+            for (float step = 0.5f; step <= 2.5f; step += 0.5f)
+            {
+                int tx = (int)MathF.Floor(px + (MathF.Sin(facing) * step));
+                int ty = (int)MathF.Floor(py - (MathF.Cos(facing) * step));
+                found &= probe.Level.IsWalkable(tx, ty);
+            }
+        }
+
+        Assert.True(found, "entrance has no straight run of open floor");
+        float mx = px + (MathF.Sin(facing) * 2f);
+        float my = py - (MathF.Cos(facing) * 2f);
+        RunSession session = Restored(start with
+        {
+            Facing = facing,
+            Monsters = [new SnapshotMonster("test.monster.rat", mx, my, 6, 0f)],
+            GroundItems = [],
+        });
+
+        float closest = float.MaxValue;
+        for (int tick = 0; tick < 180; tick++)
+        {
+            session.Tick(RunInput.Idle with { MoveY = 1f });
+            Kit.Actors.ActorState rat = session.Monsters[0].Body;
+            float dx = rat.X - session.Player.Body.X;
+            float dy = rat.Y - session.Player.Body.Y;
+            closest = MathF.Min(closest, MathF.Sqrt((dx * dx) + (dy * dy)));
+        }
+
+        Assert.InRange(closest, Tuning.ActorSeparationTiles - 0.05f, Tuning.ActorSeparationTiles + 0.1f);
+    }
+
+    [Fact]
     public void Using_the_stairs_down_moves_the_run_one_floor_deeper()
     {
         RunSession session = Session();

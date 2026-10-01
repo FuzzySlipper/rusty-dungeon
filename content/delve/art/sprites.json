@@ -1,0 +1,40 @@
+{
+  "schema": "delve.art.sprites.v1",
+  "description": "Maps content sprite ids to cells of donor sprite sheets staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). Sheets are fixed 32px grids; a cell index is column + row * columns, as in the donor's TextureAtlas. Monster cells and walk/attack ranges follow donor data/monsters.dat where a donor monster exists; rat, ogre and golem have no donor monster and borrow the worm, zombie and eye art. The art is donor-derived and never committed. Without staged art, actors keep their placeholder plates.",
+  "artContentPrefix": "delve/imports/art",
+  "atlases": {
+    "entities_dungeon.png": { "columns": 16, "rows": 16 },
+    "entities_sewer.png": { "columns": 16, "rows": 16 },
+    "entities_cave.png": { "columns": 16, "rows": 8 },
+    "entities_undead.png": { "columns": 16, "rows": 8 },
+    "items.png": { "columns": 8, "rows": 20 },
+    "melee.png": { "columns": 8, "rows": 4 },
+    "armor.png": { "columns": 8, "rows": 5 },
+    "wands.png": { "columns": 8, "rows": 4 }
+  },
+  "sprites": {
+    "monster.rat": { "atlas": "entities_cave.png", "frame": 0, "size": 1.0, "walk": { "start": 0, "end": 3, "speed": 30 }, "attack": { "start": 4, "end": 10, "speed": 65 } },
+    "monster.slime": { "atlas": "entities_dungeon.png", "frame": 0, "size": 1.0, "walk": { "start": 0, "end": 3, "speed": 35 }, "attack": { "start": 4, "end": 11, "speed": 55 } },
+    "monster.bat": { "atlas": "entities_dungeon.png", "frame": 32, "size": 1.0, "lift": 0.35, "walk": { "start": 32, "end": 35, "speed": 30 }, "attack": { "start": 36, "end": 41, "speed": 30 } },
+    "monster.kobold": { "atlas": "entities_sewer.png", "frame": 0, "size": 1.0, "walk": { "start": 0, "end": 3, "speed": 35 }, "attack": { "start": 4, "end": 10, "speed": 60 } },
+    "monster.spider": { "atlas": "entities_cave.png", "frame": 32, "size": 1.0, "walk": { "start": 32, "end": 35, "speed": 30 }, "attack": { "start": 36, "end": 40, "speed": 30 } },
+    "monster.skeleton": { "atlas": "entities_undead.png", "frame": 0, "size": 1.0, "walk": { "start": 0, "end": 3, "speed": 30 }, "attack": { "start": 4, "end": 8, "speed": 30 } },
+    "monster.ogre": { "atlas": "entities_dungeon.png", "frame": 160, "size": 1.0, "walk": { "start": 160, "end": 163, "speed": 50 }, "attack": { "start": 164, "end": 169, "speed": 40 } },
+    "monster.wraith": { "atlas": "entities_undead.png", "frame": 96, "size": 1.0, "walk": { "start": 96, "end": 101, "speed": 30 } },
+    "monster.golem": { "atlas": "entities_cave.png", "frame": 64, "size": 1.0, "walk": { "start": 64, "end": 67, "speed": 30 } },
+    "item.dagger": { "atlas": "melee.png", "frame": 8, "size": 0.5, "heldRoll": -90 },
+    "item.sword": { "atlas": "melee.png", "frame": 17, "size": 0.5 },
+    "item.mace": { "atlas": "melee.png", "frame": 11, "size": 0.5 },
+    "item.bow": { "atlas": "items.png", "frame": 131, "size": 0.5 },
+    "item.wand": { "atlas": "wands.png", "frame": 0, "size": 0.5 },
+    "item.potion.red": { "atlas": "items.png", "frame": 2, "size": 0.5 },
+    "item.potion.blue": { "atlas": "items.png", "frame": 3, "size": 0.5 },
+    "item.bread": { "atlas": "items.png", "frame": 64, "size": 0.5 },
+    "item.gold": { "atlas": "items.png", "frame": 89, "size": 0.5 },
+    "item.key": { "atlas": "items.png", "frame": 0, "size": 0.5 },
+    "item.armor.leather": { "atlas": "armor.png", "frame": 8, "size": 0.5 },
+    "item.armor.chain": { "atlas": "armor.png", "frame": 10, "size": 0.5 },
+    "item.helmet": { "atlas": "armor.png", "frame": 1, "size": 0.5 },
+    "item.orb": { "atlas": "items.png", "frame": 59, "size": 0.5 }
+  }
+}

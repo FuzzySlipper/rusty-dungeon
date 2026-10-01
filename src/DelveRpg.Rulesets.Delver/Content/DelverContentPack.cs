@@ -17,6 +17,14 @@ public sealed class DelverContentPack
     public List<DelverSectionDefinition> Sections { get; init; } = new();
 
     public List<DelverLootDefinition> Loot { get; init; } = new();
+
+    /// <summary>
+    /// Item ids a fresh character starts with, in slot order; the first
+    /// weapon, armor, and helmet are put on (donor data/player.dat
+    /// startingInventory). A settable property: the source-generated reader
+    /// assigns absent init-only members as null, and a pack may omit the kit.
+    /// </summary>
+    public List<string> StartingKit { get; set; } = new();
 }
 
 public sealed class DelverMonsterDefinition
