@@ -4,7 +4,12 @@ using DelveRpg.Kit.Rules;
 
 namespace DelveRpg.Rulesets.Delver.Content;
 
-/// <summary>The bundle manifest: which ruleset, packs, and tuning one run loads.</summary>
+/// <summary>
+/// The bundle manifest: which ruleset, packs, and tuning one run loads.
+/// Members with a default are settable: the source-generated reader keeps
+/// an initializer only on a settable property and leaves an omitted init-only
+/// member null or zero.
+/// </summary>
 public sealed class DelverBundleDefinition
 {
     public required string Kind { get; init; }
@@ -13,7 +18,7 @@ public sealed class DelverBundleDefinition
 
     public required string Ruleset { get; init; }
 
-    public List<string> Packs { get; init; } = new();
+    public List<string> Packs { get; set; } = new();
 
     public required string Tuning { get; init; }
 }
@@ -31,40 +36,43 @@ public sealed class DelverPackDescriptor
     public required string Payload { get; init; }
 }
 
-/// <summary>Typed tuning document; every field maps onto the Kit's <see cref="GameTuning"/>.</summary>
+/// <summary>
+/// Typed tuning document; every field maps onto the Kit's <see cref="GameTuning"/>,
+/// and an omitted field keeps the Kit default (settable, see the bundle note).
+/// </summary>
 public sealed class DelverTuningDefinition
 {
-    public float MaxWalkSpeed { get; init; } = 0.06f;
+    public float MaxWalkSpeed { get; set; } = 0.06f;
 
-    public float WalkAcceleration { get; init; } = 0.02f;
+    public float WalkAcceleration { get; set; } = 0.02f;
 
-    public float WalkFriction { get; init; } = 0.8f;
+    public float WalkFriction { get; set; } = 0.8f;
 
-    public int AttackChargeTicks { get; init; } = 40;
+    public int AttackChargeTicks { get; set; } = 40;
 
-    public int AttackCooldownTicks { get; init; } = 30;
+    public int AttackCooldownTicks { get; set; } = 30;
 
-    public float DodgeChance { get; init; } = 0.15f;
+    public float DodgeChance { get; set; } = 0.15f;
 
-    public float EnchantChance { get; init; } = 0.2f;
+    public float EnchantChance { get; set; } = 0.2f;
 
-    public float FleeHpFraction { get; init; } = 0.25f;
+    public float FleeHpFraction { get; set; } = 0.25f;
 
-    public int EscapeSpawnCadenceStartTicks { get; init; } = 600;
+    public int EscapeSpawnCadenceStartTicks { get; set; } = 600;
 
-    public int EscapeSpawnCadenceEndTicks { get; init; } = 60;
+    public int EscapeSpawnCadenceEndTicks { get; set; } = 60;
 
-    public int EscapeSpawnGroupStart { get; init; } = 3;
+    public int EscapeSpawnGroupStart { get; set; } = 3;
 
-    public int EscapeSpawnGroupEnd { get; init; } = 15;
+    public int EscapeSpawnGroupEnd { get; set; } = 15;
 
-    public float ActorSeparationTiles { get; init; } = 0.75f;
+    public float ActorSeparationTiles { get; set; } = 0.75f;
 
-    public int SeenRadius { get; init; } = 5;
+    public int SeenRadius { get; set; } = 5;
 
-    public int StartingGold { get; init; } = 40;
+    public int StartingGold { get; set; } = 40;
 
-    public float EyeHeight { get; init; } = 0.5f;
+    public float EyeHeight { get; set; } = 0.5f;
 
     public GameTuning ToTuning() => new()
     {

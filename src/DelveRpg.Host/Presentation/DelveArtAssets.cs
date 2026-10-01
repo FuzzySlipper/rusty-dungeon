@@ -11,20 +11,25 @@ namespace DelveRpg.Host.Presentation;
 /// </summary>
 public readonly record struct ArtTileCell(string Atlas, int Column, int Row, Color Tint);
 
+/// <summary>
+/// The tile art manifest. Members with a default are settable: the source-generated reader keeps
+/// an initializer only on a settable property and leaves an omitted init-only
+/// member null or zero.
+/// </summary>
 public sealed class DelveArtManifest
 {
     [JsonPropertyName("schema")]
-    public string Schema { get; init; } = string.Empty;
+    public string Schema { get; set; } = string.Empty;
 
     /// <summary>Content path prefix of the gitignored import art staging area.</summary>
     [JsonPropertyName("artContentPrefix")]
-    public string ArtContentPrefix { get; init; } = string.Empty;
+    public string ArtContentPrefix { get; set; } = string.Empty;
 
     [JsonPropertyName("atlases")]
-    public Dictionary<string, DelveArtAtlas> Atlases { get; init; } = new();
+    public Dictionary<string, DelveArtAtlas> Atlases { get; set; } = new();
 
     [JsonPropertyName("tiles")]
-    public Dictionary<string, DelveArtTile> Tiles { get; init; } = new();
+    public Dictionary<string, DelveArtTile> Tiles { get; set; } = new();
 }
 
 public sealed class DelveArtAtlas
@@ -39,7 +44,7 @@ public sealed class DelveArtAtlas
 public sealed class DelveArtTile
 {
     [JsonPropertyName("atlas")]
-    public string Atlas { get; init; } = string.Empty;
+    public string Atlas { get; set; } = string.Empty;
 
     [JsonPropertyName("column")]
     public int Column { get; init; }

@@ -75,3 +75,31 @@ public sealed class DelveSpriteAssetsTests
         Assert.True(Vector3.Distance(rest.Position, settled.Position) < 0.001f);
     }
 }
+
+public sealed class ArtManifestDefaultsTests
+{
+    [Fact]
+    public void Omitted_sprite_fields_keep_their_defaults()
+    {
+        DelveSpriteManifest manifest = System.Text.Json.JsonSerializer.Deserialize(
+            """{"sprites":{"s":{"atlas":"a.png","frame":3,"walk":{"start":0,"end":3}}}}""",
+            DelveSpriteJsonContext.Default.DelveSpriteManifest)!;
+
+        Assert.Equal(string.Empty, manifest.ArtContentPrefix);
+        Assert.Empty(manifest.Atlases);
+        DelveSpriteDefinition sprite = manifest.Sprites["s"];
+        Assert.Equal(1f, sprite.Size);
+        Assert.Equal(30, sprite.Walk!.Speed);
+    }
+
+    [Fact]
+    public void Omitted_tile_manifest_fields_keep_their_defaults()
+    {
+        DelveArtManifest manifest = System.Text.Json.JsonSerializer.Deserialize(
+            """{"schema":"delve.art.tiles.v1"}""", DelveArtJsonContext.Default.DelveArtManifest)!;
+
+        Assert.Equal(string.Empty, manifest.ArtContentPrefix);
+        Assert.Empty(manifest.Atlases);
+        Assert.Empty(manifest.Tiles);
+    }
+}

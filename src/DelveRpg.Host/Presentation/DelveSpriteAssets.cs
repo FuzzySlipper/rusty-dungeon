@@ -5,26 +5,31 @@ using Rusty.Engine;
 
 namespace DelveRpg.Host.Presentation;
 
+/// <summary>
+/// The sprite art manifest. Members with a default are settable: the source-generated reader keeps
+/// an initializer only on a settable property and leaves an omitted init-only
+/// member null or zero.
+/// </summary>
 public sealed class DelveSpriteManifest
 {
     [JsonPropertyName("schema")]
-    public string Schema { get; init; } = string.Empty;
+    public string Schema { get; set; } = string.Empty;
 
     /// <summary>Content path prefix of the gitignored import art staging area.</summary>
     [JsonPropertyName("artContentPrefix")]
-    public string ArtContentPrefix { get; init; } = string.Empty;
+    public string ArtContentPrefix { get; set; } = string.Empty;
 
     [JsonPropertyName("atlases")]
-    public Dictionary<string, DelveArtAtlas> Atlases { get; init; } = new();
+    public Dictionary<string, DelveArtAtlas> Atlases { get; set; } = new();
 
     [JsonPropertyName("sprites")]
-    public Dictionary<string, DelveSpriteDefinition> Sprites { get; init; } = new();
+    public Dictionary<string, DelveSpriteDefinition> Sprites { get; set; } = new();
 }
 
 public sealed class DelveSpriteDefinition
 {
     [JsonPropertyName("atlas")]
-    public string Atlas { get; init; } = string.Empty;
+    public string Atlas { get; set; } = string.Empty;
 
     /// <summary>Resting cell: column + row * columns, like the donor's atlas index.</summary>
     [JsonPropertyName("frame")]
@@ -32,7 +37,7 @@ public sealed class DelveSpriteDefinition
 
     /// <summary>World height and width of the cell, in tiles.</summary>
     [JsonPropertyName("size")]
-    public float Size { get; init; } = 1f;
+    public float Size { get; set; } = 1f;
 
     /// <summary>Height the sprite's base floats above the floor, in tiles.</summary>
     [JsonPropertyName("lift")]
@@ -65,7 +70,7 @@ public sealed class DelveSpriteAnimation
     public int End { get; init; }
 
     [JsonPropertyName("speed")]
-    public int Speed { get; init; } = 30;
+    public int Speed { get; set; } = 30;
 
     /// <summary>The cell shown <paramref name="ticks"/> into the sequence; loops.</summary>
     public int FrameAt(long ticks)

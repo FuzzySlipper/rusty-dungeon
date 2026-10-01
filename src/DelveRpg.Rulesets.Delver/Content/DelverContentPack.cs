@@ -7,22 +7,24 @@ namespace DelveRpg.Rulesets.Delver.Content;
 /// donor's data model (monsters.dat, items.dat, section.dat, loot lists) to
 /// this product's own schema; the donor files themselves are never loaded at
 /// runtime. See docs/research/delver-data-inventory.md for provenance.
+/// Members with a default are settable: the source-generated reader keeps
+/// an initializer only on a settable property and leaves an omitted init-only
+/// member null or zero.
 /// </summary>
 public sealed class DelverContentPack
 {
-    public List<DelverMonsterDefinition> Monsters { get; init; } = new();
+    public List<DelverMonsterDefinition> Monsters { get; set; } = new();
 
-    public List<DelverItemDefinition> Items { get; init; } = new();
+    public List<DelverItemDefinition> Items { get; set; } = new();
 
-    public List<DelverSectionDefinition> Sections { get; init; } = new();
+    public List<DelverSectionDefinition> Sections { get; set; } = new();
 
-    public List<DelverLootDefinition> Loot { get; init; } = new();
+    public List<DelverLootDefinition> Loot { get; set; } = new();
 
     /// <summary>
     /// Item ids a fresh character starts with, in slot order; the first
     /// weapon, armor, and helmet are put on (donor data/player.dat
-    /// startingInventory). A settable property: the source-generated reader
-    /// assigns absent init-only members as null, and a pack may omit the kit.
+    /// startingInventory).
     /// </summary>
     public List<string> StartingKit { get; set; } = new();
 }
@@ -33,23 +35,23 @@ public sealed class DelverMonsterDefinition
 
     public required string DisplayName { get; init; }
 
-    public string Sprite { get; init; } = "monster";
+    public string Sprite { get; set; } = "monster";
 
     public required int BaseHp { get; init; }
 
     public required int AttackPower { get; init; }
 
-    public int AttackCooldownTicks { get; init; } = 45;
+    public int AttackCooldownTicks { get; set; } = 45;
 
     public required int MonsterLevel { get; init; }
 
     public bool IsRanged { get; init; }
 
-    public int DetectRange { get; init; } = 8;
+    public int DetectRange { get; set; } = 8;
 
-    public int MinDungeonLevel { get; init; } = 1;
+    public int MinDungeonLevel { get; set; } = 1;
 
-    public int MaxDungeonLevel { get; init; } = 99;
+    public int MaxDungeonLevel { get; set; } = 99;
 
     public required int Attack { get; init; }
 
@@ -73,11 +75,11 @@ public sealed class DelverItemDefinition
     /// <summary>Weapon, RangedWeapon, Wand, Potion, Food, Gold, Key, Armor, Helmet, QuestOrb.</summary>
     public required string Kind { get; init; }
 
-    public string Sprite { get; init; } = "item";
+    public string Sprite { get; set; } = "item";
 
     public int Power { get; init; }
 
-    public int ChargeTicks { get; init; } = 40;
+    public int ChargeTicks { get; set; } = 40;
 
     public int HealAmount { get; init; }
 
@@ -85,9 +87,9 @@ public sealed class DelverItemDefinition
 
     public bool Stackable { get; init; }
 
-    public int MinItemLevel { get; init; } = 1;
+    public int MinItemLevel { get; set; } = 1;
 
-    public int MaxItemLevel { get; init; } = 99;
+    public int MaxItemLevel { get; set; } = 99;
 }
 
 public sealed class DelverSectionDefinition
@@ -101,7 +103,7 @@ public sealed class DelverSectionDefinition
     /// <summary>How many ordinary floors this section contributes.</summary>
     public required int Floors { get; init; }
 
-    public List<DelverLevelTemplate> LevelTemplates { get; init; } = new();
+    public List<DelverLevelTemplate> LevelTemplates { get; set; } = new();
 
     /// <summary>An optional themed floor appended after the ordinary floors.</summary>
     public DelverLevelTemplate? TransitionLevel { get; init; }
@@ -111,18 +113,18 @@ public sealed class DelverLevelTemplate
 {
     public required string Theme { get; init; }
 
-    public bool Generated { get; init; } = true;
+    public bool Generated { get; set; } = true;
 }
 
 public sealed class DelverLootDefinition
 {
     public required string ItemId { get; init; }
 
-    public int Weight { get; init; } = 1;
+    public int Weight { get; set; } = 1;
 
-    public int MinItemLevel { get; init; } = 1;
+    public int MinItemLevel { get; set; } = 1;
 
-    public int MaxItemLevel { get; init; } = 99;
+    public int MaxItemLevel { get; set; } = 99;
 }
 
 /// <summary>JSON binding for pack documents (NativeAOT-safe source generation).</summary>
