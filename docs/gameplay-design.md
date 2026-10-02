@@ -964,8 +964,54 @@ drawn, including on return.
 
 **Deliberate divergence:** lit geometry rather than the donor's light-mapped
 billboards; stairs stay vertex-colored, and actors without staged sheets fall
-back to placeholder plates. Audio and music ([donor] `Audio.java`) are
-**deferred**.
+back to placeholder plates.
+
+**Audio — approximate (donor sounds, our triggers).** The Kit raises a cue
+for each thing worth hearing (`RunSession.Cues`, cleared every tick; it has
+no audio vocabulary). The Host voices the cues through the Engine audio
+service, which plays them as one-shot emissions.
+`content/delve/audio/sounds.json` maps each cue to donor sound files, staged
+from the operator's jar into the gitignored `delve/imports/audio`; a cue
+picks one of its files at random. The sources:
+
+| Sounds | Donor source |
+| --- | --- |
+| Sword swing `whoosh1*` | `entities/items/Sword.java:31` |
+| Monster swipes `enemy_swipes*`, hits `hit*` | `entities/Monster.java:154-158` |
+| Wood door open and locked click | `entities/Door.java:83-91` |
+| Pickups `pu_gen`, `pu_gold` | `entities/Item.java:93`, `items/Gold.java:44` |
+| Pottery breaks | `entities/Breakable.java:46` |
+| Explosions | `entities/Explosion.java:16` |
+| Drink and food | `cons_drink`, `cons_food` |
+| Stairs, death, level-up, escape | `floor_descend`, `sfx_death`, `music/levelup`, `music/win` |
+| Monster alert, attack, hurt, die | [data] `data/monsters.dat` sound sets |
+
+- **Monsters.** Each of ours borrows the donor set named in the manifest:
+  rat→worm, kobold→goblin, ogre→zombie, wraith→skull, golem→beholder. A hurt
+  monster's cry plays over the hit sound; its death cry replaces the generic
+  enemy death.
+- **Placement.** World cues (monsters, doors, pots, explosions, wall bolts)
+  play where they happened, fading linearly over 16 tiles. The player's own
+  cues play at the listener.
+- **Footsteps** sound every 25 ticks of walking, with water steps while
+  wading and a ±10% pitch spread ([donor] `entities/Player.java:605-609`).
+- **Music and ambience.** Each theme loops one of its donor section's music
+  tracks at the donor's default music volume of 0.5
+  ([donor] `game/Options.java:30`) and the `env_indoor` ambience at 0.15
+  ([data] `generator/<Section>/section.dat` `music`, `ambientSound`).
+  Cold, which has no donor section, takes `DK-7`. A new theme changes the
+  track; floors of the same theme keep it.
+
+**Divergences:**
+- No action-music switch when monsters give chase (the donor's
+  `actionMusic`), no idle cries, torch loops or foliage rustles, and no title
+  or camp music.
+- Music and ambience share the Engine's Ambient bus, since there is no Music
+  bus (asked upstream as rusty-engine 9142).
+
+Verified by recording the null sink's monitor while walking and swinging
+(samples present, peak 26250). The headless host has no audible output
+device.
 
 ## Content and mods
 

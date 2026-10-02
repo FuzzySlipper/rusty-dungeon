@@ -147,4 +147,37 @@ if python3 -c 'import PIL' 2>/dev/null; then
 else
   echo "warning: Pillow missing; torches draw without embers (no particle strips)" >&2
 fi
+# Stage the sounds the audio manifest names, straight from the jar's audio/
+# folder (donor audio, so it stays in the gitignored stage).
+AUDIO_STAGE="$REPO_ROOT/content/delve/imports/audio"
+python3 - "$JAR" "$REPO_ROOT/content/delve/audio/sounds.json" "$AUDIO_STAGE" <<'PYEOF'
+import json, os, sys, zipfile
+jar, manifest_path, stage = sys.argv[1:4]
+manifest = json.load(open(manifest_path))
+names = set()
+for cue in manifest.get("cues", {}).values():
+    names.update(cue.get("files", []))
+for sets in manifest.get("monsters", {}).values():
+    for key in ("alert", "attack", "hurt", "die"):
+        names.update(sets.get(key, []))
+for theme in manifest.get("themes", {}).values():
+    names.update(theme.get("music", []))
+    if theme.get("ambient"):
+        names.add(theme["ambient"])
+staged = 0
+with zipfile.ZipFile(jar) as archive:
+    entries = set(archive.namelist())
+    for name in sorted(names):
+        entry = "audio/" + name
+        if entry not in entries:
+            print(f"  missing donor sound {entry}", file=sys.stderr)
+            continue
+        target = os.path.join(stage, name)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with archive.open(entry) as source, open(target, "wb") as out:
+            out.write(source.read())
+        staged += 1
+print(f"  content/delve/imports/audio   {staged} staged sound file(s)")
+PYEOF
+
 echo "Note: donor rips must never be committed; local/ and content/delve/imports/ are gitignored."

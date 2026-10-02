@@ -121,6 +121,7 @@ public sealed partial class RunSession
         {
             HurtPlayer(SpikeTrap.Damage);
             ShowMessage($"Spikes stab you for {SpikeTrap.Damage}.");
+            CueAtPlayer(CueKind.Spikes);
         }
 
         foreach (MonsterState monster in _monsters.ToArray())
@@ -221,6 +222,7 @@ public sealed partial class RunSession
             SpriteId = "projectile.eyebolt",
         });
         ShowMessage("A bolt flies from the wall!");
+        Cue(CueKind.WallBolt, x, y);
     }
 
     /// <summary>
@@ -229,6 +231,7 @@ public sealed partial class RunSession
     /// </summary>
     private void Explode(float x, float y, float radius, int damage, DamageType damageType)
     {
+        Cue(CueKind.Explode, x, y);
         _bursts.Add(new Burst(_nextActorId++, x, y, damageType, ElapsedTicks));
         if (damage <= 0)
         {
@@ -300,6 +303,7 @@ public sealed partial class RunSession
         }
 
         ShowMessage("The pot shatters.");
+        Cue(CueKind.PotBreak, pot.X, pot.Y);
         if (!_random.Chance(0.5))
         {
             return;

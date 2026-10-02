@@ -78,6 +78,7 @@ public sealed partial class RunSession
     /// </summary>
     private void StartSwing(ItemArchetype weapon, float attackPower)
     {
+        CueAtPlayer(CueKind.Swing, weapon.Id);
         ActorState body = Player.Body;
         bool strong = attackPower >= 0.5f && weapon.StrongSwing is not null;
         SwingTiming? timing = strong ? weapon.StrongSwing : weapon.WeakSwing;
@@ -182,6 +183,7 @@ public sealed partial class RunSession
         int experience = CombatResolver.ExperienceForKill(monster.Level - 1);
         Player.Experience += experience;
         ShowMessage($"The {monster.Archetype.DisplayName} falls. (+{experience} xp)");
+        Cue(CueKind.MonsterDie, monster.Body.X, monster.Body.Y, monster.Archetype.Id);
         foreach (ItemInstance carried in monster.Carried)
         {
             DropItem(carried, monster.Body.TileX, monster.Body.TileY);
@@ -257,6 +259,7 @@ public sealed partial class RunSession
             case TileKind.DoorClosed:
                 Level.TryOpenDoor(tileX, tileY);
                 ShowMessage("You open the door.");
+                Cue(CueKind.DoorOpen, tileX + 0.5f, tileY + 0.5f);
                 return;
             case TileKind.DoorLocked:
                 // A locked door takes one key and stays open
@@ -264,12 +267,14 @@ public sealed partial class RunSession
                 if (Player.Keys <= 0)
                 {
                     ShowMessage("The door is locked.");
+                    Cue(CueKind.DoorLocked, tileX + 0.5f, tileY + 0.5f);
                     return;
                 }
 
                 Player.Keys--;
                 Level.Set(tileX, tileY, Tile.DoorOpen);
                 ShowMessage("You unlock the door.");
+                Cue(CueKind.DoorOpen, tileX + 0.5f, tileY + 0.5f);
                 return;
             case TileKind.StairsDown:
                 if (RunIndex + 1 >= _plan.FloorCount)
@@ -306,6 +311,7 @@ public sealed partial class RunSession
         {
             Phase = RunPhase.Won;
             ShowMessage("You escape the dungeon with the orb!");
+            CueAtPlayer(CueKind.Escape);
         }
         else
         {
@@ -343,6 +349,7 @@ public sealed partial class RunSession
                 Player.Body.Hp = Math.Min(Player.Body.MaxHp, Player.Body.Hp + archetype.HealAmount);
                 Player.Inventory.TryConsumeOne(slot);
                 ShowMessage($"You eat the {archetype.DisplayName}.");
+                CueAtPlayer(CueKind.Eat);
                 return;
             case ItemKind.Weapon:
             case ItemKind.RangedWeapon:
@@ -350,18 +357,21 @@ public sealed partial class RunSession
                 Player.Equipment.WeaponItemId = archetype.Id;
                 Player.WieldedSlot = slot;
                 ShowMessage($"You wield the {ItemName(item)}.");
+                CueAtPlayer(CueKind.Equip, archetype.Id);
                 IdentifyOnEquip(slot);
                 return;
             case ItemKind.Armor:
                 Player.Equipment.ArmorItemId = archetype.Id;
                 Player.ArmorSlot = slot;
                 ShowMessage($"You wear the {ItemName(item)}.");
+                CueAtPlayer(CueKind.Equip, archetype.Id);
                 IdentifyOnEquip(slot);
                 return;
             case ItemKind.Helmet:
                 Player.Equipment.HelmetItemId = archetype.Id;
                 Player.HelmetSlot = slot;
                 ShowMessage($"You wear the {ItemName(item)}.");
+                CueAtPlayer(CueKind.Equip, archetype.Id);
                 IdentifyOnEquip(slot);
                 return;
             case ItemKind.BagUpgrade:
@@ -452,11 +462,13 @@ public sealed partial class RunSession
                 Player.Gold += archetype.Value;
                 _groundItems.Remove(item);
                 ShowMessage($"+{archetype.Value} gold.");
+                CueAtPlayer(CueKind.PickupGold);
                 return;
             case ItemKind.Key:
                 Player.Keys++;
                 _groundItems.Remove(item);
                 ShowMessage("You found a key.");
+                CueAtPlayer(CueKind.Pickup, archetype.Id);
                 return;
             case ItemKind.QuestOrb:
                 Player.HoldingOrb = true;
@@ -468,6 +480,7 @@ public sealed partial class RunSession
                 {
                     _groundItems.Remove(item);
                     ShowMessage($"You pick up the {ItemName(item.Item)}.");
+                    CueAtPlayer(CueKind.Pickup, item.Item.ArchetypeId);
                 }
                 else
                 {
@@ -542,6 +555,7 @@ public sealed partial class RunSession
             monster.Body.Z = Level.StandHeight(monster.Body.TileX, monster.Body.TileY);
             if (before == MonsterBrainState.Idle && monster.BrainState == MonsterBrainState.Chasing)
             {
+                Cue(CueKind.MonsterAlert, monster.Body.X, monster.Body.Y, monster.Archetype.Id);
                 // Alerted monsters wait a beat before the first cast
                 // ([donor] entities/Monster.java:555-565).
                 monster.RangedCooldownRemaining = 40 + _random.Next(0, 20);

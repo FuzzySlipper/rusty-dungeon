@@ -1,0 +1,464 @@
+{
+  "schema": "delve.audio.sounds.v1",
+  "description": "Maps run cues, monsters and floor themes to donor sound file names under the gitignored content import area (delve/imports/audio, staged by scripts/extract-delver-reference.sh from the operator's donor jar audio/). Names follow the donor: weapon swings (entities/items/Sword.java swingSound), monster hits and swipes (entities/Monster.java hitSound, attackSwingSound), doors (entities/Door.java), pickups (entities/Item.java, items/Gold.java), monster alert/attack/hurt/die sets (data/monsters.dat; our monsters borrow the donor set named in 'donor'), and each section's music and ambient sound (generator/<Section>/section.dat music, ambientSound 0.15). A cue picks one of its files at random. 'world' cues play where they happened; the rest play at the listener. The sound data is donor-derived and never committed; without it the game is silent.",
+  "audioContentPrefix": "delve/imports/audio",
+  "musicVolume": 0.5,
+  "cues": {
+    "Swing": {
+      "files": [
+        "whoosh1.mp3",
+        "whoosh1_02.mp3",
+        "whoosh1_03.mp3",
+        "whoosh1_04.mp3"
+      ],
+      "volume": 0.7
+    },
+    "MonsterHurt": {
+      "files": [
+        "hit.mp3",
+        "hit_02.mp3",
+        "hit_03.mp3",
+        "hit_04.mp3"
+      ],
+      "volume": 0.8,
+      "world": true
+    },
+    "MonsterDie": {
+      "files": [
+        "sfx_death_enemy_01.mp3",
+        "sfx_death_enemy_02.mp3",
+        "sfx_death_enemy_03.mp3",
+        "sfx_death_enemy_04.mp3"
+      ],
+      "volume": 0.8,
+      "world": true
+    },
+    "MonsterAttack": {
+      "files": [
+        "enemy_swipes_01.mp3",
+        "enemy_swipes_02.mp3",
+        "enemy_swipes_03.mp3",
+        "enemy_swipes_04.mp3",
+        "enemy_swipes_05.mp3"
+      ],
+      "volume": 0.7,
+      "world": true
+    },
+    "MonsterCast": {
+      "files": [
+        "magic/mg_fire_shoot_01.mp3",
+        "magic/mg_fire_shoot_02.mp3",
+        "magic/mg_fire_shoot_03.mp3",
+        "magic/mg_fire_shoot_04.mp3"
+      ],
+      "volume": 0.7,
+      "world": true
+    },
+    "PlayerHurt": {
+      "files": [
+        "hit.mp3",
+        "hit_02.mp3",
+        "hit_03.mp3",
+        "hit_04.mp3"
+      ],
+      "volume": 0.9
+    },
+    "Footstep": {
+      "files": [
+        "footsteps/feet_default_01.mp3",
+        "footsteps/feet_default_02.mp3",
+        "footsteps/feet_default_03.mp3",
+        "footsteps/feet_default_04.mp3",
+        "footsteps/feet_default_05.mp3",
+        "footsteps/feet_default_06.mp3",
+        "footsteps/feet_default_07.mp3",
+        "footsteps/feet_default_08.mp3",
+        "footsteps/feet_default_09.mp3"
+      ],
+      "volume": 0.35
+    },
+    "Wade": {
+      "files": [
+        "footsteps/feet_water_01.mp3",
+        "footsteps/feet_water_02.mp3",
+        "footsteps/feet_water_03.mp3",
+        "footsteps/feet_water_04.mp3"
+      ],
+      "volume": 0.45
+    },
+    "DoorOpen": {
+      "files": [
+        "wood-door-open.mp3"
+      ],
+      "volume": 0.8,
+      "world": true
+    },
+    "DoorLocked": {
+      "files": [
+        "wood-door-close-click.mp3"
+      ],
+      "volume": 0.8,
+      "world": true
+    },
+    "Pickup": {
+      "files": [
+        "pu_gen.mp3"
+      ],
+      "volume": 0.8
+    },
+    "PickupGold": {
+      "files": [
+        "pu_gold.mp3"
+      ],
+      "volume": 0.8
+    },
+    "Equip": {
+      "files": [
+        "ui/ui_equip_item.mp3"
+      ],
+      "volume": 0.8
+    },
+    "Drink": {
+      "files": [
+        "cons_drink.mp3"
+      ],
+      "volume": 0.8
+    },
+    "Eat": {
+      "files": [
+        "cons_food.mp3"
+      ],
+      "volume": 0.8
+    },
+    "Bow": {
+      "files": [
+        "bow.mp3",
+        "bow_02.mp3",
+        "bow_03.mp3",
+        "bow_04.mp3"
+      ],
+      "volume": 0.8
+    },
+    "Zap": {
+      "files": [
+        "mg_light_shoot_01.mp3",
+        "mg_light_shoot_02.mp3",
+        "mg_light_shoot_03.mp3",
+        "mg_light_shoot_04.mp3"
+      ],
+      "volume": 0.8
+    },
+    "Fizzle": {
+      "files": [
+        "ui/ui_noammo_wand.mp3"
+      ],
+      "volume": 0.8
+    },
+    "PotBreak": {
+      "files": [
+        "break/break_pottery_01.mp3",
+        "break/break_pottery_02.mp3",
+        "break/break_pottery_03.mp3"
+      ],
+      "volume": 0.8,
+      "world": true
+    },
+    "Explode": {
+      "files": [
+        "explode.mp3",
+        "explode_02.mp3",
+        "explode_03.mp3",
+        "explode_04.mp3"
+      ],
+      "volume": 0.9,
+      "world": true
+    },
+    "Spikes": {
+      "files": [
+        "trap/trap_spike.mp3"
+      ],
+      "volume": 0.8
+    },
+    "WallBolt": {
+      "files": [
+        "trap_activate.mp3"
+      ],
+      "volume": 0.8,
+      "world": true
+    },
+    "Stairs": {
+      "files": [
+        "floor_descend.mp3"
+      ],
+      "volume": 0.8
+    },
+    "LevelUp": {
+      "files": [
+        "music/levelup.mp3"
+      ],
+      "volume": 0.8
+    },
+    "Death": {
+      "files": [
+        "sfx_death.mp3"
+      ],
+      "volume": 0.9
+    },
+    "Escape": {
+      "files": [
+        "music/win.mp3"
+      ],
+      "volume": 0.8
+    }
+  },
+  "monsters": {
+    "delve.monster.giant-rat": {
+      "donor": "worm",
+      "alert": [
+        "mobs/worm/en_worm_alert_01.mp3",
+        "mobs/worm/en_worm_alert_02.mp3",
+        "mobs/worm/en_worm_alert_03.mp3"
+      ],
+      "attack": [
+        "mobs/worm/en_worm_attack_01.mp3",
+        "mobs/worm/en_worm_attack_02.mp3",
+        "mobs/worm/en_worm_attack_03.mp3"
+      ],
+      "hurt": [
+        "mobs/worm/en_worm_hurt_01.mp3",
+        "mobs/worm/en_worm_hurt_02.mp3",
+        "mobs/worm/en_worm_hurt_03.mp3"
+      ],
+      "die": [
+        "mobs/worm/en_worm_die_01.mp3",
+        "mobs/worm/en_worm_die_02.mp3",
+        "mobs/worm/en_worm_die_03.mp3"
+      ]
+    },
+    "delve.monster.slime": {
+      "donor": "slime",
+      "alert": [
+        "mobs/slime/en_slime_alert_01.mp3",
+        "mobs/slime/en_slime_alert_02.mp3",
+        "mobs/slime/en_slime_alert_03.mp3"
+      ],
+      "attack": [
+        "mobs/slime/en_slime_attack_01.mp3",
+        "mobs/slime/en_slime_attack_02.mp3",
+        "mobs/slime/en_slime_attack_03.mp3"
+      ],
+      "hurt": [
+        "mobs/slime/en_slime_hurt_01.mp3",
+        "mobs/slime/en_slime_hurt_02.mp3",
+        "mobs/slime/en_slime_hurt_03.mp3"
+      ],
+      "die": [
+        "mobs/slime/en_slime_die_01.mp3",
+        "mobs/slime/en_slime_die_02.mp3",
+        "mobs/slime/en_slime_die_03.mp3"
+      ]
+    },
+    "delve.monster.cave-bat": {
+      "donor": "bat",
+      "alert": [
+        "mobs/bat/en_bat_alert_01.mp3",
+        "mobs/bat/en_bat_alert_02.mp3",
+        "mobs/bat/en_bat_alert_03.mp3"
+      ],
+      "attack": [
+        "mobs/bat/en_bat_attack_01.mp3",
+        "mobs/bat/en_bat_attack_02.mp3",
+        "mobs/bat/en_bat_attack_03.mp3"
+      ],
+      "hurt": [
+        "mobs/bat/en_bat_hurt_01.mp3",
+        "mobs/bat/en_bat_hurt_02.mp3",
+        "mobs/bat/en_bat_hurt_03.mp3"
+      ],
+      "die": [
+        "mobs/bat/en_bat_death_01.mp3",
+        "mobs/bat/en_bat_death_02.mp3",
+        "mobs/bat/en_bat_death_03.mp3"
+      ]
+    },
+    "delve.monster.kobold": {
+      "donor": "goblin",
+      "alert": [
+        "mobs/goblin/en_goblin_alert_01.mp3",
+        "mobs/goblin/en_goblin_alert_02.mp3",
+        "mobs/goblin/en_goblin_alert_03.mp3"
+      ],
+      "attack": [
+        "mobs/goblin/en_goblin_attack_01.mp3",
+        "mobs/goblin/en_goblin_attack_02.mp3",
+        "mobs/goblin/en_goblin_attack_03.mp3"
+      ],
+      "hurt": [
+        "mobs/goblin/en_goblin_hurt_01.mp3",
+        "mobs/goblin/en_goblin_hurt_02.mp3",
+        "mobs/goblin/en_goblin_hurt_03.mp3"
+      ],
+      "die": [
+        "mobs/goblin/en_goblin_death_01.mp3",
+        "mobs/goblin/en_goblin_death_02.mp3",
+        "mobs/goblin/en_goblin_death_03.mp3"
+      ]
+    },
+    "delve.monster.giant-spider": {
+      "donor": "spider",
+      "alert": [
+        "mobs/spider/en_spider_alert_01.mp3",
+        "mobs/spider/en_spider_alert_02.mp3",
+        "mobs/spider/en_spider_alert_03.mp3"
+      ],
+      "attack": [
+        "mobs/spider/en_spider_attack_01.mp3",
+        "mobs/spider/en_spider_attack_02.mp3",
+        "mobs/spider/en_spider_attack_03.mp3"
+      ],
+      "hurt": [
+        "mobs/spider/en_spider_hurt_01.mp3",
+        "mobs/spider/en_spider_hurt_02.mp3",
+        "mobs/spider/en_spider_hurt_03.mp3"
+      ],
+      "die": [
+        "mobs/spider/en_spider_die_01.mp3",
+        "mobs/spider/en_spider_die_02.mp3",
+        "mobs/spider/en_spider_die_03.mp3"
+      ]
+    },
+    "delve.monster.skeleton": {
+      "donor": "skeleton",
+      "alert": [
+        "mobs/skeleton/en_skel_alert_01.mp3",
+        "mobs/skeleton/en_skel_alert_02.mp3",
+        "mobs/skeleton/en_skel_alert_03.mp3"
+      ],
+      "attack": [
+        "mobs/skeleton/en_skel_attack_01.mp3",
+        "mobs/skeleton/en_skel_attack_02.mp3",
+        "mobs/skeleton/en_skel_attack_03.mp3"
+      ],
+      "hurt": [
+        "mobs/skeleton/en_skel_hurt_01.mp3",
+        "mobs/skeleton/en_skel_hurt_02.mp3",
+        "mobs/skeleton/en_skel_hurt_03.mp3"
+      ],
+      "die": [
+        "mobs/skeleton/en_skel_death_01.mp3",
+        "mobs/skeleton/en_skel_death_02.mp3",
+        "mobs/skeleton/en_skel_death_03.mp3"
+      ]
+    },
+    "delve.monster.ogre": {
+      "donor": "zombie",
+      "alert": [
+        "mobs/zombie/en_zombie_alert_01.mp3",
+        "mobs/zombie/en_zombie_alert_02.mp3",
+        "mobs/zombie/en_zombie_alert_03.mp3"
+      ],
+      "attack": [
+        "mobs/zombie/en_zombie_attack_01.mp3",
+        "mobs/zombie/en_zombie_attack_02.mp3",
+        "mobs/zombie/en_zombie_attack_03.mp3"
+      ],
+      "hurt": [
+        "mobs/zombie/en_zombie_hurt_01.mp3",
+        "mobs/zombie/en_zombie_hurt_02.mp3",
+        "mobs/zombie/en_zombie_hurt_03.mp3"
+      ],
+      "die": [
+        "mobs/zombie/en_zombie_death_01.mp3",
+        "mobs/zombie/en_zombie_death_02.mp3",
+        "mobs/zombie/en_zombie_death_03.mp3"
+      ]
+    },
+    "delve.monster.wraith": {
+      "donor": "skull",
+      "alert": [
+        "mobs/skull/en_skull_alert_01.mp3",
+        "mobs/skull/en_skull_alert_02.mp3",
+        "mobs/skull/en_skull_alert_03.mp3"
+      ],
+      "attack": [
+        "mobs/skull/en_skull_atk_01.mp3",
+        "mobs/skull/en_skull_atk_02.mp3",
+        "mobs/skull/en_skull_atk_03.mp3"
+      ],
+      "hurt": [
+        "mobs/skull/en_skull_hurt_01.mp3",
+        "mobs/skull/en_skull_hurt_02.mp3",
+        "mobs/skull/en_skull_hurt_03.mp3"
+      ],
+      "die": [
+        "mobs/skull/en_skull_die_01.mp3",
+        "mobs/skull/en_skull_die_02.mp3",
+        "mobs/skull/en_skull_die_03.mp3"
+      ]
+    },
+    "delve.monster.stone-golem": {
+      "donor": "beholder",
+      "alert": [
+        "mobs/beholder/en_beholder_alert_01.mp3",
+        "mobs/beholder/en_beholder_alert_02.mp3",
+        "mobs/beholder/en_beholder_alert_03.mp3"
+      ],
+      "attack": [
+        "mobs/beholder/en_beholder_attack_01.mp3",
+        "mobs/beholder/en_beholder_attack_02.mp3",
+        "mobs/beholder/en_beholder_attack_03.mp3"
+      ],
+      "hurt": [
+        "mobs/beholder/en_beholder_hurt_01.mp3",
+        "mobs/beholder/en_beholder_hurt_02.mp3",
+        "mobs/beholder/en_beholder_hurt_03.mp3"
+      ],
+      "die": [
+        "mobs/beholder/en_beholder_die_01.mp3",
+        "mobs/beholder/en_beholder_die_02.mp3",
+        "mobs/beholder/en_beholder_die_03.mp3"
+      ]
+    }
+  },
+  "themes": {
+    "Sewer": {
+      "music": [
+        "music/02_descending.mp3",
+        "music/Nathan-3.mp3"
+      ],
+      "ambient": "env_indoor.mp3",
+      "ambientVolume": 0.15
+    },
+    "Temple": {
+      "music": [
+        "music/01_call_of_adventure.mp3",
+        "music/Nathan-1.mp3"
+      ],
+      "ambient": "env_indoor.mp3",
+      "ambientVolume": 0.15
+    },
+    "Cave": {
+      "music": [
+        "music/03_shimmering_caves.mp3",
+        "music/Nathan-2.mp3"
+      ],
+      "ambient": "env_indoor.mp3",
+      "ambientVolume": 0.15
+    },
+    "Undead": {
+      "music": [
+        "music/04_swords_and_skulls.mp3",
+        "music/Nathan-4.mp3"
+      ],
+      "ambient": "env_indoor.mp3",
+      "ambientVolume": 0.15
+    },
+    "Cold": {
+      "music": [
+        "music/DK-7.mp3"
+      ],
+      "ambient": "env_indoor.mp3",
+      "ambientVolume": 0.15
+    }
+  }
+}

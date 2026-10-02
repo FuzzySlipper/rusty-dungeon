@@ -65,6 +65,7 @@ public sealed partial class RunSession
         body.Facing = MathF.Atan2(Player.Body.X - body.X, -(Player.Body.Y - body.Y));
         body.AttackCooldownRemaining = archetype.AttackCooldownTicks + _random.Next(0, AttackTimeJitter);
         monster.AttackElapsedTicks = 0;
+        Cue(CueKind.MonsterAttack, body.X, body.Y, archetype.Id);
         if (archetype.AttackWindupTicks <= 0)
         {
             // No attack animation: the blow is immediate (the donor GHOST).

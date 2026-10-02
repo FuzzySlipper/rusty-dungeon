@@ -40,6 +40,7 @@ public sealed partial class RunSession
     {
         ActorState body = monster.Body;
         body.Hp = Math.Max(0, body.Hp - damage);
+        Cue(CueKind.MonsterHurt, body.X, body.Y, monster.Archetype.Id);
         ElementalEffects.ApplyOnHit(damageType, body.Effects, _random);
         monster.BrainState = MonsterBrainState.Chasing;
         monster.WasHit = true;
@@ -82,6 +83,8 @@ public sealed partial class RunSession
         {
             return;
         }
+
+        CueAtPlayer(CueKind.PlayerHurt);
 
         EffectKind ward = damageType == DamageType.Physical ? EffectKind.IronSkin : EffectKind.MagicResist;
         if (Player.Body.Effects.IsActive(ward))

@@ -43,8 +43,11 @@ public sealed partial class RunSession
         if (ammoSlot < 0)
         {
             ShowMessage("You have no arrows.");
+            CueAtPlayer(CueKind.Fizzle, bow.Id);
             return;
         }
+
+        CueAtPlayer(CueKind.Bow, bow.Id);
 
         string ammoId = Player.Inventory.Slot(ammoSlot)!.Value.ArchetypeId;
         ItemArchetype ammo = _rules.Item(ammoId)!;
@@ -79,8 +82,11 @@ public sealed partial class RunSession
         if (slot < 0 || !Player.Inventory.TryUseCharge(slot))
         {
             ShowMessage($"The {wand.DisplayName} fizzles; it has no charges left.");
+            CueAtPlayer(CueKind.Fizzle, wand.Id);
             return;
         }
+
+        CueAtPlayer(CueKind.Zap, wand.Id);
 
         int randDamage = wand.RandDamage + Math.Max(0, EffectiveStats().Magic - 4);
         int damage = wand.Power + _random.Next(0, randDamage + 1);
@@ -154,6 +160,7 @@ public sealed partial class RunSession
     /// </summary>
     private void CastAtPlayer(MonsterState monster, MonsterRangedAttack ranged)
     {
+        Cue(CueKind.MonsterCast, monster.Body.X, monster.Body.Y, monster.Archetype.Id);
         ActorState from = monster.Body;
         ActorState to = Player.Body;
         float fromZ = from.Z + (BodyHeight * 0.6f);

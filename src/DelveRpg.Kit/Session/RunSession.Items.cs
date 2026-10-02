@@ -351,6 +351,7 @@ public sealed partial class RunSession
         {
             Player.Body.Hp = Math.Min(Player.Body.MaxHp, Player.Body.Hp + potion.HealAmount);
             ShowMessage($"You drink the {potion.DisplayName}.");
+            CueAtPlayer(CueKind.Drink);
             return;
         }
 
@@ -391,6 +392,7 @@ public sealed partial class RunSession
         else
         {
             ShowMessage(known ? $"You drink the potion of {PotionName(effect)}." : $"You drink the {potion.DisplayName}.");
+            CueAtPlayer(CueKind.Drink);
         }
     }
 

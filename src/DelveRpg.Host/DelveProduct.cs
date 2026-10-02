@@ -31,6 +31,7 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
     private readonly DelveSaveStore _saves;
     private readonly DelveInputRouter _router = new();
     private readonly DelveSceneRenderer _renderer;
+    private readonly DelveAudio _audio;
     private readonly UiStream _uiStream;
     private ulong _uiSequence;
     private long _runSeedCounter;
@@ -55,6 +56,10 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
         _renderer = new DelveSceneRenderer(
             _engine,
             _ruleset.Catalog,
+            _readText,
+            path => context.Content.TryReadFile(path, out ProductContentFile _));
+        _audio = DelveAudio.Load(
+            _engine,
             _readText,
             path => context.Content.TryReadFile(path, out ProductContentFile _));
         _uiStream = _engine.Ui.OpenStream(new UiStreamRequest(DelveHudProjection.StreamId, DelveHudProjection.Contract));
@@ -128,6 +133,8 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
             _renderer.Render(_session, _ruleset.Tuning);
         }
 
+        _audio.Theme(_session is not null && _hostPhase == PhaseRun ? _session.CurrentFloor.Theme : null);
+
         PublishHud();
         return ProductUpdateResult.None;
     }
@@ -161,6 +168,8 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
         }
 
         _session.Tick(input);
+        Kit.World.DungeonLevel level = _session.Level;
+        _audio.Voice(_session.Cues, (x, y) => level.FloorHeight((int)MathF.Floor(x), (int)MathF.Floor(y)));
         if (_session.LevelRevision != _savedLevelRevision)
         {
             // The donor saves at every level change; that is this run's save boundary.
@@ -330,6 +339,7 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
         _shutdown = true;
         _uiStream.Dispose();
         _renderer.Dispose();
+        _audio.Dispose();
         _saves.Dispose();
     }
 

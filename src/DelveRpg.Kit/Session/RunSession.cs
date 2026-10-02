@@ -192,6 +192,7 @@ public sealed partial class RunSession
     public void Tick(RunInput input)
     {
         ElapsedTicks++;
+        _cues.Clear();
         for (int i = _messages.Count - 1; i >= 0; i--)
         {
             RunMessage message = _messages[i];
@@ -245,6 +246,7 @@ public sealed partial class RunSession
         {
             Phase = RunPhase.Dead;
             ShowMessage("You have died.");
+            CueAtPlayer(CueKind.Death);
             return;
         }
 
@@ -322,6 +324,7 @@ public sealed partial class RunSession
 
         MovePlayer(_velocityX, _velocityY);
         TickVertical(input);
+        TickFootsteps();
     }
 
     private void MovePlayer(float deltaX, float deltaY)
@@ -534,6 +537,7 @@ public sealed partial class RunSession
             LevelUpCursor = 0;
             Phase = RunPhase.LevelUp;
             ShowMessage("You have grown stronger. Choose your fate.");
+            CueAtPlayer(CueKind.LevelUp);
         }
     }
 
@@ -554,6 +558,7 @@ public sealed partial class RunSession
     /// </summary>
     private void TravelTo(int runIndex)
     {
+        CueAtPlayer(CueKind.Stairs);
         bool climbing = runIndex < RunIndex;
         _visitedFloors[RunIndex] = CaptureFloorState();
         if (!_visitedFloors.Remove(runIndex, out SnapshotFloorState? visited))
