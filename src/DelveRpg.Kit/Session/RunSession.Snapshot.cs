@@ -6,13 +6,13 @@ using DelveRpg.Kit.World;
 namespace DelveRpg.Kit.Session;
 
 /// <summary>Serializable shape of one slot at a save boundary.</summary>
-public sealed record SnapshotSlot(string? ArchetypeId, int Count);
+public sealed record SnapshotSlot(string? ArchetypeId, int Count, int Charges = 0);
 
 /// <summary>Serializable shape of one monster at a save boundary.</summary>
 public sealed record SnapshotMonster(string ArchetypeId, float X, float Y, int Hp, float Facing, int Level = 0);
 
 /// <summary>Serializable shape of one floor item at a save boundary.</summary>
-public sealed record SnapshotGroundItem(string ArchetypeId, int Count, int X, int Y);
+public sealed record SnapshotGroundItem(string ArchetypeId, int Count, int X, int Y, int Charges = 0);
 
 /// <summary>Serializable shape of one floor at a save boundary.</summary>
 public sealed record SnapshotFloor(
@@ -82,7 +82,7 @@ public sealed partial class RunSession
         for (int i = 0; i < slots.Length; i++)
         {
             slots[i] = Player.Inventory.Slot(i) is ItemInstance item
-                ? new SnapshotSlot(item.ArchetypeId, item.Count)
+                ? new SnapshotSlot(item.ArchetypeId, item.Count, item.Charges)
                 : new SnapshotSlot(null, 0);
         }
 
@@ -127,7 +127,7 @@ public sealed partial class RunSession
                 monster.Body.Facing,
                 monster.Level)).ToList(),
             GroundItems: _groundItems.Select(item => new SnapshotGroundItem(
-                item.Item.ArchetypeId, item.Item.Count, item.X, item.Y)).ToList(),
+                item.Item.ArchetypeId, item.Item.Count, item.X, item.Y, item.Item.Charges)).ToList(),
             LevelUpOffers: LevelUpOffers.ToList(),
             LevelUpCursor: LevelUpCursor);
     }
@@ -189,7 +189,7 @@ public sealed partial class RunSession
             SnapshotSlot slot = snapshot.Slots[i];
             player.Inventory.RestoreSlot(
                 i,
-                slot.ArchetypeId is null ? null : new ItemInstance(slot.ArchetypeId, slot.Count));
+                slot.ArchetypeId is null ? null : new ItemInstance(slot.ArchetypeId, slot.Count, slot.Charges));
         }
 
         if (player.WieldedSlot < -1 || player.WieldedSlot >= player.Inventory.Capacity
@@ -254,7 +254,7 @@ public sealed partial class RunSession
                 continue;
             }
 
-            _groundItems.Add(new GroundItem(new ItemInstance(item.ArchetypeId, item.Count), item.X, item.Y));
+            _groundItems.Add(new GroundItem(_nextActorId++, new ItemInstance(item.ArchetypeId, item.Count, item.Charges), item.X, item.Y));
         }
 
         EscapePressureTicks = snapshot.EscapePressureTicks;

@@ -1,3 +1,4 @@
+using DelveRpg.Kit.Combat;
 using DelveRpg.Kit.Random;
 using DelveRpg.Kit.Rules;
 using DelveRpg.Rulesets.Delver.Content;
@@ -32,9 +33,23 @@ public sealed class DelverCatalog : IRulesCatalog
                 monster.AttackPower,
                 monster.AttackCooldownTicks,
                 monster.MonsterLevel,
-                monster.IsRanged,
                 monster.DetectRange,
-                monster.Sprite),
+                monster.Sprite)
+            {
+                Ranged = monster.Ranged is DelverMonsterRangedDefinition ranged
+                    ? new MonsterRangedAttack(
+                        ranged.BaseDamage,
+                        ranged.RandDamage,
+                        ParseDamageType(ranged.DamageType),
+                        ranged.Speed,
+                        ranged.CooldownTicks,
+                        ranged.MinDistance,
+                        ranged.MaxDistance,
+                        ranged.Sprite)
+                    : null,
+                ChasesTarget = monster.ChasesTarget,
+                KeepsDistance = monster.KeepsDistance,
+            },
             StringComparer.Ordinal);
         _items = pack.Items.ToDictionary(
             item => item.Id,
@@ -47,7 +62,17 @@ public sealed class DelverCatalog : IRulesCatalog
                 item.HealAmount,
                 item.Value,
                 item.Sprite,
-                item.RandDamage),
+                item.RandDamage)
+            {
+                DamageType = ParseDamageType(item.DamageType),
+                Range = item.Range,
+                Charges = item.Charges,
+                AutoFireTicks = item.AutoFireTicks,
+                ProjectileSpeed = item.ProjectileSpeed,
+                Accuracy = item.Accuracy,
+                StackSize = item.StackSize,
+                ProjectileSpriteId = item.ProjectileSprite,
+            },
             StringComparer.Ordinal);
     }
 
@@ -98,7 +123,14 @@ public sealed class DelverCatalog : IRulesCatalog
 
     public bool IsStackable(string id) =>
         _items.TryGetValue(id, out ItemArchetype? archetype)
-        && archetype.Kind is ItemKind.Gold or ItemKind.Key or ItemKind.Potion or ItemKind.Food;
+        && archetype.Kind is ItemKind.Gold or ItemKind.Key or ItemKind.Potion or ItemKind.Food or ItemKind.Ammo;
+
+    /// <summary>A damage type name, or null when the name is not one.</summary>
+    public static DamageType? TryParseDamageType(string name) =>
+        Enum.TryParse<DamageType>(name, ignoreCase: true, out DamageType parsed) && Enum.IsDefined(parsed) ? parsed : null;
+
+    private static DamageType ParseDamageType(string name) =>
+        TryParseDamageType(name) ?? throw new InvalidOperationException($"Unknown damage type '{name}'.");
 
     private static ItemKind ParseKind(string kind) =>
         Enum.TryParse<ItemKind>(kind, ignoreCase: true, out ItemKind parsed)

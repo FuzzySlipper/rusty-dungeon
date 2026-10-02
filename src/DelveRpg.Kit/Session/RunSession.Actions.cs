@@ -17,6 +17,20 @@ public sealed partial class RunSession
         ItemArchetype? weapon = Player.Equipment.WeaponItemId is string weaponId ? _rules.Item(weaponId) : null;
         int chargeTicks = weapon?.ChargeTicks ?? _tuning.AttackChargeTicks;
 
+        // An auto-fire wand zaps for as long as the attack is held, a bolt
+        // per its fire interval ([donor] entities/Player.java:1215, 1243-1249).
+        if (weapon is { Kind: ItemKind.Wand, AutoFireTicks: > 0 })
+        {
+            Player.AttackCharge = 0;
+            if (input.AttackHeld && body.AttackCooldownRemaining == 0)
+            {
+                ZapWand(weapon);
+                body.AttackCooldownRemaining = weapon.AutoFireTicks;
+            }
+
+            return;
+        }
+
         // The donor's swing: holding winds the charge up to full and holds
         // it there; releasing swings at the charged fraction of full power
         // ([donor] entities/Player.java:1221-1258, 1588-1592).
@@ -29,7 +43,20 @@ public sealed partial class RunSession
         }
         else if (Player.AttackCharge > 0)
         {
-            SwingWeapon(weapon, Player.AttackCharge / (float)Math.Max(1, chargeTicks));
+            float attackPower = Player.AttackCharge / (float)Math.Max(1, chargeTicks);
+            switch (weapon?.Kind)
+            {
+                case ItemKind.RangedWeapon:
+                    ShootBow(weapon, attackPower);
+                    break;
+                case ItemKind.Wand:
+                    ZapWand(weapon);
+                    break;
+                default:
+                    SwingWeapon(weapon, attackPower);
+                    break;
+            }
+
             Player.AttackCharge = 0;
             body.AttackCooldownRemaining = _tuning.AttackCooldownTicks;
         }
@@ -63,6 +90,10 @@ public sealed partial class RunSession
         int experience = CombatResolver.ExperienceForKill(monster.Level - 1);
         Player.Experience += experience;
         ShowMessage($"The {monster.Archetype.DisplayName} falls. (+{experience} xp)");
+        foreach (ItemInstance carried in monster.Carried)
+        {
+            DropItem(carried, monster.Body.TileX, monster.Body.TileY);
+        }
 
         if (_random.Chance(_tuning.EnchantChance) && _rules.RollLootId(_random, Level.DifficultyLevel) is string lootId)
         {
@@ -293,6 +324,7 @@ public sealed partial class RunSession
         {
             ActorState body = monster.Body;
             body.AttackCooldownRemaining = Math.Max(0, body.AttackCooldownRemaining - 1);
+            monster.RangedCooldownRemaining = Math.Max(0, monster.RangedCooldownRemaining - 1);
             EffectSet effects = body.Effects;
             float speedMultiplier = effects.SpeedMultiplier();
             if (effects.IsParalyzed)
@@ -301,9 +333,10 @@ public sealed partial class RunSession
             }
 
             float distance = Distance(body, Player.Body);
+            bool seesPlayer = LineOfSight.CanSee(Level, body.TileX, body.TileY, Player.Body.TileX, Player.Body.TileY);
             if (distance < 1.2f
                 && body.AttackCooldownRemaining == 0
-                && LineOfSight.CanSee(Level, body.TileX, body.TileY, Player.Body.TileX, Player.Body.TileY))
+                && seesPlayer)
             {
                 int armorClass = CombatResolver.ArmorClass(Player.Body.Stats.Defense, GearArmorClass());
                 AttackOutcome outcome = CombatResolver.ResolveMelee(
@@ -321,13 +354,31 @@ public sealed partial class RunSession
                 continue;
             }
 
+            if (monster.Archetype.Ranged is MonsterRangedAttack ranged
+                && monster.BrainState == MonsterBrainState.Chasing
+                && seesPlayer
+                && distance > ranged.MinDistance
+                && distance < ranged.MaxDistance
+                && monster.RangedCooldownRemaining == 0)
+            {
+                CastAtPlayer(monster, ranged);
+                monster.RangedCooldownRemaining = ranged.CooldownTicks + _random.Next(0, 30);
+            }
+
+            MonsterBrainState before = monster.BrainState;
             MonsterBrain.Tick(monster, Level, Player, _tuning, speedMultiplier);
+            if (before == MonsterBrainState.Idle && monster.BrainState == MonsterBrainState.Chasing)
+            {
+                // Alerted monsters wait a beat before the first cast
+                // ([donor] entities/Monster.java:555-565).
+                monster.RangedCooldownRemaining = 40 + _random.Next(0, 20);
+            }
         }
     }
 
     private void TickEffects()
     {
-        int playerDamage = Player.Body.Effects.Tick();
+        int playerDamage = Player.Body.Effects.Tick(Player.Body.Hp);
         if (playerDamage > 0)
         {
             Player.Body.Hp = Math.Max(0, Player.Body.Hp - playerDamage);
@@ -336,7 +387,7 @@ public sealed partial class RunSession
 
         foreach (MonsterState monster in _monsters.ToArray())
         {
-            int damage = monster.Body.Effects.Tick();
+            int damage = monster.Body.Effects.Tick(monster.Body.Hp);
             if (damage > 0)
             {
                 monster.Body.Hp = Math.Max(0, monster.Body.Hp - damage);
@@ -440,13 +491,17 @@ public sealed partial class RunSession
 
     private void AddGroundItem(string archetypeId, int tileX, int tileY)
     {
-        if (_rules.Item(archetypeId) is not ItemArchetype)
+        if (_rules.Item(archetypeId) is not ItemArchetype archetype)
         {
             return;
         }
 
-        _groundItems.Add(new GroundItem(ItemInstance.One(archetypeId), tileX, tileY));
+        DropItem(Fresh(archetype), tileX, tileY);
     }
+
+    /// <summary>A newly found item: a bundle of its stack size, a wand at full charge.</summary>
+    private static ItemInstance Fresh(ItemArchetype archetype) =>
+        new(archetype.Id, Math.Max(1, archetype.StackSize), archetype.Charges);
 
     private (int X, int Y) TileInFront(float distance)
     {

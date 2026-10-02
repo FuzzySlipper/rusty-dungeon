@@ -46,7 +46,7 @@ public sealed class DelveSpriteAssetsTests
         };
         var body = new ActorState(7, ActorKind.Monster, 1.5f, 1.5f, 8, new StatBlock(2, 1, 5, 5, 0, 2));
         var monster = new MonsterState(body, new MonsterArchetype(
-            "m", "m", body.Stats, 8, 2, 40, 1, false, 7, "monster.m"));
+            "m", "m", body.Stats, 8, 2, 40, 1, 7, "monster.m"));
 
         Assert.Equal(0u, DelveSceneRenderer.MonsterFrame(definition, monster, 15));
 

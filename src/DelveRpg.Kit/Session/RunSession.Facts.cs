@@ -7,7 +7,8 @@ using DelveRpg.Kit.World;
 namespace DelveRpg.Kit.Session;
 
 /// <summary>One hotbar/backpack slot as the HUD shows it.</summary>
-public sealed record HudSlot(int Index, string? ItemId, string? DisplayName, string Kind, int Count, bool Wielded);
+/// <summary>One hotbar slot; <see cref="Charges"/> is a wand's charges left and −1 for anything else.</summary>
+public sealed record HudSlot(int Index, string? ItemId, string? DisplayName, string Kind, int Count, bool Wielded, int Charges = -1);
 
 /// <summary>The explored map around the player, as rows of cells.</summary>
 public sealed record MinimapFacts(int Size, string Cells, int PlayerX, int PlayerY, float HeadingDegrees);
@@ -115,7 +116,8 @@ public sealed partial class RunSession
                 archetype?.DisplayName,
                 archetype?.Kind.ToString() ?? "Empty",
                 instance?.Count ?? 0,
-                Player.WieldedSlot == i));
+                Player.WieldedSlot == i,
+                archetype?.Kind == ItemKind.Wand ? instance?.Charges ?? 0 : -1));
         }
 
         return slots;

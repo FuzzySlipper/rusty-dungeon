@@ -207,6 +207,33 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
             }
         }
 
+        foreach (DelverItemDefinition item in pack.Items)
+        {
+            if (DelverCatalog.TryParseDamageType(item.DamageType) is null)
+            {
+                problems.Add($"item '{item.Id}' names unknown damage type '{item.DamageType}'");
+            }
+
+            if (string.Equals(item.Kind, "RangedWeapon", StringComparison.OrdinalIgnoreCase) && item.Range <= 0)
+            {
+                problems.Add($"bow '{item.Id}' has no range");
+            }
+
+            if (string.Equals(item.Kind, "Wand", StringComparison.OrdinalIgnoreCase) && (item.ProjectileSpeed <= 0f || item.ProjectileSprite.Length == 0))
+            {
+                problems.Add($"wand '{item.Id}' needs a projectile speed and sprite");
+            }
+        }
+
+        foreach (DelverMonsterDefinition monster in pack.Monsters)
+        {
+            if (monster.Ranged is DelverMonsterRangedDefinition ranged
+                && (DelverCatalog.TryParseDamageType(ranged.DamageType) is null || ranged.Speed <= 0f))
+            {
+                problems.Add($"monster '{monster.Id}' has a ranged attack without a known damage type and a speed");
+            }
+        }
+
         foreach (string itemId in pack.StartingKit)
         {
             if (pack.Items.All(item => item.Id != itemId))

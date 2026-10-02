@@ -1,6 +1,6 @@
 {
   "schema": "delve.art.sprites.v1",
-  "description": "Maps content sprite ids to cells of donor sprite sheets staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). Sheets are fixed 32px grids; a cell index is column + row * columns, as in the donor's TextureAtlas. Monster cells and walk/attack ranges follow donor data/monsters.dat where a donor monster exists; rat, ogre and golem have no donor monster and borrow the worm, zombie and eye art. Sprites are lit through each sheet's normal sheet, derived offline by scripts/derive-sprite-normals.py; without staged normals they draw unlit. The art and its derivatives are donor-derived and never committed. Without staged art, actors keep their placeholder plates.",
+  "description": "Maps content sprite ids to cells of donor sprite sheets staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). Sheets are fixed 32px grids; a cell index is column + row * columns, as in the donor's TextureAtlas. Monster cells and walk/attack ranges follow donor data/monsters.dat where a donor monster exists; rat, ogre and golem have no donor monster and borrow the worm, zombie and eye art. Projectiles fly as the donor's arrow item cell and its white particle cells (data/items.dat wand and monsters.dat EYE magicMissileProjectile tex ranges), tinted by damage type at render time. Sprites are lit through each sheet's normal sheet, derived offline by scripts/derive-sprite-normals.py; without staged normals they draw unlit. The art and its derivatives are donor-derived and never committed. Without staged art, actors keep their placeholder plates.",
   "artContentPrefix": "delve/imports/art",
   "lighting": { "mode": "authored-normal", "strength": 1.5 },
   "atlases": {
@@ -12,7 +12,8 @@
     "melee.png": { "columns": 8, "rows": 4, "normals": "melee.normals.png" },
     "armor.png": { "columns": 8, "rows": 5, "normals": "armor.normals.png" },
     "wands.png": { "columns": 8, "rows": 4, "normals": "wands.normals.png" },
-    "sprites.png": { "columns": 4, "rows": 11 }
+    "sprites.png": { "columns": 4, "rows": 11 },
+    "particles.png": { "columns": 8, "rows": 12 }
   },
   "sprites": {
     "monster.rat": { "atlas": "entities_cave.png", "frame": 0, "size": 1.0, "walk": { "start": 0, "end": 3, "speed": 30 }, "attack": { "start": 4, "end": 10, "speed": 65 } },
@@ -38,6 +39,9 @@
     "item.armor.chain": { "atlas": "armor.png", "frame": 11, "size": 0.5 },
     "item.helmet": { "atlas": "armor.png", "frame": 1, "size": 0.5 },
     "item.orb": { "atlas": "items.png", "frame": 59, "size": 0.5 },
+    "item.arrow": { "atlas": "items.png", "frame": 73, "size": 0.5 },
+    "projectile.spark": { "atlas": "particles.png", "frame": 52, "size": 0.3, "fullbright": true, "loop": { "start": 52, "end": 55, "speed": 8 } },
+    "projectile.eyebolt": { "atlas": "particles.png", "frame": 88, "size": 0.45, "fullbright": true, "loop": { "start": 88, "end": 95, "speed": 15 } },
     "decor.torch": { "atlas": "sprites.png", "frame": 32, "size": 0.6, "fullbright": true, "loop": { "start": 32, "end": 39, "speed": 30 } }
   }
 }

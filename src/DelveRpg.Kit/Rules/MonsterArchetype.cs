@@ -1,3 +1,5 @@
+using DelveRpg.Kit.Combat;
+
 namespace DelveRpg.Kit.Rules;
 
 /// <summary>
@@ -12,6 +14,31 @@ public sealed record MonsterArchetype(
     int AttackPower,
     int AttackCooldownTicks,
     int MonsterLevel,
-    bool IsRanged,
     int DetectRange,
+    string SpriteId)
+{
+    /// <summary>The bolt this monster casts from range; null for a melee-only monster.</summary>
+    public MonsterRangedAttack? Ranged { get; init; }
+
+    /// <summary>False for a monster that holds its ground once alerted instead of chasing.</summary>
+    public bool ChasesTarget { get; init; } = true;
+
+    /// <summary>A monster that backs away from a player closer than three tiles.</summary>
+    public bool KeepsDistance { get; init; }
+}
+
+/// <summary>
+/// A monster's ranged bolt: <c>baseDamage + roll(0..randDamage)</c> flying
+/// straight at <see cref="Speed"/> tiles per tick, cast once per
+/// <see cref="CooldownTicks"/> plus up to half a second of jitter while the
+/// player is in sight between the two distances.
+/// </summary>
+public sealed record MonsterRangedAttack(
+    int BaseDamage,
+    int RandDamage,
+    DamageType DamageType,
+    float Speed,
+    int CooldownTicks,
+    float MinDistance,
+    float MaxDistance,
     string SpriteId);

@@ -27,7 +27,7 @@ public sealed class MonsterBrainTests
             Hp = monsterHp,
         };
         var monster = new MonsterState(body, new MonsterArchetype(
-            "test.monster.rat", "rat", body.Stats, 20, 2, 40, 1, false, 8, "monster.rat"));
+            "test.monster.rat", "rat", body.Stats, 20, 2, 40, 1, 8, "monster.rat"));
         var player = new PlayerState(
             new ActorState(1, ActorKind.Player, 6.5f, 4.5f, 16, new StatBlock(4, 2, 4, 4, 2, 6)),
             new InventoryStore(6, 6));

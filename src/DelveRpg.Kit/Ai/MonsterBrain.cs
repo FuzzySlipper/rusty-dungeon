@@ -15,6 +15,7 @@ public static class MonsterBrain
 {
     private const int PathRefreshTicks = 30;
     private const int PathHorizon = 64;
+    private const float KeepDistanceTiles = 3f;
 
     public static void Tick(
         MonsterState monster,
@@ -56,6 +57,21 @@ public static class MonsterBrain
                 if (!seesTarget && Distance(body, target) > monster.Archetype.DetectRange * 2)
                 {
                     monster.BrainState = MonsterBrainState.Idle;
+                    return;
+                }
+
+                // A keep-distance monster backs off inside three tiles; one
+                // that does not chase holds where it was alerted and fights
+                // from there ([donor] entities/Monster.java:549-552 keepDistance,
+                // chasetarget).
+                if (monster.Archetype.KeepsDistance && Distance(body, target) < KeepDistanceTiles)
+                {
+                    StepTowards(monster, level, Away(body, target), speedMultiplier);
+                    return;
+                }
+
+                if (!monster.Archetype.ChasesTarget)
+                {
                     return;
                 }
 

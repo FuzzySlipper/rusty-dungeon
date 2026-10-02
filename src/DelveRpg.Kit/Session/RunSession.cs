@@ -150,7 +150,7 @@ public sealed partial class RunSession
         {
             ItemArchetype archetype = _rules.Item(itemId)
                 ?? throw new InvalidOperationException($"Starting kit item '{itemId}' is not in the catalog.");
-            if (!Player.Inventory.TryAdd(ItemInstance.One(itemId), _rules.IsStackable(itemId)))
+            if (!Player.Inventory.TryAdd(Fresh(archetype), _rules.IsStackable(itemId)))
             {
                 throw new InvalidOperationException($"Starting kit item '{itemId}' does not fit the inventory.");
             }
@@ -216,6 +216,7 @@ public sealed partial class RunSession
         }
 
         TickMonsters();
+        TickProjectiles();
         TickEffects();
         TickEscapeArc();
         TickFog();
@@ -423,6 +424,7 @@ public sealed partial class RunSession
         Fog = new FogMap(Level.Width, Level.Height);
         _monsters.Clear();
         _groundItems.Clear();
+        _projectiles.Clear();
         Player.Body.X = generated.StartX + 0.5f;
         Player.Body.Y = generated.StartY + 0.5f;
         _velocityX = 0f;

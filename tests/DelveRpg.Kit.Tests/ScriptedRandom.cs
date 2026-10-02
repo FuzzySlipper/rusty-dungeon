@@ -14,6 +14,15 @@ public sealed class ScriptedRandom : IRandomSource
         _fallback = 0;
     }
 
+    private ScriptedRandom(int fallback)
+    {
+        _values = new Queue<int>();
+        _fallback = fallback;
+    }
+
+    /// <summary>Every draw returns this value, clamped into the drawn range.</summary>
+    public static ScriptedRandom Always(int value) => new(value);
+
     public int Next(int minimum, int maximum)
     {
         int value = _values.Count > 0 ? _values.Dequeue() : _fallback;

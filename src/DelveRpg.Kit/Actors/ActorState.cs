@@ -114,6 +114,12 @@ public sealed class MonsterState
     public IReadOnlyList<(int X, int Y)> Path { get; set; } = Array.Empty<(int X, int Y)>();
 
     public int PathIndex { get; set; }
+
+    /// <summary>Ticks until this monster may cast its ranged bolt again.</summary>
+    public int RangedCooldownRemaining { get; set; }
+
+    /// <summary>What the monster has caught (arrows shot into it); dropped where it falls.</summary>
+    public List<Inventory.ItemInstance> Carried { get; } = new();
 }
 
 public enum MonsterBrainState

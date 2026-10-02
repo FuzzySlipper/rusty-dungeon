@@ -18,6 +18,8 @@ interface HudSlot {
   readonly kind: string;
   readonly count: number;
   readonly wielded: boolean;
+  /** A wand's charges left; −1 (or absent in older projections) for anything else. */
+  readonly charges?: number;
 }
 
 interface MinimapFacts {
@@ -130,6 +132,9 @@ export function renderHud(doc: Document, root: HTMLElement, snapshot: HudSnapsho
       item.append(el(doc, 'span', 'delve-slot-name', slot.name ?? '—'));
       if (slot.count > 1) {
         item.append(el(doc, 'span', 'delve-slot-count', `×${slot.count}`));
+      }
+      if (slot.charges !== undefined && slot.charges >= 0) {
+        item.append(el(doc, 'span', 'delve-slot-charges', `${slot.charges} charges`));
       }
       list.append(item);
     }

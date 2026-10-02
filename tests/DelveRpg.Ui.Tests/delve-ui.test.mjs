@@ -54,7 +54,7 @@ const snapshot = {
   hotbar: [
     { index: 0, itemId: 'delve.item.short-sword', name: 'short sword', kind: 'Weapon', count: 1, wielded: true },
     { index: 1, itemId: 'delve.item.potion-of-healing', name: 'potion of healing', kind: 'Potion', count: 3, wielded: false },
-    { index: 2, itemId: null, name: null, kind: 'Empty', count: 0, wielded: false },
+    { index: 2, itemId: 'delve.item.wand-of-sparks', name: 'wand of sparks', kind: 'Wand', count: 1, wielded: false, charges: 12 },
     { index: 3, itemId: null, name: null, kind: 'Empty', count: 0, wielded: false },
     { index: 4, itemId: null, name: null, kind: 'Empty', count: 0, wielded: false },
     { index: 5, itemId: null, name: null, kind: 'Empty', count: 0, wielded: false },
@@ -87,7 +87,9 @@ test('renderHud shows the flat hotbar with stack counts and the wielded slot', (
   assert.match(slots[0].textContent, /short sword/);
   assert.ok(slots[0].className.includes('delve-slot-wielded'));
   assert.match(slots[1].textContent, /×3/);
-  assert.match(slots[2].textContent, /—/);
+  assert.match(slots[2].textContent, /12 charges/);
+  assert.match(slots[3].textContent, /—/);
+  assert.doesNotMatch(slots[0].textContent, /charges/);
 });
 
 test('renderHud shows the explored map window', () => {

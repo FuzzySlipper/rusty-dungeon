@@ -65,5 +65,6 @@ public static class DelveHudProjection
             ("name", slot.DisplayName is null ? new UiDocument.Nothing() : new UiDocument.Str(slot.DisplayName)),
             ("kind", new UiDocument.Str(slot.Kind)),
             ("count", new UiDocument.Num(slot.Count)),
-            ("wielded", new UiDocument.Flag(slot.Wielded)));
+            ("wielded", new UiDocument.Flag(slot.Wielded)),
+            ("charges", new UiDocument.Num(slot.Charges)));
 }

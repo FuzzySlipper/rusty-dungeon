@@ -96,10 +96,73 @@ speed 1.125, wand of sparks = Lesser missile wand 1+1; leather armor 3,
 chain mail = Chainmail 7, iron helmet = Iron cap 2). **Approximate:** an
 unarmed swing hits for 1 (the donor has no unarmed swing), and the cooldown
 after a swing is a flat `attackCooldownTicks` rather than the donor's
-animation-length wait. **Deliberate divergence:** wands
-and bows currently swing like melee weapons; ranged bolts and elemental
-damage are a later slice. Item conditions/degradation
+animation-length wait. Item conditions/degradation
 ([donor] `entities/items/Item.java` `ItemCondition`) are **deferred**.
+
+**Ranged weapons — approximate.** Bows, wands and casting monsters fire
+projectiles that the Kit flies over its own tile grid; the Engine only draws
+them. A bow fires on release like the melee swing. It spends one arrow from
+the first ammo stack in the pack ("You have no arrows." without one), rolls
+the same weapon damage as a melee hit at the charged power, and launches at
+`attackPower × range / 8` tiles per tick along the look direction. The arrow
+then falls under the donor's gravity of 0.0035 per tick²
+([donor] `entities/items/Bow.java:45-98` `doAttack`,
+`entities/projectiles/Projectile.java:105-106`). A full draw of the hunting
+bow (range 7, [data] `data/items.dat` Hunter's Bow) flies straight across a
+room, while a tap drops at the player's feet. An arrow that hits a monster
+stays in it and drops where it dies ([donor] `projectiles/Missile.java`
+`addArrowLootToMonster`). An arrow that hits a wall, floor or ceiling breaks
+one time in ten ([donor] `Missile.java` `breakChance` 0.1) and otherwise
+lies on the last open tile as a pickup that rejoins the stack. Arrows come
+in sixes (Arrows `count` 6 in `items.dat`).
+
+A wand spends one of its charges per bolt; when it has none, it fizzles
+instead of firing. A bolt rolls `power + roll(0..randDamage + max(0, MAG − 4))`
+whatever the charge ([donor] `entities/items/Wand.java:82-125`,
+`spells/Spell.java:115-122`). Bolts fly straight at the wand's speed, and the
+wand's accuracy scatters them by up to `(1 − accuracy) × 45°`
+([donor] `spells/MagicMissile.java:49-61`). The wand of sparks is the donor's
+Lesser missile wand: magic 1+1, 30 charges, speed 0.45, accuracy 0.92, and
+auto-fire, so holding the attack zaps once per 15 ticks
+([donor] `entities/Player.java:1215, 1243-1249`, Wand `handAnimateTimer =
+autoFireTime × 3`). A wand without auto-fire fires on release.
+
+A monster with a `ranged` attack casts a straight bolt at the player while
+alerted, in sight and inside its distance window. It waits 40–59 ticks after
+being alerted, then casts once per `cooldownTicks` plus 0–29 ticks of jitter
+([donor] `entities/Monster.java:555-565, 820-850`). A projectile hit skips
+dodge and armor on both sides, because the donor's projectile calls
+`hit`/`takeDamage` directly ([donor] `projectiles/Projectile.java:188-213`,
+`entities/Player.java:2066-2070`).
+
+**Approximate:**
+- Flight is swept in steps of 0.1 tile against walls and closed doors, the
+  floor (height 0) and the ceiling (height 1), instead of the donor's
+  collision boxes.
+- Bodies are cylinders: monsters have radius 0.3 and the player radius 0.25,
+  both 0.8 tall.
+- Knockback, splash damage, hit decals, trails and Zelda-style deflection are
+  left out.
+- An arrow flies as its item icon rather than a direction-facing sprite.
+- Wand charges do not grow with magic (the donor's `magicStatBoostMod`).
+- Monsters have no mana, so the EYE's `mpCost` is not modelled.
+- In-flight projectiles and the arrows a monster carries are not saved.
+
+**Damage types — approximate.** Weapons and monster bolts carry a damage
+type: physical, magic, fire, ice, lightning, poison or paralyze (the donor's
+`DamageType`, less healing and vampire). An elemental hit leaves the donor's
+status effect ([donor] `statuseffects/StatusEffect.java:46-70`
+`getStatusEffect`):
+- fire sets the target burning half the time;
+- ice slows;
+- poison poisons;
+- paralyze paralyzes;
+- magic and lightning leave nothing.
+
+The donor's magic resistance (`getMagicResistModBoost`) is not modelled. Bolts
+are tinted by their type's donor colour and carry a point light of that
+colour ([donor] `game/Colors.java`, `items/Weapon.java`
+`getEnchantmentColor`); physical arrows carry none.
 
 **Monster stats — faithful.** Each monster carries its donor counterpart's
 base hit points and `atk` ([data] `data/monsters.dat`), armor class 0 (no
@@ -113,7 +176,12 @@ and `Monster.java:1240` rolls `atk + level`); `MonsterScaling` keeps that as
 written. Our stand-ins map to donor monsters: giant rat = WORM, slime =
 SLIME, cave bat = the CAVE BAT, kobold = GOBLIN, giant spider = SPIDER,
 skeleton = SKELETON, wraith = GHOST; the ogre and stone golem have no donor
-monster and take the ZOMBIE and EYE stats that match their art.
+monster and take the ZOMBIE and EYE stats that match their art. The stone
+golem is the EYE in behaviour too. It does not chase
+([data] `monsters.dat` EYE `chasetarget: false`); it holds where it was
+alerted and casts its magic missile: 3+3 magic damage at speed 0.1, every 100
+ticks. Our spider and wraith content had been flagged ranged, but their donor
+monsters (SPIDER, GHOST) are melee, so they are melee again.
 **Approximate:** the donor's ±1 random level jitter above difficulty 4 and
 its 0–9 tick attack-timer jitter are left out (a regenerated floor's
 monsters come back at the same level), and movement speed and detect range
@@ -136,7 +204,11 @@ collision ([donor] `entities/Monster.java` `checkEntityCollision`): a chasing
 monster holds once it is within `actorSeparationTiles` (0.75) of the player
 and fights from there, and the player cannot walk closer to a monster than
 that (stepping away is always allowed). **Approximate** — monsters may still
-overlap each other. Sleep/ambush flags are **deferred**.
+overlap each other. Sleep/ambush flags are **deferred**. Two donor flags
+shape movement once a monster is alerted: `chasesTarget: false` holds it
+where it stands (the donor's `chasetarget`), and `keepsDistance` backs it
+away from a player closer than three tiles ([donor] `entities/Monster.java:549-552`
+`keepDistance`). A ranged monster fights from wherever those leave it.
 
 ## Items and inventory
 
@@ -151,9 +223,9 @@ the first weapon wielded and the first armor worn — the donor's
 `startingInventory` ([data] `data/player.dat`, [donor]
 `entities/Player.java:297-334` `makeStartingInventory`). **Approximate**: the
 donor gives an iron dagger, leather armor, leather pants, and a random potion,
-wand and food; ours is the rusty dagger, leather armor, a potion of healing
-and bread. There is no pants slot, the wand waits on the ranged slice, and
-potions are not shuffled per run. Loot rolls use weighted tables over a
+wand and food; ours is the rusty dagger, leather armor, a potion of healing,
+the wand of sparks and bread. There is no pants slot, and potions and wands
+are not drawn at random per run. Loot rolls use weighted tables over a
 per-item level window ([donor] `helpers/LootListHelper.java` level buckets).
 Prefix/suffix enchantments ([donor] `entities/items/ItemModification.java`)
 are **deferred** (the `enchantChance` tuning knob exists); uniques, bags, and
@@ -176,7 +248,11 @@ upgrades between runs (the counters exist; the shop does not).
 
 Timed effects that refresh rather than stack: poison/burn tick damage,
 slow/haste speed multipliers, paralysis blocks action
-([donor] `statuseffects/StatusEffect.java`). **Approximate** — five kinds
+([donor] `statuseffects/StatusEffect.java`). Elemental hits apply them with
+the donor effects' default timings. Burning lasts 600 ticks and poison 1000,
+and each strikes for 1 every 160 ticks. Poison never takes the last hit point
+([donor] `BurningEffect.java`, `PoisonEffect.java` `canKill`). Slow lasts 500
+ticks at half speed, and paralysis lasts 500. **Approximate** — five kinds
 instead of the donor's full set; no duration-scaled stacking rules beyond
 refresh-with-max-magnitude.
 
@@ -185,8 +261,8 @@ refresh-with-max-magnitude.
 **Deferred.** Doors open without keys in this slice; keys are collectible but
 locked doors ([donor] `entities/Door.java` `isLocked/takesKey`) and the spike
 traps, breakables, and trigger chains ([donor] `entities/triggers/`) are not
-placed yet. Wand bolts and scrolls ([donor] `entities/spells/*`) wait on the
-ranged slice.
+placed yet. Wand bolts are in (see Combat); the other spells — scrolls,
+beams, splash, teleport ([donor] `entities/spells/*`) — are **deferred**.
 
 ## The objective and the escape arc
 
@@ -207,9 +283,10 @@ run index no longer fits the rebuilt plan, or that records a finished run, is
 discarded on resume. **Deliberate divergence:** ascended floors regenerate
 from the run seed instead of loading floor snapshots (only the current floor
 is stored), and the save boundary strips transient combat state — status
-effect timers, attack charge and cooldowns, velocities, the pursuit timer —
+effect timers, attack charge and cooldowns, velocities, the pursuit timer,
+projectiles in flight and arrows lodged in monsters —
 like the donor's `preSaveCleanup` ([donor] `game/Game.java` `save`); hit
-points clamp to [0, maxHp] on restore. The donor's save migration story
+points clamp to [0, maxHp] on restore. A wand's charges are kept. The donor's save migration story
 (`saveVersion`) is not needed at this shape.
 
 ## Randomness
@@ -275,7 +352,13 @@ content `sprite` id to a sheet and cell; sheets are fixed 32px grids indexed
 monster walk/attack ranges and their timing (speed = whole sequence in ticks,
 [donor] `gfx/animation/SpriteAnimation.java:79-102`) follow
 [data] `data/monsters.dat`. Attack cells play right after a blow, the walk
-cycle while hunting, the resting cell while idle.
+cycle while hunting, the resting cell while idle. Projectiles are billboards
+too. An arrow is the arrow item cell. A bolt is the donor's white particle
+cells, looped and drawn fullbright: `particles.png` 52–55 for the wand and
+88–95 for the EYE ([data] `items.dat`, `monsters.dat`
+`magicMissileProjectile`). It is tinted by damage type at creation and drags
+a coloured point light (intensity 4, range 2.5) that is created, moved and
+disposed with it.
 
 Sprites are lit by the scene's lights through a normal sheet per sprite sheet
 (`lighting.mode` `authored-normal`, strength 1.5). The normal sheets are

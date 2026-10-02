@@ -45,7 +45,14 @@ public sealed class DelverMonsterDefinition
 
     public required int MonsterLevel { get; init; }
 
-    public bool IsRanged { get; init; }
+    /// <summary>A bolt cast from range; absent for a melee-only monster.</summary>
+    public DelverMonsterRangedDefinition? Ranged { get; init; }
+
+    /// <summary>False for a monster that holds its ground once alerted (donor chasetarget).</summary>
+    public bool ChasesTarget { get; set; } = true;
+
+    /// <summary>Backs away from a close player (donor keepDistance).</summary>
+    public bool KeepsDistance { get; init; }
 
     public int DetectRange { get; set; } = 8;
 
@@ -66,13 +73,36 @@ public sealed class DelverMonsterDefinition
     public required int Endurance { get; init; }
 }
 
+/// <summary>A monster's ranged bolt (the donor monster's spell or projectile).</summary>
+public sealed class DelverMonsterRangedDefinition
+{
+    public required int BaseDamage { get; init; }
+
+    public int RandDamage { get; init; }
+
+    /// <summary>Physical, Magic, Fire, Ice, Lightning, Poison, Paralyze.</summary>
+    public string DamageType { get; set; } = "Magic";
+
+    /// <summary>Bolt speed in tiles per tick.</summary>
+    public required float Speed { get; init; }
+
+    /// <summary>Ticks between casts (donor projectileAttackTime).</summary>
+    public int CooldownTicks { get; set; } = 100;
+
+    public float MinDistance { get; init; }
+
+    public float MaxDistance { get; set; } = 30f;
+
+    public string Sprite { get; set; } = "projectile.bolt";
+}
+
 public sealed class DelverItemDefinition
 {
     public required string Id { get; init; }
 
     public required string DisplayName { get; init; }
 
-    /// <summary>Weapon, RangedWeapon, Wand, Potion, Food, Gold, Key, Armor, Helmet, QuestOrb.</summary>
+    /// <summary>Weapon, RangedWeapon, Wand, Ammo, Potion, Food, Gold, Key, Armor, Helmet, QuestOrb.</summary>
     public required string Kind { get; init; }
 
     public string Sprite { get; set; } = "item";
@@ -84,6 +114,30 @@ public sealed class DelverItemDefinition
     public int RandDamage { get; init; }
 
     public int ChargeTicks { get; set; } = 40;
+
+    /// <summary>Physical, Magic, Fire, Ice, Lightning, Poison, Paralyze.</summary>
+    public string DamageType { get; set; } = "Physical";
+
+    /// <summary>A bow's range (donor Bow.range).</summary>
+    public int Range { get; init; }
+
+    /// <summary>A fresh wand's charges.</summary>
+    public int Charges { get; init; }
+
+    /// <summary>A wand that fires while held, once per this many ticks.</summary>
+    public int AutoFireTicks { get; init; }
+
+    /// <summary>A wand bolt's speed in tiles per tick.</summary>
+    public float ProjectileSpeed { get; init; }
+
+    /// <summary>A wand's aim, 1 dead on (donor shotAccuracy).</summary>
+    public float Accuracy { get; set; } = 1f;
+
+    /// <summary>How many one find holds (donor ItemStack count).</summary>
+    public int StackSize { get; set; } = 1;
+
+    /// <summary>The sprite a fired bolt flies as.</summary>
+    public string ProjectileSprite { get; set; } = "";
 
     public int HealAmount { get; init; }
 

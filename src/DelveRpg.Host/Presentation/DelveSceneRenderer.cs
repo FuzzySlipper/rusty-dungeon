@@ -1,6 +1,7 @@
 using System.Numerics;
 using DelveRpg.Kit.Actors;
 using DelveRpg.Kit.Ai;
+using DelveRpg.Kit.Combat;
 using DelveRpg.Kit.Rules;
 using DelveRpg.Kit.Session;
 using DelveRpg.Kit.World;
@@ -31,6 +32,8 @@ public sealed class DelveSceneRenderer : IDisposable
     private const ulong HandLightId = 4_000_000_002;
     private const ulong WallTorchObjectBase = 5_000_000_000;
     private const ulong TorchLightId = 4_000_000_001;
+    private const ulong BoltLightBase = 4_200_000_000;
+    private const ulong ProjectileObjectBase = 6_000_000_000;
 
     private readonly IEngineContext _engine;
     private readonly Camera _camera;
@@ -38,6 +41,7 @@ public sealed class DelveSceneRenderer : IDisposable
     private readonly Light _torch;
     private Light? _handLight;
     private readonly List<Light> _wallTorchLights = new();
+    private readonly Dictionary<long, Light> _boltLights = new();
     private IReadOnlyList<WallTorch> _wallTorches = Array.Empty<WallTorch>();
     private readonly Material _material;
     private readonly DelveArtAssets _art;
@@ -192,7 +196,7 @@ public sealed class DelveSceneRenderer : IDisposable
 
         foreach (GroundItem item in session.GroundItems)
         {
-            ulong objectId = ItemObjectBase + (ulong)((item.Y * 10_000) + item.X);
+            ulong objectId = ItemObjectBase + (ulong)item.Id;
             live.Add(objectId);
             string? spriteId = _rules.Item(item.Item.ArchetypeId)?.SpriteId;
             if (spriteId is not null && _sprites.SpriteFor(spriteId) is DelveSprite sprite)
@@ -227,6 +231,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 RenderLayer.Scene));
         }
 
+        AddProjectiles(session, facts, live);
         AddWallTorches(session.ElapsedTicks, facts, live);
         AddHeldWeapon(session, tuning, facts, live);
 
@@ -254,6 +259,16 @@ public sealed class DelveSceneRenderer : IDisposable
         // A retained appearance must leave the published snapshot before
         // disposal; the publish above is the first that excludes these.
         RetireDrain();
+    }
+
+    private void DisposeBoltLights()
+    {
+        foreach (Light light in _boltLights.Values)
+        {
+            light.Dispose();
+        }
+
+        _boltLights.Clear();
     }
 
     private void RetireDrain()
@@ -310,6 +325,7 @@ public sealed class DelveSceneRenderer : IDisposable
         }
 
         _wallTorchLights.Clear();
+        DisposeBoltLights();
         _wallTorches = TorchPlacement.Place(level);
         for (int i = 0; i < _wallTorches.Count; i++)
         {
@@ -393,6 +409,79 @@ public sealed class DelveSceneRenderer : IDisposable
             true,
             RenderLayer.Viewmodel));
     }
+
+    /// <summary>
+    /// Arrows and bolts in flight, centred on their height. A bolt is its
+    /// donor particle cells tinted by damage type, carrying a small point
+    /// light of the same colour, as the donor's magic missile drags a
+    /// dynamic light along ([donor] entities/projectiles/MagicMissileProjectile.java
+    /// onTick, items/Weapon.java getEnchantmentColor). An arrow is the
+    /// arrow item, lit like any sprite. Without staged art nothing is drawn;
+    /// a bolt's light still shows where it flies.
+    /// </summary>
+    private void AddProjectiles(RunSession session, List<AppearanceFact> facts, HashSet<ulong> live)
+    {
+        var flying = new HashSet<long>();
+        foreach (Projectile projectile in session.Projectiles)
+        {
+            Vector3 centre = new(projectile.X, projectile.Z, projectile.Y);
+            if (projectile.DamageType != DamageType.Physical)
+            {
+                flying.Add(projectile.Id);
+                LightRequest request = PointLight(
+                    BoltLightBase + (ulong)projectile.Id, centre, DamageColor(projectile.DamageType), BoltLightIntensity, BoltLightRange);
+                if (_boltLights.TryGetValue(projectile.Id, out Light? light))
+                {
+                    _engine.Graphics.UpdateLight(new LightUpdateRequest(light, request));
+                }
+                else
+                {
+                    _boltLights[projectile.Id] = _engine.Graphics.CreateLight(request);
+                }
+            }
+
+            if (_sprites.SpriteFor(projectile.SpriteId) is not DelveSprite sprite)
+            {
+                continue;
+            }
+
+            ulong objectId = ProjectileObjectBase + (ulong)projectile.Id;
+            live.Add(objectId);
+            Vector3 colour = projectile.DamageType == DamageType.Physical ? Vector3.One : DamageColor(projectile.DamageType);
+            Appearance appearance = RequireAppearance(
+                objectId, () => CreateWorldSprite(sprite, new Color(colour.X, colour.Y, colour.Z, 1f)));
+            uint frame = sprite.Definition.Loop is DelveSpriteAnimation loop
+                ? (uint)loop.FrameAt(projectile.AgeTicks)
+                : (uint)sprite.Definition.Frame;
+            ShowFrame(objectId, appearance, sprite, frame);
+            facts.Add(new AppearanceFact(
+                objectId,
+                false,
+                0,
+                new Transform(centre - new Vector3(0f, sprite.Definition.Size / 2f, 0f), Quaternion.Identity, Vector3.One),
+                appearance,
+                true,
+                RenderLayer.Scene));
+        }
+
+        foreach (long spent in _boltLights.Keys.Where(id => !flying.Contains(id)).ToList())
+        {
+            _boltLights[spent].Dispose();
+            _boltLights.Remove(spent);
+        }
+    }
+
+    /// <summary>The donor's damage-type colours ([donor] game/Colors.java).</summary>
+    public static Vector3 DamageColor(DamageType damageType) => damageType switch
+    {
+        DamageType.Fire => new Vector3(1f, 0f, 0f),
+        DamageType.Ice => new Vector3(0f, 0f, 1f),
+        DamageType.Lightning => new Vector3(1f, 1f, 1f),
+        DamageType.Magic => new Vector3(0.6172f, 0.0937f, 0.7695f),
+        DamageType.Poison => new Vector3(0.1529f, 1f, 0.3333f),
+        DamageType.Paralyze => new Vector3(0.9294f, 0.7882f, 0.1921f),
+        _ => Vector3.One,
+    };
 
     /// <summary>
     /// Wall torches: a fullbright looping flame sprite and a point light each
@@ -483,6 +572,8 @@ public sealed class DelveSceneRenderer : IDisposable
     private const float WallTorchRange = 4f;
     private const float LightDecay = 1f;
     private const float HandLightIntensity = 1.5f;
+    private const float BoltLightIntensity = 4f;
+    private const float BoltLightRange = 2.5f;
 
     /// <summary>Camera-local weapon pose; the viewmodel camera looks down -Z.</summary>
     public readonly record struct HeldPose(Vector3 Position, float RollDegrees);
@@ -502,7 +593,7 @@ public sealed class DelveSceneRenderer : IDisposable
         return new HeldPose(position, (25f * charge) - (75f * swing));
     }
 
-    private Appearance CreateWorldSprite(DelveSprite sprite) =>
+    private Appearance CreateWorldSprite(DelveSprite sprite, Color? tint = null) =>
         _engine.Graphics.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(
             sprite.Atlas,
             (uint)sprite.Definition.Frame,
@@ -512,7 +603,7 @@ public sealed class DelveSceneRenderer : IDisposable
             SpriteSizeMode.World,
             0,
             SpriteDepthPolicy.Default,
-            new Color(1f, 1f, 1f, 1f),
+            tint ?? new Color(1f, 1f, 1f, 1f),
             sprite.Material));
 
     /// <summary>
@@ -638,6 +729,12 @@ public sealed class DelveSceneRenderer : IDisposable
         }
 
         _wallTorchLights.Clear();
+        foreach (Light light in _boltLights.Values)
+        {
+            TryDispose(light.Dispose, failures);
+        }
+
+        _boltLights.Clear();
 
         TryDispose(_torch.Dispose, failures);
         TryDispose(_ambient.Dispose, failures);

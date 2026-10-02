@@ -43,8 +43,8 @@ Recorded divergences from the donor (never to be "corrected" silently):
   steering sweeps are simplified away.
 - Monster detection is range-and-line-of-sight; the donor's light-based
   stealth is not modeled.
-- Wands and bows swing like melee weapons in this slice; ranged bolts are a
-  later capability.
+- Projectiles fly over the Kit's tile grid with simplified collision (no
+  knockback, splash or deflection); see docs/gameplay-design.md §Combat.
 - Ascended floors regenerate from the run seed instead of being restored from
   snapshots; only the current floor is snapshotted at save boundaries.
 - Ripped art and audio are never committed. With the operator's donor files

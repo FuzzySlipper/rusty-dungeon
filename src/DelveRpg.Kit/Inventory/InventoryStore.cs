@@ -1,7 +1,10 @@
 namespace DelveRpg.Kit.Inventory;
 
-/// <summary>One item stack in a slot. Only stackable kinds carry counts above one.</summary>
-public readonly record struct ItemInstance(string ArchetypeId, int Count)
+/// <summary>
+/// One item stack in a slot. Only stackable kinds carry counts above one;
+/// <see cref="Charges"/> is what a wand has left.
+/// </summary>
+public readonly record struct ItemInstance(string ArchetypeId, int Count, int Charges = 0)
 {
     public static ItemInstance One(string archetypeId) => new(archetypeId, 1);
 }
@@ -89,6 +92,18 @@ public sealed class InventoryStore
         }
 
         _slots[index] = item.Count <= 1 ? null : item with { Count = item.Count - 1 };
+        return true;
+    }
+
+    /// <summary>Spend one of a wand's charges; false when the slot holds none.</summary>
+    public bool TryUseCharge(int index)
+    {
+        if (_slots[index] is not ItemInstance item || item.Charges <= 0)
+        {
+            return false;
+        }
+
+        _slots[index] = item with { Charges = item.Charges - 1 };
         return true;
     }
 
