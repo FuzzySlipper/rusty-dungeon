@@ -225,6 +225,11 @@ public sealed class DelvePlaytest
             WriteFeature(w, body, "pot", pot.X, pot.Y, pot.Kind.ToString());
         }
 
+        foreach (WallTorch torch in session.Torches.Where(t => Distance(body, t.TileX + 0.5f, t.TileY + 0.5f) <= NearbyTiles))
+        {
+            WriteFeature(w, body, "wall-torch", torch.TileX + 0.5f, torch.TileY + 0.5f, $"wall {torch.WallDx},{torch.WallDy}");
+        }
+
         for (int y = Math.Max(0, body.TileY - 12); y <= Math.Min(session.Level.Height - 1, body.TileY + 12); y++)
         {
             for (int x = Math.Max(0, body.TileX - 12); x <= Math.Min(session.Level.Width - 1, body.TileX + 12); x++)

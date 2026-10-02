@@ -25,6 +25,9 @@ public sealed class DelveSpriteManifest
     [JsonPropertyName("sprites")]
     public Dictionary<string, DelveSpriteDefinition> Sprites { get; set; } = new();
 
+    [JsonPropertyName("particles")]
+    public Dictionary<string, DelveParticleDefinition> Particles { get; set; } = new();
+
     [JsonPropertyName("lighting")]
     public DelveSpriteLighting Lighting { get; set; } = new();
 }
@@ -101,6 +104,32 @@ public sealed class DelveSpriteDefinition
 }
 
 /// <summary>
+/// A particle flipbook: cells <c>start..end</c> of a sheet, staged as one
+/// strip of equal frames by scripts/derive-particle-strips.py, because Engine
+/// billboard particles play frames laid out across one image.
+/// </summary>
+public sealed class DelveParticleDefinition
+{
+    [JsonPropertyName("atlas")]
+    public string Atlas { get; set; } = string.Empty;
+
+    [JsonPropertyName("start")]
+    public int Start { get; init; }
+
+    [JsonPropertyName("end")]
+    public int End { get; init; }
+
+    /// <summary>The staged strip, relative to the art prefix.</summary>
+    [JsonPropertyName("strip")]
+    public string Strip { get; set; } = string.Empty;
+
+    public int Frames => Math.Max(1, End + 1 - Start);
+}
+
+/// <summary>A loaded particle strip: its texture and how many frames it holds.</summary>
+public sealed record DelveParticleStrip(RenderResource Texture, int Frames);
+
+/// <summary>
 /// A donor sprite animation: cells <c>start..end</c> played over
 /// <c>speed</c> ticks for the whole sequence (donor SpriteAnimation).
 /// </summary>
@@ -174,6 +203,7 @@ public sealed class DelveSpriteAssets : IDisposable
     }
 
     private readonly Dictionary<string, DelveSprite> _sprites = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DelveParticleStrip> _particles = new(StringComparer.Ordinal);
     private readonly List<SpriteAtlas> _atlases = new();
     private readonly List<RenderResource> _textures = new();
     private bool _disposed;
@@ -185,6 +215,10 @@ public sealed class DelveSpriteAssets : IDisposable
     /// <summary>The loaded sprite for a content sprite id, or null.</summary>
     public DelveSprite? SpriteFor(string spriteId) =>
         _sprites.TryGetValue(spriteId, out DelveSprite? sprite) ? sprite : null;
+
+    /// <summary>The staged flipbook strip for a particle id, or null without its art.</summary>
+    public DelveParticleStrip? ParticleFor(string particleId) =>
+        _particles.TryGetValue(particleId, out DelveParticleStrip? strip) ? strip : null;
 
     public static DelveSpriteAssets Load(IEngineContext engine, Func<string, string?> readText, Func<string, bool> contentExists)
     {
@@ -249,6 +283,16 @@ public sealed class DelveSpriteAssets : IDisposable
                     ? CutoutMaterial(new DelveSpriteLighting(), null)
                     : materials[definition.Atlas];
                 assets._sprites[id] = new DelveSprite(atlas, definition, material);
+            }
+        }
+
+        foreach ((string id, DelveParticleDefinition particle) in manifest.Particles)
+        {
+            string stripPath = PathIn(manifest, particle.Strip);
+            if (particle.Strip.Length > 0 && contentExists(stripPath) && OpenSheet(engine, stripPath) is RenderResource strip)
+            {
+                assets._textures.Add(strip);
+                assets._particles[id] = new DelveParticleStrip(strip, particle.Frames);
             }
         }
 

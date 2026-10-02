@@ -44,6 +44,28 @@ public sealed class DelveArtTheme
 
     [JsonPropertyName("cells")]
     public Dictionary<string, List<int>> Cells { get; set; } = new();
+
+    /// <summary>The floor's distance fog, from the donor section's level template.</summary>
+    [JsonPropertyName("fog")]
+    public DelveArtFog? Fog { get; init; }
+}
+
+/// <summary>
+/// Linear fog: geometry fades from its lit colour at <c>start</c> tiles to
+/// <c>color</c> at <c>end</c>, as the donor's main shader does with a level's
+/// fogStart, fogEnd and fogColor ([donor] shaders/main.vert calcFogFactor,
+/// gfx/shaders/ShaderInfo.java).
+/// </summary>
+public sealed class DelveArtFog
+{
+    [JsonPropertyName("start")]
+    public float Start { get; init; }
+
+    [JsonPropertyName("end")]
+    public float End { get; init; }
+
+    [JsonPropertyName("color")]
+    public float[] Color { get; set; } = [0f, 0f, 0f];
 }
 
 public sealed class DelveArtAtlas
@@ -102,6 +124,7 @@ public sealed class DelveArtAssets : IDisposable
     private readonly Dictionary<(string Theme, string Role), Material> _themeMaterials = new();
     private readonly Dictionary<string, Material> _materials = new(StringComparer.Ordinal);
     private readonly List<RenderResource> _textures = new();
+    private readonly Dictionary<string, DelveArtFog> _fogs = new(StringComparer.Ordinal);
     private readonly List<Material> _ownedMaterials = new();
     private bool _disposed;
 
@@ -112,6 +135,9 @@ public sealed class DelveArtAssets : IDisposable
     /// <summary>Atlas cell rect for a role; the full unit square without art.</summary>
     public UvRect RectFor(string role) =>
         _rects.TryGetValue(role, out UvRect rect) ? rect : FallbackRects[role];
+
+    /// <summary>A theme's fog, or null for none. Fog needs no staged art.</summary>
+    public DelveArtFog? FogFor(string theme) => _fogs.TryGetValue(theme, out DelveArtFog? fog) ? fog : null;
 
     /// <summary>True when a theme paints at least one role from its own art.</summary>
     public bool Paints(string theme) => _themeRects.Keys.Any(key => key.Theme == theme);
@@ -221,6 +247,11 @@ public sealed class DelveArtAssets : IDisposable
 
         foreach ((string theme, DelveArtTheme painter) in manifest.Themes)
         {
+            if (painter.Fog is DelveArtFog fog)
+            {
+                assets._fogs[theme] = fog;
+            }
+
             if (!manifest.Atlases.TryGetValue(painter.Atlas, out DelveArtAtlas? atlas) || atlas.Columns <= 0 || atlas.Rows <= 0)
             {
                 continue;

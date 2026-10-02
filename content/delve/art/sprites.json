@@ -1,6 +1,6 @@
 {
   "schema": "delve.art.sprites.v1",
-  "description": "Maps content sprite ids to cells of donor sprite sheets staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). Sheets are fixed 32px grids; a cell index is column + row * columns, as in the donor's TextureAtlas. Monster cells and walk/attack/hurt/die ranges follow donor data/monsters.dat where a donor monster exists; rat, ogre and golem have no donor monster and borrow the worm, zombie and eye art. Projectiles fly as the donor's arrow item cell and its white particle cells (data/items.dat wand and monsters.dat EYE magicMissileProjectile tex ranges), tinted by damage type at render time. Sprites are lit through each sheet's normal sheet, derived offline by scripts/derive-sprite-normals.py; without staged normals they draw unlit. The art and its derivatives are donor-derived and never committed. Without staged art, actors keep their placeholder plates.",
+  "description": "Maps content sprite ids to cells of donor sprite sheets staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). Sheets are fixed 32px grids; a cell index is column + row * columns, as in the donor's TextureAtlas. Monster cells and walk/attack/hurt/die ranges follow donor data/monsters.dat where a donor monster exists; rat, ogre and golem have no donor monster and borrow the worm, zombie and eye art. Projectiles fly as the donor's arrow item cell and its white particle cells (data/items.dat wand and monsters.dat EYE magicMissileProjectile tex ranges), tinted by damage type at render time. 'particles' are flipbooks cut from sheet cells start..end into a staged strip by scripts/derive-particle-strips.py (Engine billboard particles play frames across one image); the ember is the donor Torch emitter's cells (data/entities.dat). Sprites are lit through each sheet's normal sheet, derived offline by scripts/derive-sprite-normals.py; without staged normals they draw unlit. The art and its derivatives are donor-derived and never committed. Without staged art, actors keep their placeholder plates.",
   "artContentPrefix": "delve/imports/art",
   "lighting": { "mode": "authored-normal", "strength": 1.5 },
   "atlases": {
@@ -20,6 +20,9 @@
     "textures/Temple/sprites.png": { "columns": 4, "rows": 8, "normals": "textures/Temple/sprites.normals.png" },
     "textures/Cold/sprites.png": { "columns": 4, "rows": 8, "normals": "textures/Cold/sprites.normals.png" },
     "textures/Dungeon/sprites.png": { "columns": 4, "rows": 10, "normals": "textures/Dungeon/sprites.normals.png" }
+  },
+  "particles": {
+    "ember": { "atlas": "particles.png", "start": 64, "end": 69, "strip": "particles/ember.png" }
   },
   "sprites": {
     "monster.rat": { "atlas": "entities_cave.png", "frame": 0, "size": 1.0, "walk": { "start": 0, "end": 3, "speed": 30 }, "attack": { "start": 4, "end": 10, "speed": 65 }, "hurt": { "start": 11, "end": 14, "speed": 22 }, "die": { "start": 15, "end": 17, "speed": 30 } },

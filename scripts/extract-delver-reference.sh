@@ -140,4 +140,11 @@ if python3 -c 'import numpy, PIL' 2>/dev/null; then
 else
   echo "warning: numpy/Pillow missing; sprites will draw unlit (no derived normal sheets)" >&2
 fi
+
+# Particle flipbooks are strips cut from the staged particle sheet.
+if python3 -c 'import PIL' 2>/dev/null; then
+  python3 "$REPO_ROOT/scripts/derive-particle-strips.py" "$REPO_ROOT/content/delve/art/sprites.json" "$ART_STAGE"
+else
+  echo "warning: Pillow missing; torches draw without embers (no particle strips)" >&2
+fi
 echo "Note: donor rips must never be committed; local/ and content/delve/imports/ are gitignored."

@@ -1,6 +1,6 @@
 {
   "schema": "delve.art.tiles.v1",
-  "description": "Maps level tile roles (floor, wall, water, door, ceiling) into texture atlases staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). 'tiles' is the default cell per role (the donor's t1 sheet). 'themes' paints a floor theme from its own donor atlas with weighted cell lists per role (index = column + row * columns; a cell listed n times is n times as likely), following the donor's texture painters (generator/<Theme>/info.dat texturePainters, generator/<Section>/section.dat level painters). Roles a theme leaves out keep the default cell. The art is donor-derived and never committed. Without staged art the level keeps its placeholder colors.",
+  "description": "Maps level tile roles (floor, wall, water, door, ceiling) into texture atlases staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). 'tiles' is the default cell per role (the donor's t1 sheet). 'themes' paints a floor theme from its own donor atlas with weighted cell lists per role (index = column + row * columns; a cell listed n times is n times as likely), following the donor's texture painters (generator/<Theme>/info.dat texturePainters, generator/<Section>/section.dat level painters). Roles a theme leaves out keep the default cell. A theme's 'fog' is its donor section's linear fog (generator/<Section>/section.dat fogStart, fogEnd, fogColor) and applies with or without art. The art is donor-derived and never committed. Without staged art the level keeps its placeholder colors.",
   "artContentPrefix": "delve/imports/art",
   "atlases": {
     "textures.png": {
@@ -87,6 +87,7 @@
   },
   "themes": {
     "Sewer": {
+      "fog": { "start": 0, "end": 12, "color": [0.1, 0.56, 0.53] },
       "atlas": "textures/Sewer/textures.png",
       "cells": {
         "wall": [
@@ -131,6 +132,7 @@
       }
     },
     "Temple": {
+      "fog": { "start": 1.925, "end": 16.039, "color": [0.125, 0.024, 0.024] },
       "atlas": "textures/Temple/textures.png",
       "cells": {
         "wall": [
@@ -172,6 +174,7 @@
       }
     },
     "Undead": {
+      "fog": { "start": 0, "end": 14, "color": [0.43, 0.1, 0.43] },
       "atlas": "textures/Temple/textures.png",
       "cells": {
         "wall": [
@@ -213,6 +216,7 @@
       }
     },
     "Cave": {
+      "fog": { "start": 3.471, "end": 27.95, "color": [0.0, 0.467, 0.251] },
       "atlas": "textures/Cave/textures.png",
       "cells": {
         "wall": [
@@ -245,6 +249,7 @@
       }
     },
     "Cold": {
+      "fog": { "start": 0, "end": 16, "color": [0.12, 0.2, 0.32] },
       "atlas": "textures/Cold/textures.png",
       "cells": {
         "wall": [

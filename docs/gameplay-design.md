@@ -748,21 +748,71 @@ torches, and a hand light on the held weapon.
 - Wall torches are the donor's `Torch` ([data] `data/entities.dat` "Torch",
   [donor] `entities/Torch.java`): a fullbright flame sprite looping
   `sprites.png` cells 32–39 over 30 ticks and a point light of colour
-  (1, 0.8, 0.2), range 4, intensity 8. The donor places them from room
-  template markers ([donor] `generator/GenInfo.java` `Markers.torch`,
-  `RoomGenerator.java:299-302`); our generated rooms have none, so
-  the Kit's `TorchPlacement` hangs them on walls from the tile grid — floor tiles
-  against a wall in a hashed order, at least 6 tiles apart, at most 48 —
-  the same grid always getting the same torches.
+  (1, 0.8, 0.2), range 4, intensity 8. They hang along room walls and from
+  room-piece markers (see *Heights and room pieces*).
+  - **Flicker.** Each torch light flickers with the donor's `fire` formula
+    ([donor] `entities/DynamicLight.java:95-102`): three slow sines (0.11,
+    0.147, 0.263 rad a tick) each take up to a tenth off its intensity, and
+    three (0.111, 0.1477, 0.2631) take up to a twentieth off its range. Each
+    torch runs its own phase. **Divergence:** the donor bakes its wall torches
+    into steady light maps and gives the formula to its dynamic fire lights
+    (candles, `entities/Fire.java:117`); a flickering wall torch is our
+    choice.
+  - **Embers.** Each torch is an Engine retained particle emitter playing
+    `particles.png` cells 64–69 once over each particle's life, the donor
+    Torch emitter ([data] `data/entities.dat` "Torch" `emitter`):
+    - life 25–35 ticks, rising 0.36–0.84 tiles a second, floating, at the
+      particle colour (1, 0.957, 0.957);
+    - about one a second beside the player, slowing with distance and
+      stopping at its `spawnDistance` of 15 tiles
+      ([donor] `entities/ParticleEmitter.java:199-201`).
+    The cells are cut into a flipbook strip at staging
+    (`scripts/derive-particle-strips.py`), since Engine billboard particles
+    play frames across one image.
+    **Approximate:**
+    - A little sideways drift stands in for the 0.2-tile spawn spread.
+    - Engine billboard particles keep one screen size at any distance, so
+      embers are sized for a torch two tiles away (asked upstream as
+      rusty-engine 9134).
+    - A retained emitter refuses a zero rate, so out-of-range torches idle
+      at 0.01 a second, hidden (rusty-engine 9135).
 - The held weapon is lit by a warm light parented to it, so it rides in the
   camera-local viewmodel layer (the donor tints the held item by the light
   where the player stands). The Engine requires a light's parent in the
   published scene, so the hand light is made after the weapon's first
   publish and released before a publish without it. Still true on the
   current pair; asked upstream as rusty-engine 9132.
-**Approximate:** intensities and ranges are tuned by eye for the Engine's
-`1/distance` falloff with a range window; no flicker, no flame particles, no
-baked light maps. Verified in play that the product's settings hold: with
+**Fog — faithful.** Each theme fades geometry linearly to its donor
+section's fog, as the donor's main shader does with a level's `fogStart`,
+`fogEnd` and `fogColor` ([donor] `shaders/main.vert` `calcFogFactor`,
+`gfx/shaders/ShaderInfo.java:167-170`). The background stays black, and the
+Engine's fog does not touch it either.
+
+| Theme | Donor section | Fog start–end (tiles) | Colour |
+| --- | --- | --- | --- |
+| Sewer | Sewer | 0–12 | teal (0.1, 0.56, 0.53) |
+| Temple | Dungeon | 1.925–16.039 | dark red (0.125, 0.024, 0.024) |
+| Undead | Undead | 0–14 | purple (0.43, 0.1, 0.43) |
+| Cave | Cave | 3.471–27.95 | green (0, 0.467, 0.251) |
+| Cold | none | 0–16 | dark blue (0.12, 0.2, 0.32) |
+
+Sources are `[data] generator/<Section>/section.dat` level templates; Cold
+has no donor section, so its fog is ours. The Sewer's teal haze is strong at
+close range, as the donor's values give.
+
+**Evaluated and left off:**
+- **Scene shadows** (`RustyEngineProductSceneShadows`, torches requesting
+  point shadows): a torch's light sits a quarter tile out from its wall, and
+  the wall shadows most of its pool, leaving a halo round the flame.
+- **Tone mapping:** ACES filmic at exposure 1 dims and desaturates a scene
+  tuned without it, and the donor draws plain clamped colour.
+
+**Approximate:**
+- Intensities and ranges are tuned by eye for the Engine's `1/distance`
+  falloff with a range window.
+- There are no baked light maps. The Engine bakes none, and the closest
+  mechanism, an ambient light that requests shadows, darkens surfaces under a
+  closed sky, which every dungeon floor has. Verified in play that the product's settings hold: with
 every product light at zero the world renders black apart from the fullbright
 torch sprites, and disabling the viewmodel rig blacks the weapon until the
 hand light lights it.

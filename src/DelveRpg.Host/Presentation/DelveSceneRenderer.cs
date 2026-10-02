@@ -28,7 +28,6 @@ public sealed class DelveSceneRenderer : IDisposable
     private const ulong ItemObjectBase = 2_000_000;
     private const ulong WeaponObjectId = 3_000_000_000;
     private const ulong AmbientLightId = 4_000_000_000;
-    private const ulong WallTorchLightBase = 4_100_000_000;
     private const ulong HandLightId = 4_000_000_002;
     private const ulong WallTorchObjectBase = 5_000_000_000;
     private const ulong TorchLightId = 4_000_000_001;
@@ -56,7 +55,7 @@ public sealed class DelveSceneRenderer : IDisposable
     private readonly Light _ambient;
     private readonly Light _torch;
     private Light? _handLight;
-    private readonly List<Light> _wallTorchLights = new();
+    private readonly TorchEffects _torchEffects;
     private readonly Dictionary<long, Light> _boltLights = new();
     private readonly Dictionary<long, Light> _burstLights = new();
     private MeshResource? _spikeMesh;
@@ -91,6 +90,7 @@ public sealed class DelveSceneRenderer : IDisposable
         _rules = rules;
         _art = DelveArtAssets.Load(engine, readText, contentExists);
         _sprites = DelveSpriteAssets.Load(engine, readText, contentExists);
+        _torchEffects = new TorchEffects(engine, _sprites);
         _held = HeldAnimations.Load(readText);
         _material = engine.Graphics.CreateMaterial(new MaterialRequest(
             new Color(1f, 1f, 1f, 1f),
@@ -168,6 +168,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 new CameraProjection(CameraProjectionKind.Perspective, 75.0, 0.0, 0.05, 120.0),
                 new CameraViewport(0, 0, 1, 1))));
 
+        _torchEffects.Tick(session.ElapsedTicks, new Vector3(player.X, player.Z + eyeHeight, player.Y));
         _engine.Graphics.UpdateLight(new LightUpdateRequest(
             _torch, TorchRequest(new Vector3(player.X, player.Z + eyeHeight, player.Y))));
 
@@ -351,12 +352,6 @@ public sealed class DelveSceneRenderer : IDisposable
         _actorAppearances.Clear();
         _spriteFrames.Clear();
 
-        foreach (Light light in _wallTorchLights)
-        {
-            light.Dispose();
-        }
-
-        _wallTorchLights.Clear();
         DisposeBoltLights();
         foreach (Light light in _burstLights.Values)
         {
@@ -366,15 +361,9 @@ public sealed class DelveSceneRenderer : IDisposable
         _burstLights.Clear();
         _level = level;
         _wallTorches = torches;
-        for (int i = 0; i < _wallTorches.Count; i++)
-        {
-            _wallTorchLights.Add(_engine.Graphics.CreateLight(PointLight(
-                WallTorchLightBase + (ulong)i,
-                TorchLightPosition(_wallTorches[i]),
-                WallTorchColor,
-                WallTorchIntensity,
-                WallTorchRange)));
-        }
+        _torchEffects.Load(_wallTorches
+            .Select(torch => (TorchLightPosition(torch), TorchFlamePosition(torch)))
+            .ToList());
 
         LevelMesh.LevelGeometry geometry = LevelMesh.Build(
             level, theme, (role, x, y) => _art.RectFor(theme, role, x, y), _art.Paints(theme));
@@ -395,6 +384,9 @@ public sealed class DelveSceneRenderer : IDisposable
             geometry.Groups.Select(entry => entry.Group).ToArray(),
             bindings.ToArray()));
         _levelAppearance = _engine.Graphics.CreateMeshAppearance(_levelMesh);
+        _engine.CameraView.SetFog(_art.FogFor(theme) is DelveArtFog fog
+            ? new FogRequest(FogMode.Linear, new Color(fog.Color[0], fog.Color[1], fog.Color[2], 1f), fog.Start, fog.End, 0f)
+            : new FogRequest(FogMode.Off, default, 0f, 0f, 0f));
     }
 
     /// <summary>
@@ -788,7 +780,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 objectId,
                 false,
                 0,
-                new Transform(new Vector3(_wallTorches[i].SpriteX, Ground(_wallTorches[i].TileX, _wallTorches[i].TileY) + 0.3f, _wallTorches[i].SpriteY), Quaternion.Identity, Vector3.One),
+                new Transform(new Vector3(_wallTorches[i].SpriteX, Ground(_wallTorches[i].TileX, _wallTorches[i].TileY) + WallTorchSpriteLift, _wallTorches[i].SpriteY), Quaternion.Identity, Vector3.One),
                 appearance,
                 true,
                 RenderLayer.Scene));
@@ -797,6 +789,10 @@ public sealed class DelveSceneRenderer : IDisposable
 
     /// <summary>A wall torch's light sits a little out from the wall, above the flame.</summary>
     private Vector3 TorchLightPosition(WallTorch torch) => new(torch.LightX, Ground(torch.TileX, torch.TileY) + 0.65f, torch.LightY);
+
+    /// <summary>Where a wall torch's embers leave its flame: the top of its sprite.</summary>
+    private Vector3 TorchFlamePosition(WallTorch torch) =>
+        new(torch.SpriteX, Ground(torch.TileX, torch.TileY) + WallTorchSpriteLift + (WallTorchSize * 0.7f), torch.SpriteY);
 
     /// <summary>The floor height of a tile, for standing things on it.</summary>
     private float Ground(int tileX, int tileY) => _level?.FloorHeight(tileX, tileY) ?? 0f;
@@ -852,12 +848,11 @@ public sealed class DelveSceneRenderer : IDisposable
             LightShadowIntent.Disabled));
 
     private const string WallTorchSpriteId = "decor.torch";
+    private const float WallTorchSpriteLift = 0.3f;
+    private float WallTorchSize => _sprites.SpriteFor(WallTorchSpriteId)?.Definition.Size ?? 0.5f;
     private const float AmbientIntensity = 0.06f;
     private const float TorchIntensity = 8f;
     private const float TorchRange = 3.5f;
-    private static readonly Vector3 WallTorchColor = new(1f, 0.8f, 0.2f);
-    private const float WallTorchIntensity = 8f;
-    private const float WallTorchRange = 4f;
     private const float LightDecay = 1f;
     private const float HandLightIntensity = 1.5f;
     private const float BoltLightIntensity = 4f;
@@ -1000,12 +995,7 @@ public sealed class DelveSceneRenderer : IDisposable
             TryDispose(_levelMesh.Dispose, failures);
         }
 
-        foreach (Light light in _wallTorchLights)
-        {
-            TryDispose(light.Dispose, failures);
-        }
-
-        _wallTorchLights.Clear();
+        TryDispose(_torchEffects.Dispose, failures);
         foreach (Light light in _boltLights.Values)
         {
             TryDispose(light.Dispose, failures);
