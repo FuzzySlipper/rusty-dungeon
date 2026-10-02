@@ -40,9 +40,13 @@ The donor tesselates a heightbox tile grid and grows prefab chunks through a
 chunk graph ([donor] `generator/DungeonGenerator.java`, `tiles/Tile.java`).
 This port owns a flat tile-kind grid (`Wall`, `Floor`, `DoorClosed`,
 `DoorOpen`, `StairsDown`, `StairsUp`, `Water`) and generates rooms +
-L-corridors with door seams, stairs from far exit candidates, and bonus loot
-at leftover candidates ([donor] `gamemode/delver/DelverGameMode.java`
-`placeStairsDown`). Closed doors are *navigable* seams — connectivity and
+L-corridors, stairs from far exit candidates, and bonus loot at leftover
+candidates ([donor] `gamemode/delver/DelverGameMode.java`
+`placeStairsDown`). Corridors are carved as floor. Doors are placed
+afterwards, only where a corridor enters a room: on a corridor tile outside
+every room, beside the room's floor, with walls on both sides across the way
+in, and never touching another door. These are the donor's doorway prefabs at
+room seams. Closed doors are *navigable* seams — connectivity and
 monster paths run through them because any actor can open them — while
 sight and player movement stay blocked until the door is opened. The run
 starts on safe ground: no hostile spawns land in the entrance room or its

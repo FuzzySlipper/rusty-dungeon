@@ -262,4 +262,47 @@ public sealed class DungeonGeneratorTests
 
         return -1;
     }
+
+    [Fact]
+    public void Doors_stand_only_in_doorways_between_two_walls_and_corridors_are_floor()
+    {
+        for (int seed = 1; seed <= 12; seed++)
+        {
+            GeneratedLevel generated = DungeonGenerator.Generate(
+                new SplitMixRandom(SplitMixRandom.FloorSeed((ulong)seed, 0)), Config, Tuning, Floor, ["m1"], ["i1"]);
+            DungeonLevel level = generated.Level;
+            int doors = 0;
+            int corridorFloor = 0;
+            for (int y = 1; y < level.Height - 1; y++)
+            {
+                for (int x = 1; x < level.Width - 1; x++)
+                {
+                    TileKind kind = level.At(x, y).Kind;
+                    if (kind == TileKind.Floor)
+                    {
+                        corridorFloor++;
+                    }
+
+                    if (kind is not (TileKind.DoorClosed or TileKind.DoorLocked))
+                    {
+                        continue;
+                    }
+
+                    doors++;
+                    bool wallsAcross = (Wall(level, x - 1, y) && Wall(level, x + 1, y) && !Wall(level, x, y - 1) && !Wall(level, x, y + 1))
+                        || (Wall(level, x, y - 1) && Wall(level, x, y + 1) && !Wall(level, x - 1, y) && !Wall(level, x + 1, y));
+                    Assert.True(wallsAcross, $"door at {x},{y} is not in a doorway (seed {seed})");
+                    foreach ((int nx, int ny) in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
+                    {
+                        Assert.False(level.At(nx, ny).Kind is TileKind.DoorClosed or TileKind.DoorLocked, $"doors touch at {x},{y} (seed {seed})");
+                    }
+                }
+            }
+
+            Assert.True(doors < corridorFloor / 4, $"{doors} doors against {corridorFloor} floor tiles (seed {seed})");
+        }
+    }
+
+    private static bool Wall(DungeonLevel level, int x, int y) => level.At(x, y).Kind == TileKind.Wall;
 }
+

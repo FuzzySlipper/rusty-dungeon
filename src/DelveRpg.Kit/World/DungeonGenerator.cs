@@ -114,6 +114,8 @@ public static class DungeonGenerator
             CarveCorridor(level, random, fromX, fromY, toX, toY);
         }
 
+        PlaceDoors(level, rooms);
+
         (int startX, int startY) = RoomCenter(rooms[0]);
         level.Set(startX, startY, Tile.StairsUp);
 
@@ -251,7 +253,7 @@ public static class DungeonGenerator
         int step = fromX <= toX ? 1 : -1;
         for (int x = fromX; x != toX + step; x += step)
         {
-            CarveWithDoor(level, x, y);
+            CarveFloor(level, x, y);
         }
     }
 
@@ -260,31 +262,52 @@ public static class DungeonGenerator
         int step = fromY <= toY ? 1 : -1;
         for (int y = fromY; y != toY + step; y += step)
         {
-            CarveWithDoor(level, x, y);
+            CarveFloor(level, x, y);
         }
     }
 
-    /// <summary>
-    /// Carve one corridor tile. A corridor tile squeezed between two side walls
-    /// is a room seam; seams become closed doors, like the donor's doorway
-    /// prefabs.
-    /// </summary>
-    private static void CarveWithDoor(DungeonLevel level, int x, int y)
-    {
-        bool wasWall = level.At(x, y).Kind == TileKind.Wall;
-        level.Set(x, y, Tile.Floor);
-        if (!wasWall)
-        {
-            return;
-        }
+    private static void CarveFloor(DungeonLevel level, int x, int y) => level.Set(x, y, Tile.Floor);
 
-        bool verticalSeam = !level.InBounds(x, y - 1) || level.At(x, y - 1).BlocksMovement
-            ? level.At(x, y + 1).BlocksMovement
-            : false;
-        bool horizontalSeam = level.At(x - 1, y).BlocksMovement && level.At(x + 1, y).BlocksMovement;
-        if (verticalSeam || horizontalSeam)
+    /// <summary>
+    /// Doorways go where a corridor enters a room: a corridor tile outside
+    /// every room, beside a room's floor, with walls on both sides across
+    /// the way in — the donor's doorway prefabs at room seams. A corridor
+    /// running along a room or crossing open floor gets no door, and no two
+    /// doors touch.
+    /// </summary>
+    private static void PlaceDoors(DungeonLevel level, IReadOnlyList<(int X, int Y, int Width, int Height)> rooms)
+    {
+        bool InRoom(int x, int y) => rooms.Any(room =>
+            x >= room.X && x < room.X + room.Width && y >= room.Y && y < room.Y + room.Height);
+        bool Solid(int x, int y) => !level.InBounds(x, y) || level.At(x, y).Kind == TileKind.Wall;
+
+        for (int y = 1; y < level.Height - 1; y++)
         {
-            level.Set(x, y, Tile.DoorClosed);
+            for (int x = 1; x < level.Width - 1; x++)
+            {
+                if (level.At(x, y).Kind != TileKind.Floor || InRoom(x, y))
+                {
+                    continue;
+                }
+
+                foreach ((int dx, int dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                {
+                    if (!InRoom(x + dx, y + dy))
+                    {
+                        continue;
+                    }
+
+                    // The way in runs along (dx, dy); its sides are across it.
+                    bool walledSides = Solid(x + dy, y + dx) && Solid(x - dy, y - dx);
+                    bool doorBeside = new[] { (1, 0), (-1, 0), (0, 1), (0, -1) }
+                        .Any(n => level.At(x + n.Item1, y + n.Item2).Kind == TileKind.DoorClosed);
+                    if (walledSides && !doorBeside)
+                    {
+                        level.Set(x, y, Tile.DoorClosed);
+                        break;
+                    }
+                }
+            }
         }
     }
 
