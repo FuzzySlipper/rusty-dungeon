@@ -101,6 +101,9 @@ public sealed partial class RunSession
 
     public FogMap Fog { get; private set; } = null!;
 
+    /// <summary>The current floor's wall torches; their light decides how far monsters see the player.</summary>
+    public IReadOnlyList<WallTorch> Torches { get; private set; } = Array.Empty<WallTorch>();
+
     public PlayerState Player { get; }
 
     public MetaProgression Meta { get; }
@@ -216,6 +219,7 @@ public sealed partial class RunSession
             MapOpen = !MapOpen;
         }
 
+        TickStealth();
         TickMonsters();
         TickProjectiles();
         TickEffects();
@@ -428,6 +432,7 @@ public sealed partial class RunSession
 
         Level = generated.Level;
         Fog = new FogMap(Level.Width, Level.Height);
+        Torches = TorchPlacement.Place(Level);
         _monsters.Clear();
         _groundItems.Clear();
         _projectiles.Clear();

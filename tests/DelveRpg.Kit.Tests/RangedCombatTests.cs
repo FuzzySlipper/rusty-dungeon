@@ -26,7 +26,8 @@ public sealed class RangedCombatTests
         IReadOnlyList<SnapshotSlot> slots,
         string? weaponId,
         IReadOnlyList<SnapshotMonster>? monsters = null,
-        float playerX = 1.5f)
+        float playerX = 1.5f,
+        GameTuning? tuning = null)
     {
         var tiles = new byte[HallWidth * 3];
         Array.Fill(tiles, (byte)TileKind.Wall);
@@ -58,7 +59,7 @@ public sealed class RangedCombatTests
             GroundItems = [],
         };
 
-        return new RunSession(new ScriptedCatalog(), new GameTuning(), Plan, snapshot, MetaProgression.Fresh, random);
+        return new RunSession(new ScriptedCatalog(), tuning ?? new GameTuning(), Plan, snapshot, MetaProgression.Fresh, random);
     }
 
     internal static void HoldThenRelease(RunSession session, int heldTicks)
@@ -229,7 +230,8 @@ public sealed class RangedCombatTests
             ScriptedRandom.Always(0),
             [],
             null,
-            [new SnapshotMonster("test.monster.eye", 8.5f, 1.5f, 2, 0f)]);
+            [new SnapshotMonster("test.monster.eye", 8.5f, 1.5f, 2, 0f)],
+            tuning: new GameTuning { NoticeDarkTiles = 18f }); // as if the hall were torchlit
         int startHp = session.Player.Body.Hp;
 
         Idle(session, 140);

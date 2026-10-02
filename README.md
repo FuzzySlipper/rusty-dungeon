@@ -41,8 +41,9 @@ Recorded divergences from the donor (never to be "corrected" silently):
 
 - Monster navigation is a bounded grid BFS; the donor's node-graph paths and
   steering sweeps are simplified away.
-- Monster detection is range-and-line-of-sight; the donor's light-based
-  stealth is not modeled.
+- Monster detection is the donor's light-based stealth, sampled on the tile
+  grid from wall torches; partial shadow and held light sources are not
+  modeled.
 - Projectiles fly over the Kit's tile grid with simplified collision (no
   knockback, splash or deflection); see docs/gameplay-design.md §Combat.
 - Ascended floors regenerate from the run seed instead of being restored from

@@ -33,7 +33,6 @@ public sealed class DelverCatalog : IRulesCatalog
                 monster.AttackPower,
                 monster.AttackCooldownTicks,
                 monster.MonsterLevel,
-                monster.DetectRange,
                 monster.Sprite)
             {
                 Ranged = monster.Ranged is DelverMonsterRangedDefinition ranged
@@ -49,6 +48,7 @@ public sealed class DelverCatalog : IRulesCatalog
                     : null,
                 ChasesTarget = monster.ChasesTarget,
                 KeepsDistance = monster.KeepsDistance,
+                Ambushes = monster.Ambushes,
                 PainChance = monster.PainChance,
                 HurtTicks = monster.HurtTicks,
                 AttackKnockback = monster.AttackKnockback,

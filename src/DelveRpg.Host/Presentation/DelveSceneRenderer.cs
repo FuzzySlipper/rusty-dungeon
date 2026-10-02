@@ -138,7 +138,7 @@ public sealed class DelveSceneRenderer : IDisposable
 
         if (_loadedLevelRevision != session.LevelRevision)
         {
-            LoadLevel(session.Level, session.CurrentFloor.Theme);
+            LoadLevel(session.Level, session.CurrentFloor.Theme, session.Torches);
             _loadedLevelRevision = session.LevelRevision;
         }
 
@@ -314,7 +314,7 @@ public sealed class DelveSceneRenderer : IDisposable
     /// only disposed after the next publish drops them (the publish at the end
     /// of this render).
     /// </summary>
-    private void LoadLevel(DungeonLevel level, string theme)
+    private void LoadLevel(DungeonLevel level, string theme, IReadOnlyList<WallTorch> torches)
     {
         if (_levelAppearance is not null)
         {
@@ -343,12 +343,12 @@ public sealed class DelveSceneRenderer : IDisposable
 
         _wallTorchLights.Clear();
         DisposeBoltLights();
-        _wallTorches = TorchPlacement.Place(level);
+        _wallTorches = torches;
         for (int i = 0; i < _wallTorches.Count; i++)
         {
             _wallTorchLights.Add(_engine.Graphics.CreateLight(PointLight(
                 WallTorchLightBase + (ulong)i,
-                _wallTorches[i].LightPosition,
+                TorchLightPosition(_wallTorches[i]),
                 WallTorchColor,
                 WallTorchIntensity,
                 WallTorchRange)));
@@ -628,12 +628,15 @@ public sealed class DelveSceneRenderer : IDisposable
                 objectId,
                 false,
                 0,
-                new Transform(_wallTorches[i].SpritePosition, Quaternion.Identity, Vector3.One),
+                new Transform(new Vector3(_wallTorches[i].SpriteX, 0.3f, _wallTorches[i].SpriteY), Quaternion.Identity, Vector3.One),
                 appearance,
                 true,
                 RenderLayer.Scene));
         }
     }
+
+    /// <summary>A wall torch's light sits a little out from the wall, above the flame.</summary>
+    private static Vector3 TorchLightPosition(WallTorch torch) => new(torch.LightX, 0.65f, torch.LightY);
 
     /// <summary>
     /// The player's torch: a warm point light carried at eye height, the

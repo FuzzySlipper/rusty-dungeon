@@ -33,6 +33,8 @@ public sealed class DelverCatalogAndTuningTests
         Assert.Equal(5, Composition.Tuning.SeenRadius);
         Assert.Equal(40, Composition.Tuning.StartingGold);
         Assert.Equal(0.5f, Composition.Tuning.EyeHeight);
+        Assert.Equal(3f, Composition.Tuning.NoticeDarkTiles);
+        Assert.Equal(15f, Composition.Tuning.NoticeLightTiles);
     }
 
     [Fact]

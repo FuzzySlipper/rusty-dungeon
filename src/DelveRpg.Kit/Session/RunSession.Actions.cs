@@ -24,6 +24,7 @@ public sealed partial class RunSession
             Player.AttackCharge = 0;
             if (input.AttackHeld && body.AttackCooldownRemaining == 0)
             {
+                _attackedThisTick = true;
                 ZapWand(weapon);
                 body.AttackCooldownRemaining = weapon.AutoFireTicks;
             }
@@ -43,6 +44,7 @@ public sealed partial class RunSession
         }
         else if (Player.AttackCharge > 0)
         {
+            _attackedThisTick = true;
             float attackPower = Player.AttackCharge / (float)Math.Max(1, chargeTicks);
             switch (weapon?.Kind)
             {
@@ -380,7 +382,7 @@ public sealed partial class RunSession
                 continue;
             }
 
-            MonsterBrain.Tick(monster, Level, Player, _tuning, speedMultiplier);
+            MonsterBrain.Tick(monster, Level, Player, _tuning, speedMultiplier, NoticeRadius, _monsters, _random);
             if (before == MonsterBrainState.Idle && monster.BrainState == MonsterBrainState.Chasing)
             {
                 // Alerted monsters wait a beat before the first cast

@@ -47,7 +47,11 @@ public sealed class OptionalFieldDefaultsTests
         DelverMonsterDefinition monster = pack.Monsters.Single();
         Assert.Equal("monster", monster.Sprite);
         Assert.Equal(45, monster.AttackCooldownTicks);
-        Assert.Equal(8, monster.DetectRange);
+        Assert.True(monster.ChasesTarget);
+        Assert.Equal(0.75f, monster.PainChance);
+        Assert.Equal(22, monster.HurtTicks);
+        Assert.Equal(0.6f, monster.AttackStartDistance);
+        Assert.Equal(0.05f, monster.AttackKnockback);
         Assert.Equal(1, monster.MinDungeonLevel);
         Assert.Equal(99, monster.MaxDungeonLevel);
 

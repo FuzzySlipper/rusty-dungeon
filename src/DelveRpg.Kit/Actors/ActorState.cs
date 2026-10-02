@@ -85,6 +85,12 @@ public sealed class PlayerState
     /// <summary>Weapon wind-up progress in ticks.</summary>
     public int AttackCharge { get; set; }
 
+    /// <summary>
+    /// How visible the player is, 0 (dark) to 1 (lit, or attacking this tick):
+    /// the donor's visiblityMod. Monsters notice within <c>3 + 15 × this</c> tiles.
+    /// </summary>
+    public float Visibility { get; set; }
+
     /// <summary>Ticks left on the red hurt flash; set whenever the player takes damage.</summary>
     public int HurtFlashRemaining { get; set; }
 
@@ -139,6 +145,18 @@ public sealed class MonsterState
 
     /// <summary>Ticks since the current or last melee attack began; the attack animation reads it.</summary>
     public int AttackElapsedTicks { get; set; } = int.MaxValue;
+
+    /// <summary>The neighbouring tile an idle monster is wandering to; null when it has none.</summary>
+    public (int X, int Y)? WanderTarget { get; set; }
+
+    /// <summary>The tile it last wandered from, so it does not double straight back.</summary>
+    public (int X, int Y)? WanderFrom { get; set; }
+
+    /// <summary>Ticks until the wander picks again.</summary>
+    public int WanderTicksRemaining { get; set; }
+
+    /// <summary>True while an idle monster stands resting instead of wandering.</summary>
+    public bool WanderResting { get; set; }
 
     /// <summary>True once the player has hurt it: it then notices the player on sight at any range.</summary>
     public bool WasHit { get; set; }

@@ -68,6 +68,10 @@ public sealed class DelverTuningDefinition
 
     public float ActorSeparationTiles { get; set; } = 0.75f;
 
+    public float NoticeDarkTiles { get; set; } = 3f;
+
+    public float NoticeLightTiles { get; set; } = 15f;
+
     public int SeenRadius { get; set; } = 5;
 
     public int StartingGold { get; set; } = 40;
@@ -89,6 +93,8 @@ public sealed class DelverTuningDefinition
         EscapeSpawnGroupStart = EscapeSpawnGroupStart,
         EscapeSpawnGroupEnd = EscapeSpawnGroupEnd,
         ActorSeparationTiles = ActorSeparationTiles,
+        NoticeDarkTiles = NoticeDarkTiles,
+        NoticeLightTiles = NoticeLightTiles,
         SeenRadius = SeenRadius,
         StartingGold = StartingGold,
         EyeHeight = EyeHeight,

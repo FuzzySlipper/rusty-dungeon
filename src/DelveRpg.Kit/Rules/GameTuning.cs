@@ -49,6 +49,18 @@ public sealed record GameTuning
     /// </summary>
     public float ActorSeparationTiles { get; init; } = 0.75f;
 
+    /// <summary>
+    /// How close a monster in sight notices the player standing in the dark,
+    /// in tiles ([donor] Monster.java:554-566: 3).
+    /// </summary>
+    public float NoticeDarkTiles { get; init; } = 3f;
+
+    /// <summary>
+    /// How much further it notices a fully lit player ([donor] Monster.java:556:
+    /// <c>visiblityMod × 15</c>).
+    /// </summary>
+    public float NoticeLightTiles { get; init; } = 15f;
+
     /// <summary>Radius, in tiles, of the remembered map window around the player.</summary>
     public int SeenRadius { get; init; } = 5;
 

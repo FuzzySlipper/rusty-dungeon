@@ -216,6 +216,7 @@ public sealed partial class RunSession
 
         Level = level;
         Fog = new FogMap(level.Width, level.Height);
+        Torches = TorchPlacement.Place(level);
         for (int y = 0; y < floor.Height; y++)
         {
             for (int x = 0; x < floor.Width; x++)

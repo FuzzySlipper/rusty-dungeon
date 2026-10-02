@@ -14,7 +14,6 @@ public sealed record MonsterArchetype(
     int AttackPower,
     int AttackCooldownTicks,
     int MonsterLevel,
-    int DetectRange,
     string SpriteId)
 {
     /// <summary>The bolt this monster casts from range; null for a melee-only monster.</summary>
@@ -22,6 +21,12 @@ public sealed record MonsterArchetype(
 
     /// <summary>False for a monster that holds its ground once alerted instead of chasing.</summary>
     public bool ChasesTarget { get; init; } = true;
+
+    /// <summary>
+    /// Stands still until it notices the player instead of wandering (the
+    /// donor's AmbushMode.WaitToSee).
+    /// </summary>
+    public bool Ambushes { get; init; }
 
     /// <summary>A monster that backs away from a player closer than three tiles.</summary>
     public bool KeepsDistance { get; init; }

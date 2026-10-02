@@ -12,6 +12,8 @@
   "escapeSpawnGroupStart": 3,
   "escapeSpawnGroupEnd": 15,
   "actorSeparationTiles": 0.75,
+  "noticeDarkTiles": 3,
+  "noticeLightTiles": 15,
   "seenRadius": 5,
   "startingGold": 40,
   "eyeHeight": 0.5

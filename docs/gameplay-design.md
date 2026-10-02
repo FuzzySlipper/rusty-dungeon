@@ -265,25 +265,73 @@ numbers.
 
 ## Monster AI
 
-Idle until the player is detected (range + line of sight — a closed door
-blocks detection), then chase along a bounded grid BFS path, opening closed
-doors in the path; flee below 25% HP
-([donor] `entities/Monster.java` flee threshold). **Deliberate divergence:**
-the donor's node-graph paths and steering sweeps
-([donor] `game/pathfinding/NodeGraphPathfinding.java`,
-`DoomStylePathfinding.java`) are replaced by grid BFS; the donor's light-based
-stealth (detection radius from light level,
-[donor] `entities/Player.java` `updatePlayerLight`) is replaced by a fixed
-per-archetype `detectRange`. Bodies do not overlap, like the donor's entity
-collision ([donor] `entities/Monster.java` `checkEntityCollision`): a chasing
-monster holds once it is within `actorSeparationTiles` (0.75) of the player
-and fights from there, and the player cannot walk closer to a monster than
-that (stepping away is always allowed). **Approximate** — monsters may still
-overlap each other. Sleep/ambush flags are **deferred**. Two donor flags
-shape movement once a monster is alerted: `chasesTarget: false` holds it
-where it stands (the donor's `chasetarget`), and `keepsDistance` backs it
-away from a player closer than three tiles ([donor] `entities/Monster.java:549-552`
-`keepDistance`). A ranged monster fights from wherever those leave it.
+**Noticing the player — approximate (light-based stealth).** A monster
+notices the player when they are in sight within 17 tiles (a closed door
+blocks sight) and closer than `3 + 15 × visibility` tiles: 3 in the dark,
+18 fully lit ([donor] `entities/Monster.java:527, 554-566`). Visibility is
+the light where the player stands, squared and capped at 1. Attacking sets
+it to 1 for that tick ([donor] `entities/Player.java:852-854, 1371, 1620`).
+A monster the player has hurt notices them on sight at any range, the
+donor's `alertValue` (:946).
+- **Light.** It comes from the floor's wall torches with the donor's
+  falloff, `min(1, 2 × (1 − distance / 3.2))`, and a wall in between is full
+  shadow ([donor] `game/Level.java:1734-1815`, `entities/Light.java:201-233`).
+  The level ambient is black, as the donor's default is.
+- **The player's own torch.** It does not count: the donor's player light is
+  not a held item, and only held items' lights add to visibility.
+- **Torches are a rules fact.** `TorchPlacement` and `LightLevel` live in
+  the Kit, and the Host draws the session's torches.
+- **Tuning.** The 3 and 15 are `noticeDarkTiles` and `noticeLightTiles` in
+  the tuning profile.
+
+**Approximate:**
+- Light is sampled on the 2D tile grid with tile line of sight; the donor
+  uses partial shadow and 3D light heights.
+- Held light sources (a torch item) do not exist yet.
+- The per-archetype `detectRange` this replaces is gone.
+
+**Idle wandering — faithful in shape.** An idle monster wanders the donor's
+way ([donor] `Monster.java:612-700`):
+- it walks to a random open neighbouring tile, not straight back the way it
+  came unless that is the only way;
+- it moves at 60% of its chase speed (`getSpeed`, :881-895);
+- it picks anew on arrival or every 100 ticks;
+- on one roll in five it has a 3-in-20 chance to rest for 220 ticks.
+
+`ambushes: true` keeps a monster still until it notices the player, the
+donor's `AmbushMode.WaitToSee` (:38-52). No donor data uses it, and none of
+ours does either. The donor has no sleep state, so there is none here.
+
+**Chasing — approximate.** A chase follows a bounded grid BFS path, opens
+closed doors in it, and flees below 25% HP ([donor] `entities/Monster.java`
+flee threshold). It cuts corners: the monster heads for the furthest next
+path tile its 0.3 half-width body has a clear straight run to. So it runs
+diagonals and rounds corners instead of stepping from tile centre to tile
+centre. The donor steers node to node over its node-graph "smell" flood
+([donor] `game/pathfinding/NodeGraphPathfinding.java`). The chase gives up
+once the player is out of sight beyond 17 tiles.
+
+**Bodies do not overlap** ([donor] `entities/Monster.java`
+`checkEntityCollision`):
+- A chasing monster holds once it is within `actorSeparationTiles` (0.75)
+  of the player and fights from there.
+- The player cannot walk closer to a monster than that; stepping away is
+  always allowed.
+- A monster will not step into another monster's separation. It shoves the
+  one in its way aside with a fifth of its own speed, as the donor's
+  encroaching monster pushes ([donor] `Monster.java:1266-1297`).
+
+**Approximate:** the donor's stuck detection and random path adjustment
+(`tryPathAdjust`, :502-519, 912-925) are left out; the shove and the
+cut-corner run cover the common jams.
+
+Two donor flags shape movement once a monster is alerted:
+- `chasesTarget: false` holds it where it stands (the donor's
+  `chasetarget`);
+- `keepsDistance` backs it away from a player closer than three tiles
+  ([donor] `entities/Monster.java:549-552` `keepDistance`).
+
+A ranged monster fights from wherever those leave it.
 
 ## Items and inventory
 
@@ -404,7 +452,7 @@ torches, and a hand light on the held weapon.
   (1, 0.8, 0.2), range 4, intensity 8. The donor places them from room
   template markers ([donor] `generator/GenInfo.java` `Markers.torch`,
   `RoomGenerator.java:299-302`); our generated rooms have none, so
-  `TorchPlacement` hangs them on walls from the tile grid — floor tiles
+  the Kit's `TorchPlacement` hangs them on walls from the tile grid — floor tiles
   against a wall in a hashed order, at least 6 tiles apart, at most 48 —
   the same grid always getting the same torches.
 - The held weapon is lit by a warm light parented to it, so it rides in the

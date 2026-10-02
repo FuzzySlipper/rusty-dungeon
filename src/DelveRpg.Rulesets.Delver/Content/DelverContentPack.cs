@@ -51,6 +51,9 @@ public sealed class DelverMonsterDefinition
     /// <summary>False for a monster that holds its ground once alerted (donor chasetarget).</summary>
     public bool ChasesTarget { get; set; } = true;
 
+    /// <summary>Stands still until it notices the player (donor AmbushMode.WaitToSee).</summary>
+    public bool Ambushes { get; init; }
+
     /// <summary>Backs away from a close player (donor keepDistance).</summary>
     public bool KeepsDistance { get; init; }
 
@@ -75,7 +78,6 @@ public sealed class DelverMonsterDefinition
     /// <summary>Shove its landed blow gives the player (donor DamageAction knockback).</summary>
     public float AttackKnockback { get; set; } = 0.05f;
 
-    public int DetectRange { get; set; } = 8;
 
     public int MinDungeonLevel { get; set; } = 1;
 

@@ -14,7 +14,7 @@ public sealed class ScriptedCatalog : IRulesCatalog
     public ScriptedCatalog()
     {
         _monsters["test.monster.rat"] = new MonsterArchetype(
-            "test.monster.rat", "rat", new StatBlock(2, 1, 5, 5, 0, 2), 6, 2, 40, 1, 8, "monster.rat");
+            "test.monster.rat", "rat", new StatBlock(2, 1, 5, 5, 0, 2), 6, 2, 40, 1, "monster.rat");
         _items["test.item.sword"] = new ItemArchetype("test.item.sword", "sword", ItemKind.Weapon, 4, 30, 0, 5, "item.sword")
         {
             Knockback = 0.4f,
@@ -45,7 +45,7 @@ public sealed class ScriptedCatalog : IRulesCatalog
             AutoFireTicks = 0,
         };
         _monsters["test.monster.eye"] = new MonsterArchetype(
-            "test.monster.eye", "eye", new StatBlock(4, 0, 1, 2, 0, 12), 2, 0, 60, 1, 8, "monster.golem")
+            "test.monster.eye", "eye", new StatBlock(4, 0, 1, 2, 0, 12), 2, 0, 60, 1, "monster.golem")
         {
             ChasesTarget = false,
             Ranged = new MonsterRangedAttack(3, 3, DamageType.Magic, 0.1f, 100, 0f, 30f, "projectile.eyebolt"),
