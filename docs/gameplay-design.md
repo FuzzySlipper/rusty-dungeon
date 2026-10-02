@@ -966,6 +966,18 @@ drawn, including on return.
 billboards; stairs stay vertex-colored, and actors without staged sheets fall
 back to placeholder plates.
 
+**Windows (DX12) parity.** The `rusty-dungeon-windows` crew-services
+profile runs the native desktop build on den-win11 (RTX 3080, DX12). It
+needs the donor art and sounds staged into that checkout as well. Compared on
+pair `0.1.0-dev.c8a57596089e` with Linux captures of the same seed:
+- The same: theme textures and fog, the tall-room ceilings and corridor
+  lintels, lit sprites and the flickering torch pool, and the HUD.
+- The HUD's Engine-drawn icons and backings sit in the DOM frames, over the
+  held weapon.
+- The ember specks are too small at two tiles to compare reliably in either
+  capture.
+- Audio was not checked on the box.
+
 **Audio — approximate (donor sounds, our triggers).** The Kit raises a cue
 for each thing worth hearing (`RunSession.Cues`, cleared every tick; it has
 no audio vocabulary). The Host voices the cues through the Engine audio
