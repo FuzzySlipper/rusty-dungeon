@@ -1,5 +1,6 @@
 using DelveRpg.Host.Hud;
 using DelveRpg.Host.Input;
+using DelveRpg.Host.Playtest;
 using DelveRpg.Host.Presentation;
 using DelveRpg.Host.Save;
 using DelveRpg.Kit.Progression;
@@ -8,6 +9,7 @@ using DelveRpg.Kit.Session;
 using DelveRpg.Rulesets.Delver;
 using DelveRpg.Rulesets.Delver.Content;
 using Rusty.Engine;
+using Rusty.Engine.Debugging;
 
 namespace DelveRpg.Host;
 
@@ -17,7 +19,7 @@ namespace DelveRpg.Host;
 /// callbacks apply run policy (save boundaries, permadeath, meta updates);
 /// gameplay itself lives in the Kit session and the ruleset.
 /// </summary>
-public sealed class DelveProduct : IEngineProduct
+public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
 {
     private const uint MaxCatchUpSteps = 4;
     private const string PhaseTitle = "title";
@@ -52,6 +54,21 @@ public sealed class DelveProduct : IEngineProduct
             _readText,
             path => context.Content.TryReadFile(path, out ProductContentFile _));
         _uiStream = _engine.Ui.OpenStream(new UiStreamRequest(DelveHudProjection.StreamId, DelveHudProjection.Contract));
+    }
+
+    /// <summary>
+    /// The live-debug playtest adapter (crew-services playtest assist ops).
+    /// Every command reads the current run, so a new run or a resumed save
+    /// never leaves a stale delegate.
+    /// </summary>
+    public void RegisterDebugCommands(IDebugCommandModuleRegistrar registrar)
+    {
+        var playtest = new DelvePlaytest(() => _session, () => _hostPhase, _ruleset.Catalog);
+        registrar.Register(new PlaytestDebugModule(
+            playtest.Observe,
+            playtest.InspectAction,
+            DelvePlaytest.Actions,
+            playtest.Look));
     }
 
     public void Start()

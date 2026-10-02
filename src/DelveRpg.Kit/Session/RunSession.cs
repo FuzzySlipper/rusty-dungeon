@@ -236,6 +236,17 @@ public sealed partial class RunSession
         TickExperience();
     }
 
+    /// <summary>
+    /// Turn the view by relative degrees through the same rules as mouse
+    /// look (pitch clamped to ±80°), without advancing the run. For
+    /// inspection tools; play turns through <see cref="RunInput"/>.
+    /// </summary>
+    public void Look(float yawDegrees, float pitchDegrees)
+    {
+        Player.Body.Facing += DegreesToRadians(yawDegrees);
+        Player.Body.PitchDegrees = Math.Clamp(Player.Body.PitchDegrees + pitchDegrees, -80f, 80f);
+    }
+
     private void TickMovement(RunInput input)
     {
         ActorState body = Player.Body;

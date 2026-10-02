@@ -9,7 +9,9 @@ input delivery, rendering, and the browser shell.
 The game adapts concepts and data shapes from the Delver donor
 (`com.interrupt.dungeoneer`); it is a similar game, not a port of donor code.
 See [docs/gameplay-design.md](docs/gameplay-design.md) for every fidelity
-decision and [docs/research/](docs/research/) for the donor surveys.
+decision, [docs/research/](docs/research/) for the donor surveys, and
+[docs/playtesting.md](docs/playtesting.md) for driving the running game from
+tools.
 
 ## Ownership
 
