@@ -109,6 +109,9 @@ public sealed partial class RunSession
 
     public FogMap Fog { get; private set; } = null!;
 
+    /// <summary>The current floor's decorations; solid ones block the player.</summary>
+    public IReadOnlyList<Decor> Decorations { get; private set; } = Array.Empty<Decor>();
+
     /// <summary>The current floor's wall torches; their light decides how far monsters see the player.</summary>
     public IReadOnlyList<WallTorch> Torches { get; private set; } = Array.Empty<WallTorch>();
 
@@ -513,6 +516,7 @@ public sealed partial class RunSession
         Level = generated.Level;
         Fog = new FogMap(Level.Width, Level.Height);
         Torches = TorchPlacement.Place(Level);
+        Decorations = DecorPlacement.Place(Level, _rules.DecorFor(floor.Theme), _tuning.DecorChance);
         LoadFeatures(generated.Features);
         _monsters.Clear();
         _groundItems.Clear();

@@ -39,6 +39,7 @@ public sealed class DelverCatalogAndTuningTests
         Assert.Equal(0.012f, Composition.Tuning.TrapChance);
         Assert.Equal(0.1f, Composition.Tuning.WallBoltRoomChance);
         Assert.Equal(0.03f, Composition.Tuning.PotChance);
+        Assert.Equal(0.05f, Composition.Tuning.DecorChance);
     }
 
     [Fact]

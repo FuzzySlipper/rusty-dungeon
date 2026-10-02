@@ -80,6 +80,8 @@ public sealed class DelverTuningDefinition
 
     public float PotChance { get; set; } = 0.03f;
 
+    public float DecorChance { get; set; } = 0.05f;
+
     public int SeenRadius { get; set; } = 5;
 
     public int StartingGold { get; set; } = 40;
@@ -107,6 +109,7 @@ public sealed class DelverTuningDefinition
         TrapChance = TrapChance,
         WallBoltRoomChance = WallBoltRoomChance,
         PotChance = PotChance,
+        DecorChance = DecorChance,
         SeenRadius = SeenRadius,
         StartingGold = StartingGold,
         EyeHeight = EyeHeight,
@@ -189,6 +192,7 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
         SwingStyles = left.SwingStyles.Concat(right.SwingStyles).ToDictionary(entry => entry.Key, entry => entry.Value),
         Enchantments = left.Enchantments.Concat(right.Enchantments).ToList(),
         PotionColours = left.PotionColours.Concat(right.PotionColours).ToList(),
+        Decor = left.Decor.Concat(right.Decor).ToDictionary(entry => entry.Key, entry => entry.Value),
     };
 
     /// <summary>All-or-nothing validation at load; a bad pack fails the load, not a run.</summary>

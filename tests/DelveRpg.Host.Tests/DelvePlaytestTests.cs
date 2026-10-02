@@ -49,4 +49,13 @@ public sealed class DelvePlaytestTests
         Assert.Equal(ticks, session.ElapsedTicks);
         Assert.Equal("Playing", looked.RootElement.GetProperty("runPhase").GetString());
     }
+
+    [Fact]
+    public void A_shipped_first_floor_is_decorated_from_its_theme()
+    {
+        RunSession session = NewRun();
+        Assert.NotEmpty(session.Decorations);
+        Assert.All(session.Decorations, decor => Assert.StartsWith("decor.", decor.SpriteId));
+        Assert.Contains(session.Decorations, decor => decor.SpriteId.StartsWith("decor.sewer.", StringComparison.Ordinal));
+    }
 }

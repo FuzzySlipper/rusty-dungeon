@@ -579,6 +579,52 @@
     "bow": { "weak": { "length": 3.0 } },
     "wand": { "weak": { "length": 2.5 } }
   },
+  "decor": {
+    "Sewer": [
+      {"sprite": "decor.skull", "weight": 2},
+      {"sprite": "decor.bones.long", "weight": 2},
+      {"sprite": "decor.bones.ribs", "weight": 2},
+      {"sprite": "decor.sewer.rocks", "weight": 3},
+      {"sprite": "decor.sewer.grass", "weight": 5},
+      {"sprite": "decor.sewer.roots", "weight": 2, "ceiling": true},
+      {"sprite": "decor.sewer.web", "ceiling": true}
+    ],
+    "Temple": [
+      {"sprite": "decor.skull", "weight": 2},
+      {"sprite": "decor.bones.long", "weight": 2},
+      {"sprite": "decor.bones.ribs", "weight": 2},
+      {"sprite": "decor.temple.rocks", "weight": 3},
+      {"sprite": "decor.temple.grass", "weight": 3},
+      {"sprite": "decor.temple.koru", "weight": 2},
+      {"sprite": "decor.temple.mushroom.blue"},
+      {"sprite": "decor.temple.mushroom.brown"},
+      {"sprite": "decor.temple.web", "ceiling": true}
+    ],
+    "Cave": [
+      {"sprite": "decor.cave.rocks", "weight": 3},
+      {"sprite": "decor.cave.grass", "weight": 3},
+      {"sprite": "decor.cave.deadgrass", "weight": 2},
+      {"sprite": "decor.cave.stalagmite", "weight": 2, "solid": true},
+      {"sprite": "decor.cave.stalactite", "weight": 2, "ceiling": true},
+      {"sprite": "decor.cave.roots", "ceiling": true},
+      {"sprite": "decor.cave.mushroom.blue"},
+      {"sprite": "decor.cave.mushroom.brown"}
+    ],
+    "Undead": [
+      {"sprite": "decor.skull", "weight": 3},
+      {"sprite": "decor.bones.long", "weight": 3},
+      {"sprite": "decor.bones.ribs", "weight": 3},
+      {"sprite": "decor.temple.rocks", "weight": 2},
+      {"sprite": "decor.temple.web", "ceiling": true}
+    ],
+    "Cold": [
+      {"sprite": "decor.cold.rocks", "weight": 3},
+      {"sprite": "decor.cold.grass"},
+      {"sprite": "decor.cold.icicle.small", "weight": 2, "ceiling": true},
+      {"sprite": "decor.cold.icicle.large", "weight": 2, "ceiling": true},
+      {"sprite": "decor.cold.mushroom"}
+    ]
+  },
   "potionColours": [
     "delve.item.potion-red",
     "delve.item.potion-blue",

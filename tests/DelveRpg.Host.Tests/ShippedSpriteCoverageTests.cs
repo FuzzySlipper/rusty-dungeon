@@ -43,7 +43,8 @@ public sealed class ShippedSpriteCoverageTests
         IEnumerable<string> named = pack.Items.Select(item => item.Sprite)
             .Concat(pack.Items.Select(item => item.ProjectileSprite).Where(id => id.Length > 0))
             .Concat(pack.Monsters.Select(monster => monster.Sprite))
-            .Concat(pack.Monsters.Where(monster => monster.Ranged is not null).Select(monster => monster.Ranged!.Sprite));
+            .Concat(pack.Monsters.Where(monster => monster.Ranged is not null).Select(monster => monster.Ranged!.Sprite))
+            .Concat(pack.Decor.Values.SelectMany(kinds => kinds).Select(kind => kind.Sprite));
 
         Assert.All(named, id => Assert.True(manifest.Sprites.ContainsKey(id), $"no sprite for '{id}'"));
         Assert.True(manifest.Sprites["projectile.spark"].Fullbright);

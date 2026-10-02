@@ -760,6 +760,35 @@ product content only. With no staged art the level keeps its authored
 placeholder colors: the product runs identically without donor pixels, which
 are never committed (see AGENTS.md fidelity rules).
 
+**Decorations — approximate.** Each floor theme scatters its donor
+decorations ([data] `generator/<Theme>/info.dat` `decorations` and the
+`genInfos` sprite clusters; [donor] `gamemode/delver/DelverGameMode.java:675-717`).
+- **Which.**
+  - Skulls and bones come from the item sheet (cells 56, 74, 75; the
+    Sewer, Temple and Crypt lists).
+  - Each theme sheet adds rocks, grass, plants and mushrooms on the floor,
+    and roots, webs, stalactites or icicles hanging from the ceiling. The
+    sheets are `textures/<Theme>/sprites.png`, and the cells are the
+    genInfos' (sewer rocks 0, grass 1, roots 4, web 6; cave stalagmite 16,
+    stalactite 20, …).
+  - Cave stalagmites are solid; the rest can be walked through. The donor's
+    skull and bones have a small collision box that its step height
+    climbs anyway.
+- **Where.** Each open floor tile rolls `decorChance` (5%). A hit drops a
+  cluster of one to three pieces of one kind, spread up to 0.4 tiles (the
+  genInfos' `clusterSpread`). A solid piece stands alone at the tile's
+  centre so it never blocks a corridor's width.
+- **Saving.** Choices come from a hash of the grid, so a floor always gets
+  the same decorations and they need no saving, like the wall torches.
+
+**Approximate:**
+- The donor gates each decoration by the floor texture under it (grass on
+  mossy cells and so on); here the gate is one chance per tile.
+- The donor's barrels and crates are 3D models (`barrel_*.obj`,
+  `crate.obj`). They need a mesh import path (donor OBJ to the Engine's
+  GLB) and are **deferred**.
+- Notes and the dungeon's crystal mesh are skipped.
+
 **Theme painting — faithful in data, approximate in choice.** Each floor
 theme is painted from its own donor atlas, with weighted cell lists per role
 taken from the donor's texture painters ([donor] `generator/TexturePainter.java`,

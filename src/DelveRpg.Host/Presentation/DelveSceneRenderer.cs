@@ -39,6 +39,7 @@ public sealed class DelveSceneRenderer : IDisposable
     private const ulong SpikeObjectBase = 8_100_000_000;
     private const ulong PlateObjectBase = 8_200_000_000;
     private const ulong BurstObjectBase = 8_300_000_000;
+    private const ulong DecorObjectBase = 8_400_000_000;
     private const ulong BurstLightBase = 4_300_000_000;
     private const ulong FlashObjectId = 3_000_000_001;
     private const string FlashTexturePath = "delve/art/white.png";
@@ -258,6 +259,7 @@ public sealed class DelveSceneRenderer : IDisposable
 
         AddCorpses(session, facts, live);
         AddFeatures(session, facts, live);
+        AddDecorations(session, facts, live);
         AddProjectiles(session, facts, live);
         AddWallTorches(session.ElapsedTicks, facts, live);
         AddHeldWeapon(session, tuning, facts, live);
@@ -510,6 +512,30 @@ public sealed class DelveSceneRenderer : IDisposable
         {
             _boltLights[spent].Dispose();
             _boltLights.Remove(spent);
+        }
+    }
+
+    /// <summary>
+    /// Decorations as their donor sprites: floor pieces stand on the floor,
+    /// ceiling pieces (roots, webs, icicles, stalactites) hang from it.
+    /// </summary>
+    private void AddDecorations(RunSession session, List<AppearanceFact> facts, HashSet<ulong> live)
+    {
+        for (int i = 0; i < session.Decorations.Count; i++)
+        {
+            Decor decor = session.Decorations[i];
+            if (_sprites.SpriteFor(decor.SpriteId) is not DelveSprite sprite)
+            {
+                continue;
+            }
+
+            ulong objectId = DecorObjectBase + (ulong)i;
+            live.Add(objectId);
+            Appearance appearance = RequireAppearance(objectId, () => CreateWorldSprite(sprite));
+            float y = decor.OnCeiling ? 1f - sprite.Definition.Size : 0f;
+            facts.Add(new AppearanceFact(objectId, false, 0,
+                new Transform(new Vector3(decor.X, y, decor.Y), Quaternion.Identity, Vector3.One),
+                appearance, true, RenderLayer.Scene));
         }
     }
 

@@ -14,7 +14,7 @@ public sealed class DelveGridDebugModule(Func<RunSession?> session) : IDebugComm
 {
     private const int Radius = 16;
 
-    [DebugCommand("delve.grid", Description = "The floor within 16 tiles of the player: # wall, . floor, + door, L locked door, ~ water, < > stairs, ^ spikes, _ pressure plate, o pot, @ player, m monster, i item. First line: origin x,y of the top-left cell.")]
+    [DebugCommand("delve.grid", Description = "The floor within 16 tiles of the player: # wall, . floor, + door, L locked door, ~ water, < > stairs, ^ spikes, _ pressure plate, o pot, d decoration (D solid), @ player, m monster, i item. First line: origin x,y of the top-left cell.")]
     public DebugCommandResult Grid()
     {
         if (session() is not RunSession run)
@@ -29,6 +29,7 @@ public sealed class DelveGridDebugModule(Func<RunSession?> session) : IDebugComm
         int right = Math.Min(run.Level.Width - 1, px + Radius);
         int bottom = Math.Min(run.Level.Height - 1, py + Radius);
         var marks = new Dictionary<(int, int), char>();
+        foreach (Decor decor in run.Decorations) marks[((int)MathF.Floor(decor.X), (int)MathF.Floor(decor.Y))] = decor.Solid ? 'D' : 'd';
         foreach (SpikeTrap spikes in run.Spikes) marks[(spikes.TileX, spikes.TileY)] = '^';
         foreach (TouchTrigger trigger in run.Triggers.Where(t => t.IsPlate)) marks[(trigger.TileX, trigger.TileY)] = '_';
         foreach (Pot pot in run.Pots) marks[(pot.TileX, pot.TileY)] = 'o';

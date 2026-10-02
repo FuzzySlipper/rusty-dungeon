@@ -19,12 +19,14 @@ public sealed class DelverCatalog : IRulesCatalog
     private readonly List<DelverLootDefinition> _loot;
     private readonly Dictionary<string, ItemModification> _modifications;
     private readonly List<string> _potionColours;
+    private readonly Dictionary<string, List<DelverDecor>> _decor;
 
     public DelverCatalog(DelverContentPack pack)
     {
         _monsterDefinitions = pack.Monsters;
         _loot = pack.Loot;
         _potionColours = pack.PotionColours;
+        _decor = pack.Decor;
         _modifications = pack.Enchantments.ToDictionary(enchantment => enchantment.Id, ToModification, StringComparer.Ordinal);
         _itemDefinitions = pack.Items.ToDictionary(item => item.Id, StringComparer.Ordinal);
         _monsters = pack.Monsters.ToDictionary(
@@ -120,6 +122,11 @@ public sealed class DelverCatalog : IRulesCatalog
         _items.Values.Where(item => item.Unique).Select(item => item.Id).ToList();
 
     public IReadOnlyList<string> PotionColourIds => _potionColours;
+
+    public IReadOnlyList<Kit.World.DecorKind> DecorFor(string theme) =>
+        _decor.TryGetValue(theme, out List<DelverDecor>? kinds)
+            ? kinds.Select(kind => new Kit.World.DecorKind(kind.Sprite, kind.Weight, kind.Ceiling, kind.Solid)).ToList()
+            : [];
 
     public IReadOnlyList<string> ItemsForFloor(int dungeonLevel) =>
         _itemDefinitions.Values

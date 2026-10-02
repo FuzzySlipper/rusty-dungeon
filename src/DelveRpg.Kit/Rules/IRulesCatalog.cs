@@ -41,6 +41,9 @@ public interface IRulesCatalog
     /// <summary>The potion colours whose effects are shuffled each run, in a fixed order.</summary>
     IReadOnlyList<string> PotionColourIds => [];
 
+    /// <summary>The decorations a floor theme scatters; empty for a bare theme.</summary>
+    IReadOnlyList<World.DecorKind> DecorFor(string theme) => [];
+
     /// <summary>The key a locked vault's key spot holds; null when the catalog has no key.</summary>
     string? KeyItemId => null;
 }

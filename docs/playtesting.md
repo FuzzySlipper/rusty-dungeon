@@ -34,7 +34,7 @@ work. `src/DelveRpg.Host/Playtest/DelvePlaytest.cs` supplies:
 
 `delve.grid` (a plain debug command) prints the true floor within 16 tiles
 of the player: walls, doors, `L` locked doors, stairs, `^` spikes, `_`
-plates, `o` pots, `m` monsters, `i` items and `@` the player. The first line
+plates, `o` pots, `d` decorations (`D` solid), `m` monsters, `i` items and `@` the player. The first line
 gives the top-left tile. Use it to route, since the HUD map shows only what
 was explored. Observations also list nearby spikes, plates, pots and locked
 doors, plus the keys carried; hidden tripwires are left out.

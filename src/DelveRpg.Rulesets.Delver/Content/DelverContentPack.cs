@@ -42,8 +42,26 @@ public sealed class DelverContentPack
     /// </summary>
     public List<DelverEnchantment> Enchantments { get; set; } = new();
 
+    /// <summary>
+    /// Decorations per floor theme ([data] generator/&lt;Theme&gt;/info.dat
+    /// decorations and genInfos sprite clusters).
+    /// </summary>
+    public Dictionary<string, List<DelverDecor>> Decor { get; set; } = new();
+
     /// <summary>The potion items whose effects are shuffled across them each run, in order.</summary>
     public List<string> PotionColours { get; set; } = new();
+}
+
+/// <summary>One kind of decoration: its sprite, how often it is chosen, where it hangs, whether it blocks.</summary>
+public sealed class DelverDecor
+{
+    public required string Sprite { get; init; }
+
+    public int Weight { get; set; } = 1;
+
+    public bool Ceiling { get; init; }
+
+    public bool Solid { get; init; }
 }
 
 /// <summary>One enchantment, or a unique's fixed mods (then its id and slot are ignored).</summary>

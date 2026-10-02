@@ -70,6 +70,9 @@ public sealed record GameTuning
     /// <summary>Chance a room hides a wall-bolt tripwire.</summary>
     public float WallBoltRoomChance { get; init; } = 0.1f;
 
+    /// <summary>Chance per open floor tile of a cluster of the theme's decorations.</summary>
+    public float DecorChance { get; init; } = 0.05f;
+
     /// <summary>Chance per floor tile against a room wall of a pot.</summary>
     public float PotChance { get; init; } = 0.03f;
 

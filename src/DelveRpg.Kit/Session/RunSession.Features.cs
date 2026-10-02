@@ -366,14 +366,19 @@ public sealed partial class RunSession
         return best;
     }
 
-    /// <summary>True when a step ends inside a pot and closer than it began; pots are solid.</summary>
+    /// <summary>
+    /// True when a step ends inside a pot or a solid decoration and closer
+    /// than it began; both are solid ([donor] entities/items/Decoration.java:15-19).
+    /// </summary>
     private bool CrowdsPot(float fromX, float fromY, float toX, float toY)
     {
         float reach = PotRadius + BodyRadius;
-        foreach (Pot pot in _pots)
+        IEnumerable<(float X, float Y)> solids = _pots.Select(pot => (pot.X, pot.Y))
+            .Concat(Decorations.Where(decor => decor.Solid && !decor.OnCeiling).Select(decor => (decor.X, decor.Y)));
+        foreach ((float x, float y) in solids)
         {
-            float after = DistanceSquared(pot.X, pot.Y, toX, toY);
-            if (after < reach * reach && after < DistanceSquared(pot.X, pot.Y, fromX, fromY))
+            float after = DistanceSquared(x, y, toX, toY);
+            if (after < reach * reach && after < DistanceSquared(x, y, fromX, fromY))
             {
                 return true;
             }

@@ -346,6 +346,7 @@ public sealed partial class RunSession
         Level = level;
         Fog = new FogMap(level.Width, level.Height);
         Torches = TorchPlacement.Place(level);
+        Decorations = DecorPlacement.Place(level, _rules.DecorFor(floor.Theme), _tuning.DecorChance);
         LoadFeatures(RestoreFeatures(state.Features));
         for (int y = 0; y < floor.Height; y++)
         {

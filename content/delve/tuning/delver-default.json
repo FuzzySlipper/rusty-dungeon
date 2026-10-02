@@ -18,6 +18,7 @@
   "trapChance": 0.012,
   "wallBoltRoomChance": 0.1,
   "potChance": 0.03,
+  "decorChance": 0.05,
   "seenRadius": 5,
   "startingGold": 40,
   "eyeHeight": 0.5
