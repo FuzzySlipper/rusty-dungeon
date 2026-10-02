@@ -15,9 +15,10 @@ public enum ItemKind
 }
 
 /// <summary>
-/// A ruleset-supplied item definition. <see cref="Power"/> reads as weapon
-/// damage for weapons, absorbed armor class for armor, and magnitude for
-/// consumables; <see cref="ChargeTicks"/> is the wind-up before a weapon hit.
+/// A ruleset-supplied item definition. <see cref="Power"/> reads as a weapon's
+/// base damage, absorbed armor class for armor, and magnitude for consumables;
+/// <see cref="RandDamage"/> is a weapon's random damage on top;
+/// <see cref="ChargeTicks"/> is the wind-up to a full-power swing.
 /// </summary>
 public sealed record ItemArchetype(
     string Id,
@@ -27,4 +28,5 @@ public sealed record ItemArchetype(
     int ChargeTicks,
     int HealAmount,
     int Value,
-    string SpriteId);
+    string SpriteId,
+    int RandDamage = 0);

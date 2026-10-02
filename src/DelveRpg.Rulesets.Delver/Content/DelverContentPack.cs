@@ -77,7 +77,11 @@ public sealed class DelverItemDefinition
 
     public string Sprite { get; set; } = "item";
 
+    /// <summary>A weapon's base damage; an armor piece's armor class.</summary>
     public int Power { get; init; }
+
+    /// <summary>A weapon's random damage on top of its base (donor randDamage).</summary>
+    public int RandDamage { get; init; }
 
     public int ChargeTicks { get; set; } = 40;
 

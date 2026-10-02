@@ -17,23 +17,25 @@ public sealed partial class RunSession
         ItemArchetype? weapon = Player.Equipment.WeaponItemId is string weaponId ? _rules.Item(weaponId) : null;
         int chargeTicks = weapon?.ChargeTicks ?? _tuning.AttackChargeTicks;
 
-        if (input.AttackHeld && body.AttackCooldownRemaining == 0)
+        // The donor's swing: holding winds the charge up to full and holds
+        // it there; releasing swings at the charged fraction of full power
+        // ([donor] entities/Player.java:1221-1258, 1588-1592).
+        if (input.AttackHeld)
         {
-            Player.AttackCharge = Math.Min(chargeTicks, Player.AttackCharge + 1);
-            if (Player.AttackCharge >= chargeTicks)
+            if (body.AttackCooldownRemaining == 0)
             {
-                SwingWeapon(weapon);
-                Player.AttackCharge = 0;
-                body.AttackCooldownRemaining = _tuning.AttackCooldownTicks;
+                Player.AttackCharge = Math.Min(chargeTicks, Player.AttackCharge + 1);
             }
         }
-        else if (!input.AttackHeld)
+        else if (Player.AttackCharge > 0)
         {
+            SwingWeapon(weapon, Player.AttackCharge / (float)Math.Max(1, chargeTicks));
             Player.AttackCharge = 0;
+            body.AttackCooldownRemaining = _tuning.AttackCooldownTicks;
         }
     }
 
-    private void SwingWeapon(ItemArchetype? weapon)
+    private void SwingWeapon(ItemArchetype? weapon, float attackPower)
     {
         MonsterState? target = NearestTargetInReach(ReachTiles);
         if (target is null)
@@ -42,16 +44,9 @@ public sealed partial class RunSession
             return;
         }
 
-        int weaponPower = weapon?.Power ?? 1;
-        int gearArmor = ArmorClassOf(target.Body);
-        AttackOutcome outcome = CombatResolver.ResolveMelee(
-            _random, Player.Body, target.Body, weaponPower, gearArmor, _tuning);
-        if (outcome.Dodged)
-        {
-            ShowMessage($"The {target.Archetype.DisplayName} dodges.");
-            return;
-        }
-
+        // Bare hands hit for a point; the donor has no unarmed swing at all.
+        AttackOutcome outcome = CombatResolver.ResolveWeaponHit(
+            _random, Player.Body, target.Body, weapon?.Power ?? 1, weapon?.RandDamage ?? 0, attackPower);
         ShowMessage($"You hit the {target.Archetype.DisplayName} for {outcome.Damage}.");
         target.BrainState = MonsterBrainState.Chasing;
         if (outcome.TargetKilled)
@@ -310,9 +305,9 @@ public sealed partial class RunSession
                 && body.AttackCooldownRemaining == 0
                 && LineOfSight.CanSee(Level, body.TileX, body.TileY, Player.Body.TileX, Player.Body.TileY))
             {
-                int gearArmor = GearArmorClass();
+                int armorClass = CombatResolver.ArmorClass(Player.Body.Stats.Defense, GearArmorClass());
                 AttackOutcome outcome = CombatResolver.ResolveMelee(
-                    _random, body, Player.Body, monster.Archetype.AttackPower, gearArmor, _tuning);
+                    _random, body, Player.Body, monster.Archetype.AttackPower, armorClass, _tuning);
                 body.AttackCooldownRemaining = monster.Archetype.AttackCooldownTicks;
                 if (outcome.Dodged)
                 {
@@ -477,9 +472,6 @@ public sealed partial class RunSession
 
         return armor;
     }
-
-    private int ArmorClassOf(ActorState target) =>
-        target.Kind == ActorKind.Player ? GearArmorClass() : 0;
 
     private void ShowMessage(string text) => _messages.Add(new RunMessage(text, MessageDurationTicks));
 

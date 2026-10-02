@@ -15,7 +15,7 @@ public sealed record GameTuning
     /// <summary>Velocity retained per tick without input.</summary>
     public float WalkFriction { get; init; } = 0.8f;
 
-    /// <summary>Weapon wind-up before a melee hit lands, in ticks.</summary>
+    /// <summary>Full charge of a swing without a weapon, in ticks (donor attackChargeTime).</summary>
     public int AttackChargeTicks { get; init; } = 40;
 
     /// <summary>Time between two attacks from the same actor, in ticks.</summary>

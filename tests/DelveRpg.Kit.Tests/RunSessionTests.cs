@@ -65,6 +65,26 @@ public sealed class RunSessionTests
     }
 
     [Fact]
+    public void Holding_attack_winds_the_charge_and_releasing_swings()
+    {
+        RunSession session = Session();
+        session.GiveStartingKit(["test.item.sword"]);
+
+        for (int tick = 0; tick < 100; tick++)
+        {
+            session.Tick(RunInput.Idle with { AttackHeld = true });
+        }
+
+        // Holding never swings; the charge waits at full (sword ChargeTicks 30).
+        Assert.Equal(30, session.Player.AttackCharge);
+        Assert.Equal(0, session.Player.Body.AttackCooldownRemaining);
+
+        session.Tick(RunInput.Idle);
+        Assert.Equal(0, session.Player.AttackCharge);
+        Assert.True(session.Player.Body.AttackCooldownRemaining > 0);
+    }
+
+    [Fact]
     public void Walking_into_a_monster_stops_at_the_separation_distance()
     {
         RunSnapshot start = Session().Capture();

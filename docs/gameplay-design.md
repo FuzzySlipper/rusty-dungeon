@@ -75,14 +75,28 @@ painting — the DOM renders the cell grid).
 
 ## Combat
 
-**Faithful core.** Physical attacks: flat dodge chance (0.15), then
-`roll(1..attack) − armor class`, minimum 1
-([donor] `entities/Actor.java` `damageRoll`). Attack magnitude folds weapon
-power and the attack stat into one roll; armor class is defense stat + worn
-gear. Player melee is a real-time charge attack: hold to wind up
-(`attackChargeTicks`, 40 like the donor's `attackChargeTime`), the blow lands
-on completion in a forward reach slice
-([donor] `entities/Player.java` `doAttack`). **Deliberate divergence:** wands
+**Faithful.** The donor's two attack shapes. A monster's blow is
+`Actor.damageRoll`: flat dodge chance (0.15), then `roll(1..attack) − armor
+class`, minimum 1 ([donor] `entities/Actor.java:146-168`); the player's
+armor class is worn gear plus a point per defense above 4
+([donor] `entities/Player.java:2179-2208` `GetArmorClass`). The player's
+melee is a real-time charge: holding winds the charge up to the weapon's
+full charge and holds it there, and releasing swings at
+`attackPower = charge / full` ([donor] `entities/Player.java:1221-1258,
+1588-1592`) into a forward reach slice. A hit deals
+`(int)(baseDamage × attackPower) + roll(0..randDamage + max(0, ATK − 4))`,
+minimum 1, straight onto the monster with no dodge or armor
+([donor] `entities/items/Weapon.java:93-104`, `entities/Monster.java:939-957`).
+Weapon `power` is the donor `baseDamage`, `randDamage` its random part, and
+`chargeTicks` the donor's 40-tick `attackChargeTime` divided by the weapon's
+`speed` (the donor's charge speed); weapon and armor values are the donor
+items' ([data] `data/items.dat`: rusty dagger = Iron dagger 2+1, short sword =
+Steel shortsword 5+3, mace = Iron mace 2+2, hunting bow = Hunter's Bow 3+6 at
+speed 1.125, wand of sparks = Lesser missile wand 1+1; leather armor 3,
+chain mail = Chainmail 7, iron helmet = Iron cap 2). **Approximate:** an
+unarmed swing hits for 1 (the donor has no unarmed swing), and the cooldown
+after a swing is a flat `attackCooldownTicks` rather than the donor's
+animation-length wait. **Deliberate divergence:** wands
 and bows currently swing like melee weapons; ranged bolts and elemental
 damage are a later slice. Item conditions/degradation
 ([donor] `entities/items/Item.java` `ItemCondition`) are **deferred**.
@@ -104,11 +118,7 @@ monster and take the ZOMBIE and EYE stats that match their art.
 its 0–9 tick attack-timer jitter are left out (a regenerated floor's
 monsters come back at the same level), and movement speed and detect range
 stay authored (the donor's `speed` is an acceleration in a different
-movement model). **Known divergence, not yet decided:** the player's melee
-roll is `weapon power + roll(1..attack stat)`, about twice the donor's
-`baseDamage*charge + roll(0..randDamage + max(0, ATK-4))`
-([donor] `entities/items/Weapon.java:93-104`), so early fights are easier
-than the donor's.
+movement model).
 
 ## Monster AI
 

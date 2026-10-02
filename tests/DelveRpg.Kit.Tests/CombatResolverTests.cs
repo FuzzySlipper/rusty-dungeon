@@ -29,10 +29,10 @@ public sealed class CombatResolverTests
         ActorState defender = Defender();
         // Draw 1: not a dodge (>= 150000). Draw 2: attack roll = 5 + 1 = 6.
         var random = new ScriptedRandom(999_999, 1);
-        AttackOutcome outcome = CombatResolver.ResolveMelee(random, Attacker(), defender, 5, 0, Tuning);
+        AttackOutcome outcome = CombatResolver.ResolveMelee(random, Attacker(), defender, 5, 3, Tuning);
 
         Assert.False(outcome.Dodged);
-        Assert.Equal(3, outcome.Damage); // 6 rolled - (defense 3 + gear 0)
+        Assert.Equal(3, outcome.Damage); // 6 rolled - armor class 3
         Assert.Equal(7, defender.Hp);
 
         // Heavy armor still chips one point: roll 6 vs armor class 50.
@@ -62,6 +62,38 @@ public sealed class CombatResolverTests
         // The donor formula floors a roll of one: 5 + 1.
         var low = new ScriptedRandom(1);
         Assert.Equal(6, CombatResolver.RollAttack(low, weaponPower: 5, attackStat: 6));
+    }
+
+    [Fact]
+    public void A_weapon_hit_scales_base_damage_by_charge_and_adds_the_random_part()
+    {
+        // Donor Weapon.doAttackRoll: (int)(base * power) + nextInt(rand + 1 + max(0, ATK - 4)).
+        // Iron dagger 2+1 at full charge with attack 4: 2 + 0..1.
+        Assert.Equal(2, CombatResolver.WeaponDamage(new ScriptedRandom(0), 2, 1, 4, 1f));
+        Assert.Equal(3, CombatResolver.WeaponDamage(new ScriptedRandom(1), 2, 1, 4, 1f));
+
+        // A quick tap: half charge drops the base part to (int)(2 * 0.4) = 0, floored at 1.
+        Assert.Equal(1, CombatResolver.WeaponDamage(new ScriptedRandom(0), 2, 1, 4, 0.4f));
+
+        // Attack above 4 widens the random part: attack 6 rolls 0..3.
+        Assert.Equal(5, CombatResolver.WeaponDamage(new ScriptedRandom(3), 2, 1, 6, 1f));
+    }
+
+    [Fact]
+    public void A_weapon_hit_lands_without_dodge_or_armor()
+    {
+        ActorState defender = Defender(); // defense 3 is not armor here
+        AttackOutcome outcome = CombatResolver.ResolveWeaponHit(new ScriptedRandom(1), Attacker(), defender, 2, 1, 1f);
+        Assert.False(outcome.Dodged);
+        Assert.Equal(3, outcome.Damage);
+        Assert.Equal(7, defender.Hp);
+    }
+
+    [Fact]
+    public void The_player_armor_class_is_gear_plus_defense_above_four()
+    {
+        Assert.Equal(3, CombatResolver.ArmorClass(2, 3)); // leather armor, defense 2
+        Assert.Equal(5, CombatResolver.ArmorClass(6, 3));
     }
 
     [Fact]

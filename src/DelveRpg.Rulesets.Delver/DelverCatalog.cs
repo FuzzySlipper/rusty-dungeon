@@ -46,7 +46,8 @@ public sealed class DelverCatalog : IRulesCatalog
                 item.ChargeTicks,
                 item.HealAmount,
                 item.Value,
-                item.Sprite),
+                item.Sprite,
+                item.RandDamage),
             StringComparer.Ordinal);
     }
 
