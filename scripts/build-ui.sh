@@ -13,6 +13,14 @@ types=${1:?usage: scripts/build-ui.sh <path to rusty-engine-product-ui.d.ts>}
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 config_dir=$(mktemp -d)
 trap 'rm -rf "$config_dir"' EXIT
+
+# Under Git Bash on Windows, node is a Windows program: hand it Windows paths
+# (C:/dev/...), not the shell's /c/dev/... form.
+if command -v cygpath >/dev/null 2>&1; then
+  repo_root=$(cygpath -m "$repo_root")
+  config_dir=$(cygpath -m "$config_dir")
+  types=$(cygpath -m "$types")
+fi
 cat > "$config_dir/tsconfig.json" <<JSON
 {
   "extends": "$repo_root/src/ui/tsconfig.json",
