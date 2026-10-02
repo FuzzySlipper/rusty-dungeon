@@ -45,9 +45,14 @@ public static class LevelMesh
     public static LevelGeometry Build(
         DungeonLevel level,
         string theme,
-        Func<string, UvRect> rectFor)
+        Func<string, int, int, UvRect> rectFor,
+        bool themedArt = false)
     {
-        (float r, float g, float b) = Themes.TryGetValue(theme, out (float R, float G, float B) palette)
+        // Theme art carries the theme itself; the palette tint is for the
+        // default sheet and the placeholder colors.
+        (float r, float g, float b) = themedArt
+            ? (1f, 1f, 1f)
+            : Themes.TryGetValue(theme, out (float R, float G, float B) palette)
             ? palette
             : (0.34f, 0.32f, 0.30f);
 
@@ -63,9 +68,9 @@ public static class LevelMesh
         foreach (string role in Roles)
         {
             uint blockStart = (uint)indices.Count;
-            UvRect rect = rectFor(role);
             foreach ((int x, int y, Tile tile) in TilesOf(level, role))
             {
+                UvRect rect = rectFor(role, x, y);
                 Color color = role switch
                 {
                     "wall" => WallColor(tile, r, g, b),

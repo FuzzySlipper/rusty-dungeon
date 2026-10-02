@@ -58,3 +58,28 @@ public sealed class ShippedSpriteCoverageTests
         Assert.Equal(System.Numerics.Vector3.One, DelveSceneRenderer.DamageColor(DamageType.Physical));
     }
 }
+
+/// <summary>Every theme a section uses has a painter, and every painted cell is on its atlas.</summary>
+public sealed class ShippedThemeArtTests
+{
+    [Fact]
+    public void Every_section_theme_is_painted_from_cells_on_its_atlas()
+    {
+        DelveArtManifest manifest = System.Text.Json.JsonSerializer.Deserialize(
+            ShippedContent.Read(DelveArtAssets.ManifestPath)!, DelveArtJsonContext.Default.DelveArtManifest)!;
+        Rulesets.Delver.Content.DelverContentPack pack = Rulesets.Delver.Content.DelverComposition.Load(ShippedContent.Read).Pack;
+
+        IEnumerable<string> themes = pack.Sections
+            .SelectMany(section => section.LevelTemplates.Select(template => template.Theme)
+                .Concat(section.TransitionLevel is { } transition ? [transition.Theme] : []))
+            .Distinct();
+        foreach (string theme in themes)
+        {
+            Assert.True(manifest.Themes.TryGetValue(theme, out DelveArtTheme? painter), $"no painter for {theme}");
+            DelveArtAtlas atlas = manifest.Atlases[painter!.Atlas];
+            Assert.All(painter.Cells.Values.SelectMany(cells => cells), cell => Assert.InRange(cell, 0, (atlas.Columns * atlas.Rows) - 1));
+            Assert.Contains("floor", painter.Cells.Keys);
+            Assert.Contains("wall", painter.Cells.Keys);
+        }
+    }
+}

@@ -753,17 +753,36 @@ boxes, actor sprites, one perspective camera with distance fog handled by the
 host background ([donor] `gfx/GlRenderer.java` distance fog is a shader
 mix). Level tiles carry the donor's tile atlases ([donor] `data/tiles.dat`,
 `data/walltextures.dat` fixed-grid sheets): the authored manifest
-`content/delve/art/tiles.json` maps tile roles (floor, wall, water, door, ceiling) to
-atlas cells, the extract script stages the named sheets into the gitignored
-`content/delve/imports/art/` (Engine textures open from product content
-only), and theme tints multiply the texture. With no staged art the level
-keeps its authored placeholder colors — the product runs identically without
-donor pixels, which are never committed (see AGENTS.md fidelity rules).
-**Deliberate divergence:** one cell per role rather than the donor's
-per-theme `texturePainters` ([donor] `generator/*/info.dat`) and light-mapped
+`content/delve/art/tiles.json` maps tile roles (floor, wall, water, door,
+ceiling) to atlas cells. The extract script stages the named sheets into the
+gitignored `content/delve/imports/art/`, since Engine textures open from
+product content only. With no staged art the level keeps its authored
+placeholder colors: the product runs identically without donor pixels, which
+are never committed (see AGENTS.md fidelity rules).
+
+**Theme painting — faithful in data, approximate in choice.** Each floor
+theme is painted from its own donor atlas, with weighted cell lists per role
+taken from the donor's texture painters ([donor] `generator/TexturePainter.java`,
+`game/Level.java:725-800`; [data] `generator/<Theme>/info.dat`
+`texturePainters` and the `section.dat` level painters, which win).
+- Sewer (`textures/Sewer/textures.png`): walls `0×4, 1×3, 2, 3×2`; floors
+  `8×6, 9, 10, 12×2`; ceiling `11×6, 10×4`; water cell 6.
+- Temple, and the Crypt (Undead), which the donor paints from the same
+  atlas: walls `0×4, 2×2, 3, 1×3`; floors `8×4, 9×3, 10×2, 16`; ceiling
+  `12×6, 13×4`.
+- Cave: walls `0×6, 1×3, 2`; floors `8×6, 9×3, 10`; ceiling 1.
+- Cold: walls 0; floors `8×8, 9×2`; ceiling `11×6, 10×4`.
+
+Roles a theme leaves out (doors, and water outside the sewers) keep the
+default cell, and themed floors drop the placeholder palette tint.
+**Approximate:** a tile's cell is chosen by a hash of the tile rather than
+the donor's unseeded random, so a floor looks the same every time it is
+drawn, including on return.
+
+**Deliberate divergence:** lit geometry rather than the donor's light-mapped
 billboards; stairs stay vertex-colored, and actors without staged sheets fall
-back to placeholder plates. Audio, music, and
-screen flashes ([donor] `Audio.java`, `Game.flash`) are **deferred**.
+back to placeholder plates. Audio and music ([donor] `Audio.java`) are
+**deferred**.
 
 ## Content and mods
 

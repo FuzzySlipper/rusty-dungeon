@@ -371,13 +371,14 @@ public sealed class DelveSceneRenderer : IDisposable
                 WallTorchRange)));
         }
 
-        LevelMesh.LevelGeometry geometry = LevelMesh.Build(level, theme, _art.RectFor);
+        LevelMesh.LevelGeometry geometry = LevelMesh.Build(
+            level, theme, (role, x, y) => _art.RectFor(theme, role, x, y), _art.Paints(theme));
         var bindings = new List<MeshMaterialBinding>();
         foreach ((string role, MeshGroup _) in geometry.Groups)
         {
             bindings.Add(new MeshMaterialBinding(
                 (uint)LevelMesh.SlotFor(role),
-                _art.MaterialFor(role) ?? _material));
+                _art.MaterialFor(theme, role) ?? _material));
         }
 
         _levelMesh = _engine.Graphics.CreateMeshResource(new MeshResourceCreateRequest(

@@ -1,6 +1,6 @@
 {
   "schema": "delve.art.tiles.v1",
-  "description": "Maps level tile roles (floor, wall, water, door, ceiling; the ceiling is the donor default t1 cell 1) into texture atlases staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). The art is donor-derived and never committed. Without staged art the level keeps its authored placeholder colors.",
+  "description": "Maps level tile roles (floor, wall, water, door, ceiling) into texture atlases staged under the gitignored content import area (delve/imports/art, produced by scripts/extract-delver-reference.sh). 'tiles' is the default cell per role (the donor's t1 sheet). 'themes' paints a floor theme from its own donor atlas with weighted cell lists per role (index = column + row * columns; a cell listed n times is n times as likely), following the donor's texture painters (generator/<Theme>/info.dat texturePainters, generator/<Section>/section.dat level painters). Roles a theme leaves out keep the default cell. The art is donor-derived and never committed. Without staged art the level keeps its placeholder colors.",
   "artContentPrefix": "delve/imports/art",
   "atlases": {
     "textures.png": {
@@ -8,6 +8,22 @@
       "rows": 16
     },
     "textures1.png": {
+      "columns": 4,
+      "rows": 4
+    },
+    "textures/Sewer/textures.png": {
+      "columns": 4,
+      "rows": 8
+    },
+    "textures/Temple/textures.png": {
+      "columns": 4,
+      "rows": 6
+    },
+    "textures/Cave/textures.png": {
+      "columns": 4,
+      "rows": 4
+    },
+    "textures/Cold/textures.png": {
       "columns": 4,
       "rows": 4
     }
@@ -67,6 +83,198 @@
         1.0,
         1.0
       ]
+    }
+  },
+  "themes": {
+    "Sewer": {
+      "atlas": "textures/Sewer/textures.png",
+      "cells": {
+        "wall": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          2,
+          3,
+          3
+        ],
+        "floor": [
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          9,
+          10,
+          12,
+          12
+        ],
+        "ceiling": [
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          10,
+          10,
+          10,
+          10
+        ],
+        "water": [
+          6
+        ]
+      }
+    },
+    "Temple": {
+      "atlas": "textures/Temple/textures.png",
+      "cells": {
+        "wall": [
+          0,
+          0,
+          0,
+          0,
+          2,
+          2,
+          3,
+          1,
+          1,
+          1
+        ],
+        "floor": [
+          8,
+          8,
+          8,
+          8,
+          9,
+          9,
+          9,
+          10,
+          10,
+          16
+        ],
+        "ceiling": [
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          13,
+          13,
+          13,
+          13
+        ]
+      }
+    },
+    "Undead": {
+      "atlas": "textures/Temple/textures.png",
+      "cells": {
+        "wall": [
+          0,
+          0,
+          0,
+          0,
+          2,
+          2,
+          3,
+          1,
+          1,
+          1
+        ],
+        "floor": [
+          8,
+          8,
+          8,
+          8,
+          9,
+          9,
+          9,
+          10,
+          10,
+          16
+        ],
+        "ceiling": [
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          13,
+          13,
+          13,
+          13
+        ]
+      }
+    },
+    "Cave": {
+      "atlas": "textures/Cave/textures.png",
+      "cells": {
+        "wall": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          2
+        ],
+        "floor": [
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          9,
+          9,
+          9,
+          10
+        ],
+        "ceiling": [
+          1
+        ]
+      }
+    },
+    "Cold": {
+      "atlas": "textures/Cold/textures.png",
+      "cells": {
+        "wall": [
+          0
+        ],
+        "floor": [
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          9,
+          9
+        ],
+        "ceiling": [
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          10,
+          10,
+          10,
+          10
+        ]
+      }
     }
   }
 }

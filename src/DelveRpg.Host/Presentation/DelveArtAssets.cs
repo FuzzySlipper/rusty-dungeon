@@ -30,6 +30,20 @@ public sealed class DelveArtManifest
 
     [JsonPropertyName("tiles")]
     public Dictionary<string, DelveArtTile> Tiles { get; set; } = new();
+
+    /// <summary>Per-theme painting: a theme's atlas and weighted cells per role.</summary>
+    [JsonPropertyName("themes")]
+    public Dictionary<string, DelveArtTheme> Themes { get; set; } = new();
+}
+
+/// <summary>One theme's painter: its atlas and, per role, the cells to choose from (repeats weigh).</summary>
+public sealed class DelveArtTheme
+{
+    [JsonPropertyName("atlas")]
+    public string Atlas { get; set; } = string.Empty;
+
+    [JsonPropertyName("cells")]
+    public Dictionary<string, List<int>> Cells { get; set; } = new();
 }
 
 public sealed class DelveArtAtlas
@@ -84,6 +98,8 @@ public sealed class DelveArtAssets : IDisposable
     };
 
     private readonly Dictionary<string, UvRect> _rects = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Theme, string Role), UvRect[]> _themeRects = new();
+    private readonly Dictionary<(string Theme, string Role), Material> _themeMaterials = new();
     private readonly Dictionary<string, Material> _materials = new(StringComparer.Ordinal);
     private readonly List<RenderResource> _textures = new();
     private readonly List<Material> _ownedMaterials = new();
@@ -96,6 +112,33 @@ public sealed class DelveArtAssets : IDisposable
     /// <summary>Atlas cell rect for a role; the full unit square without art.</summary>
     public UvRect RectFor(string role) =>
         _rects.TryGetValue(role, out UvRect rect) ? rect : FallbackRects[role];
+
+    /// <summary>True when a theme paints at least one role from its own art.</summary>
+    public bool Paints(string theme) => _themeRects.Keys.Any(key => key.Theme == theme);
+
+    /// <summary>
+    /// The cell one tile of a role shows on a theme's floor: one of the
+    /// theme's weighted cells chosen by a hash of the tile, so a floor looks
+    /// the same every time it is drawn; the role's default cell otherwise.
+    /// The donor picks from its global random instead ([donor] generator/TexturePainter.java).
+    /// </summary>
+    public UvRect RectFor(string theme, string role, int x, int y)
+    {
+        if (!_themeRects.TryGetValue((theme, role), out UvRect[]? cells))
+        {
+            return RectFor(role);
+        }
+
+        uint h = (uint)((x * 73856093) ^ (y * 19349663) ^ (role.Length * 83492791));
+        h ^= h >> 13;
+        h *= 0x5bd1e995;
+        h ^= h >> 15;
+        return cells[h % (uint)cells.Length];
+    }
+
+    /// <summary>The material for a role on a theme's floor: the theme's atlas, else the default.</summary>
+    public Material? MaterialFor(string theme, string role) =>
+        _themeMaterials.TryGetValue((theme, role), out Material? material) ? material : MaterialFor(role);
 
     /// <summary>Textured material for a role, or null when no art covers it.</summary>
     public Material? MaterialFor(string role) =>
@@ -176,8 +219,67 @@ public sealed class DelveArtAssets : IDisposable
             assets._materials[role] = material;
         }
 
+        foreach ((string theme, DelveArtTheme painter) in manifest.Themes)
+        {
+            if (!manifest.Atlases.TryGetValue(painter.Atlas, out DelveArtAtlas? atlas) || atlas.Columns <= 0 || atlas.Rows <= 0)
+            {
+                continue;
+            }
+
+            string contentPath = string.IsNullOrEmpty(manifest.ArtContentPrefix)
+                ? painter.Atlas
+                : $"{manifest.ArtContentPrefix.TrimEnd('/')}/{painter.Atlas}";
+            if (!open.TryGetValue(painter.Atlas, out RenderResource? texture))
+            {
+                if (!contentExists(contentPath))
+                {
+                    continue;
+                }
+
+                RenderResourceInfo info = engine.Graphics.OpenResource(
+                    new RenderResourceRequest(contentPath, TextureFilter.Nearest, TextureWrap.Clamp));
+                if (info.Kind != RenderResourceKind.Texture || info.ByteLength == 0 || info.Handle.Handle.Value == 0)
+                {
+                    continue;
+                }
+
+                texture = info.Handle;
+                assets._textures.Add(texture);
+                open[painter.Atlas] = texture;
+            }
+
+            Material? material = null;
+            foreach ((string role, List<int> cells) in painter.Cells)
+            {
+                UvRect[] rects = cells
+                    .Where(cell => cell >= 0 && cell < atlas.Columns * atlas.Rows)
+                    .Select(cell => CellRect(atlas, cell % atlas.Columns, cell / atlas.Columns))
+                    .ToArray();
+                if (rects.Length == 0)
+                {
+                    continue;
+                }
+
+                material ??= engine.Graphics.CreateMaterial(new MaterialRequest(
+                    new Color(1f, 1f, 1f, 1f), texture, 0.9f, new Color(1f, 1f, 1f, 1f), Vector3.Zero, 0f, false));
+                if (!assets._ownedMaterials.Contains(material))
+                {
+                    assets._ownedMaterials.Add(material);
+                }
+
+                assets._themeRects[(theme, role)] = rects;
+                assets._themeMaterials[(theme, role)] = material;
+            }
+        }
+
         return assets;
     }
+
+    private static UvRect CellRect(DelveArtAtlas atlas, int column, int row) => new(
+        column / (float)atlas.Columns,
+        row / (float)atlas.Rows,
+        (column + 1) / (float)atlas.Columns,
+        (row + 1) / (float)atlas.Rows);
 
     public void Dispose()
     {

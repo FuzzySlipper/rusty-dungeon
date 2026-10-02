@@ -122,7 +122,7 @@ public sealed class LevelMeshTests
     [Fact]
     public void Role_blocks_cover_every_index_exactly_once()
     {
-        LevelMesh.LevelGeometry geometry = LevelMesh.Build(SmallLevel(), "Test", _ => Cell);
+        LevelMesh.LevelGeometry geometry = LevelMesh.Build(SmallLevel(), "Test", (_, _, _) => Cell);
 
         uint covered = 0;
         int expectedStart = 0;
@@ -145,7 +145,7 @@ public sealed class LevelMeshTests
     [Fact]
     public void Ceiling_quads_sit_at_wall_height_and_face_down()
     {
-        LevelMesh.LevelGeometry geometry = LevelMesh.Build(SmallLevel(), "Test", _ => Cell);
+        LevelMesh.LevelGeometry geometry = LevelMesh.Build(SmallLevel(), "Test", (_, _, _) => Cell);
         MeshGroup ceiling = geometry.Groups.Single(entry => entry.Role == "ceiling").Group;
 
         for (uint i = ceiling.Start; i < ceiling.Start + ceiling.Count; i += 3)
@@ -164,7 +164,7 @@ public sealed class LevelMeshTests
     [Fact]
     public void Face_uvs_land_inside_the_roles_atlas_cell()
     {
-        LevelMesh.LevelGeometry geometry = LevelMesh.Build(SmallLevel(), "Test", _ => Cell);
+        LevelMesh.LevelGeometry geometry = LevelMesh.Build(SmallLevel(), "Test", (_, _, _) => Cell);
 
         Assert.NotEmpty(geometry.Uvs);
         foreach (Vector2 uv in geometry.Uvs)
