@@ -21,6 +21,13 @@ public sealed class ScriptedCatalog : IRulesCatalog
         };
         _items["test.item.potion"] = new ItemArchetype("test.item.potion", "potion", ItemKind.Potion, 0, 0, 10, 3, "item.potion");
         _items["test.item.gold"] = new ItemArchetype("test.item.gold", "gold", ItemKind.Gold, 0, 0, 0, 25, "item.gold");
+        _items["test.item.armor"] = new ItemArchetype("test.item.armor", "armor", ItemKind.Armor, 3, 0, 0, 10, "item.armor") { Durability = 2 };
+        _items["test.item.lucky"] = new ItemArchetype("test.item.lucky", "Lucky Dagger", ItemKind.Weapon, 1, 40, 0, 1000, "unique.lucky", 5) { Unique = true };
+        foreach (string colour in new[] { "red", "blue", "green" })
+        {
+            _items[$"test.item.potion.{colour}"] = new ItemArchetype($"test.item.potion.{colour}", $"{colour} potion", ItemKind.Potion, 0, 0, 0, 25, "item.potion");
+        }
+
         _items["test.item.key"] = new ItemArchetype("test.item.key", "key", ItemKind.Key, 0, 0, 0, 0, "item.key");
         _items["test.item.orb"] = new ItemArchetype("test.item.orb", "the orb", ItemKind.QuestOrb, 0, 0, 0, 0, "item.orb");
         _items["test.item.dagger"] = new ItemArchetype("test.item.dagger", "dagger", ItemKind.Weapon, 2, 40, 0, 5, "item.dagger", 1)
@@ -93,6 +100,21 @@ public sealed class ScriptedCatalog : IRulesCatalog
     public string ObjectiveItemId => "test.item.orb";
 
     public string? KeyItemId => "test.item.key";
+
+    private static readonly ItemModification[] Mods =
+    [
+        new("of-fire", "of Fire", ModificationSlot.WeaponSuffix, DamageMod: 3, DamageType: DamageType.Fire),
+        new("fighters", "Fighter's", ModificationSlot.WeaponPrefix, AttackMod: 1),
+        new("blessed", "Blessed", ModificationSlot.ArmorPrefix, ArmorMod: 4),
+    ];
+
+    public IReadOnlyList<ItemModification> Modifications(ModificationSlot slot) => Mods.Where(mod => mod.Slot == slot).ToList();
+
+    public ItemModification? Modification(string id) => Mods.FirstOrDefault(mod => mod.Id == id);
+
+    public IReadOnlyList<string> UniqueItemIds => ["test.item.lucky"];
+
+    public IReadOnlyList<string> PotionColourIds => ["test.item.potion.red", "test.item.potion.blue", "test.item.potion.green"];
 
     public bool IsStackable(string id) =>
         Item(id)?.Kind is ItemKind.Gold or ItemKind.Key or ItemKind.Potion or ItemKind.Food or ItemKind.Ammo;

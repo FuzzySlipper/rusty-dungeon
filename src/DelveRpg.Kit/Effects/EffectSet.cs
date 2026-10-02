@@ -7,6 +7,15 @@ public enum EffectKind
     Slowed,
     Hasted,
     Paralyzed,
+
+    /// <summary>Halves non-physical damage taken (the donor's Resist Magic ShieldEffect).</summary>
+    MagicResist,
+
+    /// <summary>Halves physical damage taken (the donor's Iron Skin, damageMod 0.5).</summary>
+    IronSkin,
+
+    /// <summary>Heals its magnitude once per interval (the donor's RestoreHealthEffect).</summary>
+    Regenerating,
 }
 
 /// <summary>
@@ -47,10 +56,14 @@ public sealed class EffectSet
 
     public bool IsActive(EffectKind kind) => _effects.Any(effect => effect.Kind == kind);
 
+    /// <summary>End every effect (the donor's Restoration potion).</summary>
+    public void Clear() => _effects.Clear();
+
     /// <summary>
-    /// Advance one tick; returns damage dealt by effects this tick. Burning
-    /// and poison strike once per interval; poison never takes the last hit
-    /// point, like the donor's non-lethal PoisonEffect.
+    /// Advance one tick; returns damage dealt by effects this tick, negative
+    /// when regeneration heals more. Burning and poison strike once per
+    /// interval; poison never takes the last hit point, like the donor's
+    /// non-lethal PoisonEffect.
     /// </summary>
     public int Tick(int currentHp)
     {
@@ -63,6 +76,10 @@ public sealed class EffectSet
             {
                 bool spares = effect.Kind == EffectKind.Poison && currentHp - damage - effect.Magnitude <= 0;
                 damage += spares ? 0 : effect.Magnitude;
+            }
+            else if (effect.Kind == EffectKind.Regenerating && effect.ElapsedTicks % effect.IntervalTicks == 0)
+            {
+                damage -= effect.Magnitude;
             }
 
             if (effect.RemainingTicks <= 1)

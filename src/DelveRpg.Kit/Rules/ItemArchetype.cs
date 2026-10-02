@@ -70,6 +70,20 @@ public sealed record ItemArchetype(
     /// <summary>A wand's aim: 1 is dead on; lower scatters up to (1 − accuracy) × 45°.</summary>
     public float Accuracy { get; init; } = 1f;
 
+    /// <summary>The dungeon levels it is found on; a find's item level is the floor's, held to this window.</summary>
+    public int MinItemLevel { get; init; } = 1;
+
+    public int MaxItemLevel { get; init; } = 99;
+
+    /// <summary>Uses before its condition drops a step ([donor] Weapon.java:78, Armor.java:18: 25).</summary>
+    public int Durability { get; init; } = 25;
+
+    /// <summary>A unique: found once a run at most, never enchanted, carries <see cref="BaseMods"/>.</summary>
+    public bool Unique { get; init; }
+
+    /// <summary>A unique's fixed mods, always known ([data] items.dat baseMods).</summary>
+    public ItemModification? BaseMods { get; init; }
+
     /// <summary>How many a fresh find holds (a bundle of arrows); 1 for most items.</summary>
     public int StackSize { get; init; } = 1;
 

@@ -114,7 +114,7 @@ public sealed partial class RunSession
             slots.Add(new HudSlot(
                 i,
                 instance?.ArchetypeId,
-                archetype?.DisplayName,
+                instance is ItemInstance named ? ItemName(named) : null,
                 archetype?.Kind.ToString() ?? "Empty",
                 instance?.Count ?? 0,
                 Player.WieldedSlot == i,

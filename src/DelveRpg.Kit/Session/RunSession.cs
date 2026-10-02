@@ -91,6 +91,14 @@ public sealed partial class RunSession
         Meta = meta;
         Player = RestorePlayer(snapshot);
         RestoreFloor(snapshot);
+        _spawnedUniques.UnionWith(snapshot.SpawnedUniques ?? []);
+        foreach (string known in snapshot.KnownPotions ?? [])
+        {
+            if (Enum.TryParse(known, out PotionEffect effect))
+            {
+                _knownPotions.Add(effect);
+            }
+        }
     }
 
     public RunPhase Phase { get; private set; } = RunPhase.Playing;
@@ -153,7 +161,8 @@ public sealed partial class RunSession
         {
             ItemArchetype archetype = _rules.Item(itemId)
                 ?? throw new InvalidOperationException($"Starting kit item '{itemId}' is not in the catalog.");
-            if (!Player.Inventory.TryAdd(Fresh(archetype), _rules.IsStackable(itemId)))
+            // The kit comes plain: normal condition, no enchantments.
+            if (!Player.Inventory.TryAdd(new ItemInstance(itemId, Math.Max(1, archetype.StackSize), archetype.Charges), _rules.IsStackable(itemId)))
             {
                 throw new InvalidOperationException($"Starting kit item '{itemId}' does not fit the inventory.");
             }
@@ -166,9 +175,11 @@ public sealed partial class RunSession
                     break;
                 case ItemKind.Armor when Player.Equipment.ArmorItemId is null:
                     Player.Equipment.ArmorItemId = itemId;
+                    Player.ArmorSlot = Player.Inventory.Find(itemId);
                     break;
                 case ItemKind.Helmet when Player.Equipment.HelmetItemId is null:
                     Player.Equipment.HelmetItemId = itemId;
+                    Player.HelmetSlot = Player.Inventory.Find(itemId);
                     break;
             }
         }

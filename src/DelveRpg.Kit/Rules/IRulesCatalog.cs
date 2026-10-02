@@ -29,6 +29,18 @@ public interface IRulesCatalog
     /// <summary>The item id whose pickup starts the escape arc.</summary>
     string ObjectiveItemId { get; }
 
+    /// <summary>The enchantments of one table; empty when the ruleset has none.</summary>
+    IReadOnlyList<ItemModification> Modifications(ModificationSlot slot) => [];
+
+    /// <summary>One enchantment by id, for restoring and naming an instance.</summary>
+    ItemModification? Modification(string id) => null;
+
+    /// <summary>The uniques that monster loot can turn up, once each per run.</summary>
+    IReadOnlyList<string> UniqueItemIds => [];
+
+    /// <summary>The potion colours whose effects are shuffled each run, in a fixed order.</summary>
+    IReadOnlyList<string> PotionColourIds => [];
+
     /// <summary>The key a locked vault's key spot holds; null when the catalog has no key.</summary>
     string? KeyItemId => null;
 }

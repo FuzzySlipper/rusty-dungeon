@@ -17,11 +17,15 @@ public sealed class DelverCatalog : IRulesCatalog
     private readonly Dictionary<string, DelverItemDefinition> _itemDefinitions;
     private readonly List<DelverMonsterDefinition> _monsterDefinitions;
     private readonly List<DelverLootDefinition> _loot;
+    private readonly Dictionary<string, ItemModification> _modifications;
+    private readonly List<string> _potionColours;
 
     public DelverCatalog(DelverContentPack pack)
     {
         _monsterDefinitions = pack.Monsters;
         _loot = pack.Loot;
+        _potionColours = pack.PotionColours;
+        _modifications = pack.Enchantments.ToDictionary(enchantment => enchantment.Id, ToModification, StringComparer.Ordinal);
         _itemDefinitions = pack.Items.ToDictionary(item => item.Id, StringComparer.Ordinal);
         _monsters = pack.Monsters.ToDictionary(
             monster => monster.Id,
@@ -77,6 +81,11 @@ public sealed class DelverCatalog : IRulesCatalog
                 SwingStyle = item.Swing,
                 WeakSwing = Timing(pack, item.Swing, strong: false),
                 StrongSwing = Timing(pack, item.Swing, strong: true),
+                MinItemLevel = item.MinItemLevel,
+                MaxItemLevel = item.MaxItemLevel,
+                Durability = item.Durability,
+                Unique = item.Unique,
+                BaseMods = item.BaseMods is DelverEnchantment fixedMods ? ToModification(fixedMods) : null,
                 Range = item.Range,
                 Charges = item.Charges,
                 AutoFireTicks = item.AutoFireTicks,
@@ -100,9 +109,20 @@ public sealed class DelverCatalog : IRulesCatalog
             .Select(monster => monster.Id)
             .ToList();
 
+    public IReadOnlyList<ItemModification> Modifications(ModificationSlot slot) =>
+        _modifications.Values.Where(mod => mod.Slot == slot).ToList();
+
+    public ItemModification? Modification(string id) =>
+        _modifications.TryGetValue(id, out ItemModification? mod) ? mod : null;
+
+    public IReadOnlyList<string> UniqueItemIds =>
+        _items.Values.Where(item => item.Unique).Select(item => item.Id).ToList();
+
+    public IReadOnlyList<string> PotionColourIds => _potionColours;
+
     public IReadOnlyList<string> ItemsForFloor(int dungeonLevel) =>
         _itemDefinitions.Values
-            .Where(item => item.Kind is not ("QuestOrb" or "Key")
+            .Where(item => item.Kind is not ("QuestOrb" or "Key") && !item.Unique
                 && dungeonLevel >= item.MinItemLevel && dungeonLevel <= item.MaxItemLevel)
             .Select(item => item.Id)
             .ToList();
@@ -144,6 +164,23 @@ public sealed class DelverCatalog : IRulesCatalog
         && (strong ? found.Strong : found.Weak) is DelverSwingTiming timing
             ? new SwingTiming(timing.Length, timing.ActionTime)
             : null;
+
+    /// <summary>An enchantment slot name, or null when the name is not one.</summary>
+    public static ModificationSlot? TryParseSlot(string name) =>
+        Enum.TryParse<ModificationSlot>(name, ignoreCase: true, out ModificationSlot slot) && Enum.IsDefined(slot) ? slot : null;
+
+    private static ItemModification ToModification(DelverEnchantment enchantment) => new(
+        enchantment.Id,
+        enchantment.Name,
+        TryParseSlot(enchantment.Slot) ?? throw new InvalidOperationException($"Unknown enchantment slot '{enchantment.Slot}'."),
+        enchantment.AttackMod,
+        enchantment.ArmorMod,
+        enchantment.MagicMod,
+        enchantment.MoveSpeedMod,
+        enchantment.DamageMod,
+        enchantment.AttackSpeedMod,
+        enchantment.KnockbackMod,
+        ParseDamageType(enchantment.DamageType));
 
     /// <summary>A damage type name, or null when the name is not one.</summary>
     public static DamageType? TryParseDamageType(string name) =>

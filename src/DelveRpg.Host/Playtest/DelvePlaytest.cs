@@ -194,6 +194,7 @@ public sealed class DelvePlaytest
         {
             w.WriteStartObject();
             w.WriteString("item", item.Item.ArchetypeId);
+            w.WriteString("name", session.ItemName(item.Item));
             w.WriteNumber("count", item.Item.Count);
             w.WriteNumber("tileX", item.X);
             w.WriteNumber("tileY", item.Y);

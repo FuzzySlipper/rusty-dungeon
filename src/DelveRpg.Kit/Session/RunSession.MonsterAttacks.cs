@@ -99,6 +99,10 @@ public sealed partial class RunSession
 
         Player.Body.Hp = hpBefore;
         HurtPlayer(outcome.Damage);
+
+        // A landed blow wears what the player wears ([donor] Player.java:2248-2255 UseArmor).
+        Wear(Player.ArmorSlot);
+        Wear(Player.HelmetSlot);
         ShovePlayer(body, monster.Archetype.AttackKnockback);
         ShowMessage($"The {monster.Archetype.DisplayName} hits you for {outcome.Damage}.");
     }

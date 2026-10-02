@@ -187,6 +187,8 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
         Loot = left.Loot.Concat(right.Loot).ToList(),
         StartingKit = left.StartingKit.Concat(right.StartingKit).ToList(),
         SwingStyles = left.SwingStyles.Concat(right.SwingStyles).ToDictionary(entry => entry.Key, entry => entry.Value),
+        Enchantments = left.Enchantments.Concat(right.Enchantments).ToList(),
+        PotionColours = left.PotionColours.Concat(right.PotionColours).ToList(),
     };
 
     /// <summary>All-or-nothing validation at load; a bad pack fails the load, not a run.</summary>
@@ -246,6 +248,29 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
             if (string.Equals(item.Kind, "Wand", StringComparison.OrdinalIgnoreCase) && (item.ProjectileSpeed <= 0f || item.ProjectileSprite.Length == 0))
             {
                 problems.Add($"wand '{item.Id}' needs a projectile speed and sprite");
+            }
+        }
+
+        foreach (DelverEnchantment enchantment in pack.Enchantments)
+        {
+            if (enchantment.Id.Length == 0 || DelverCatalog.TryParseSlot(enchantment.Slot) is null
+                || DelverCatalog.TryParseDamageType(enchantment.DamageType) is null)
+            {
+                problems.Add($"enchantment '{enchantment.Name}' needs an id, a known slot and a known damage type");
+            }
+        }
+
+        if (pack.Enchantments.Select(enchantment => enchantment.Id).Distinct().Count() != pack.Enchantments.Count)
+        {
+            problems.Add("enchantment ids repeat");
+        }
+
+        foreach (string colour in pack.PotionColours)
+        {
+            if (pack.Items.FirstOrDefault(item => item.Id == colour) is not { } potion
+                || !string.Equals(potion.Kind, "Potion", StringComparison.OrdinalIgnoreCase))
+            {
+                problems.Add($"potion colour '{colour}' names no potion");
             }
         }
 

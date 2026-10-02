@@ -372,13 +372,89 @@ the first weapon wielded and the first armor worn — the donor's
 `startingInventory` ([data] `data/player.dat`, [donor]
 `entities/Player.java:297-334` `makeStartingInventory`). **Approximate**: the
 donor gives an iron dagger, leather armor, leather pants, and a random potion,
-wand and food; ours is the rusty dagger, leather armor, a potion of healing,
-the wand of sparks and bread. There is no pants slot, and potions and wands
-are not drawn at random per run. Loot rolls use weighted tables over a
-per-item level window ([donor] `helpers/LootListHelper.java` level buckets).
-Prefix/suffix enchantments ([donor] `entities/items/ItemModification.java`)
-are **deferred** (the `enchantChance` tuning knob exists); uniques, bags, and
-shops are **skipped/deferred**.
+wand and food; ours is the rusty dagger, leather armor, the red potion (its
+effect is drawn per run, see below), the wand of sparks and bread, all in
+normal condition and unenchanted. There is no pants slot, and the wand is not
+drawn at random. Loot rolls use weighted tables over a per-item level window
+([donor] `helpers/LootListHelper.java` level buckets). Bags and shops are
+**deferred** (task 9076).
+
+**Condition and wear — faithful.**
+- **Condition.** Every weapon or armor find rolls the donor's condition:
+  worn, normal, fine or excellent, never broken ([donor]
+  `managers/ItemManager.java:139-142`). A weapon's base damage moves by
+  −2/0/+2/+4 with it, and −4 when broken. Armor moves by −1/0/+1/+2, and −2
+  when broken ([donor] `entities/items/Weapon.java:155`, `Armor.java:59`).
+- **Wear.** Each attack wears the wielded weapon, and each landed monster
+  blow wears the worn armor and helmet. After `durability` uses (25, or a
+  unique's own) the condition drops a step ([donor] `Item.java` `wasUsed`,
+  `Player.java:2248-2255`). A broken item loses its enchantments
+  ([donor] `Weapon.java:107-133`).
+- **Item level.** A find's item level is the floor's, held to the item's
+  level window. Past level 1 a weapon gains `(int)(0.75 × level)` base and
+  random damage ([donor] `Weapon.java:153-181`).
+
+**Enchantments — faithful in rule.**
+- **Tables.** The donor's four tables ship whole: 14 weapon suffixes, 19
+  weapon prefixes, 10 armor suffixes and 23 armor prefixes ([data]
+  `items.dat`). Each weapon or armor find rolls a suffix and a prefix, each
+  at 20%, and an enchanted find is unidentified one time in five ([donor]
+  `ItemManager.java:77-103`).
+- **Scaling.** Mods grow with item level, `mod + (int)(mod × level × 0.5)`,
+  and fractional ones by `mod × level × 0.05` (`ItemModification.java:54-104`).
+- **What they do.**
+  - Physical damage mods add to base damage.
+  - An elemental suffix adds its damage and makes the blow its type, so
+    elemental status effects follow.
+  - Attack-speed mods quicken the swing, and knockback mods add to the
+    shove.
+  - Armor mods add to armor class.
+  - Attack and magic mods add to the player's effective stats
+    ([donor] `rpg/Stats.java:105-130`).
+- **Names.** Items are named `{prefix} {condition} {name} {suffix}`, with
+  normal condition unnamed. Enchantments show only once known, and an
+  unknown one adds "(unidentified)" ([donor] `Item.java:463-483`).
+
+**Approximate:**
+- Movement-speed mods are named but have no effect, since walking does not
+  read stats here.
+- The donor's Unholy prefix loses its vampiric damage type (there is no
+  vampire damage yet).
+- Unidentified items are identified by equipping them; the donor needs an
+  Identify scroll or a shop, and there are neither here yet.
+
+**Uniques — faithful in rule, a sample.** Five donor uniques ship ([data]
+`items.dat` unique list; sprites from `unique.png`):
+- Lucky Dagger: 1+5, durability 1000.
+- Dusk: 4+8, speed 1.25.
+- Dawn: 6+4.
+- Ashen: a fire bow with move +1, knockback +0.2 and armor +2.
+- Silverhorn: a bow at speed 3 with move +2.
+
+A unique comes only from monster loot, at `2% × min(1, level / 6)`, and is
+one not yet found this run ([donor] `ItemManager.java:150-177, 406-417`). It
+is never rolled for condition or enchantments, and its fixed mods are always
+known. **Approximate:** the donor remembers found uniques across runs in
+its progression; here only within the run. Silverhorn's hp +2 is left out.
+
+**Potions — faithful.** Seven colour potions — red, blue, green, purple,
+dark, gold and bright ([data] `items.dat:2318`) — have their effects dealt
+out anew each run. The colours are shuffled from the run's seed and given
+the effects in order ([donor] `ItemManager.java:295-316`). The effects
+([donor] `entities/items/Potion.java:37-57, 203-221`):
+- Healing: 4–8 hit points.
+- Resist Magic: halves non-physical damage for 1000 ticks.
+- Restoration: full health and all effects cleared.
+- Poison: 1 per 160 ticks for 1600, non-lethal.
+- Regeneration: 1 now and 1 per 160 ticks for 1600 (the donor calls it
+  "Cola").
+- Iron Skin: halves physical damage for 1000 ticks.
+- Paralyzation: 1000 ticks.
+
+Drinking identifies a potion half the time ([donor] `Potion.java:77-82`).
+A known potion is named "red potion of Healing", and the run's known
+effects save with it. **Approximate:** thrown and broken potions do not
+burst.
 
 ## Progression
 
@@ -401,9 +477,14 @@ slow/haste speed multipliers, paralysis blocks action
 the donor effects' default timings. Burning lasts 600 ticks and poison 1000,
 and each strikes for 1 every 160 ticks. Poison never takes the last hit point
 ([donor] `BurningEffect.java`, `PoisonEffect.java` `canKill`). Slow lasts 500
-ticks at half speed, and paralysis lasts 500. **Approximate** — five kinds
-instead of the donor's full set; no duration-scaled stacking rules beyond
-refresh-with-max-magnitude.
+ticks at half speed, and paralysis lasts 500. Potions add three more:
+- Iron Skin and Resist Magic halve physical and non-physical damage taken,
+  as the donor's `damageMod` and `magicDamageMod` ([donor]
+  `entities/Actor.java:184-199`);
+- Regeneration heals once per interval.
+
+**Approximate** — eight kinds instead of the donor's full set; no
+duration-scaled stacking rules beyond refresh-with-max-magnitude.
 
 ## Doors, keys, traps, pots and triggers
 

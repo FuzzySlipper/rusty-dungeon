@@ -99,6 +99,12 @@ public sealed class PlayerState
 
     /// <summary>Which hotbar slot the wielded weapon lives in; −1 when bare-handed.</summary>
     public int WieldedSlot { get; set; } = -1;
+
+    /// <summary>Which slot the worn body armor lives in; −1 when none.</summary>
+    public int ArmorSlot { get; set; } = -1;
+
+    /// <summary>Which slot the worn helmet lives in; −1 when none.</summary>
+    public int HelmetSlot { get; set; } = -1;
 }
 
 /// <summary>A monster instance on the current floor.</summary>

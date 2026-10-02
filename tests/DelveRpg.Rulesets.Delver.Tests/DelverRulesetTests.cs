@@ -83,7 +83,7 @@ public sealed class DelverRulesetTests
     {
         DelverRuleset ruleset = Ruleset();
         IReadOnlyList<string> items = ruleset.Catalog.ItemsForFloor(3);
-        Assert.Contains("delve.item.potion-of-healing", items);
+        Assert.Contains("delve.item.potion-red", items);
         Assert.DoesNotContain("delve.item.orb", items);
         Assert.DoesNotContain("delve.item.iron-key", items);
     }
@@ -127,6 +127,6 @@ public sealed class DelverRulesetTests
         Assert.Equal("delve.item.rusty-dagger", session.Player.Equipment.WeaponItemId);
         Assert.Equal("delve.item.rusty-dagger", session.Player.Inventory.Slot(session.Player.WieldedSlot)?.ArchetypeId);
         Assert.Equal("delve.item.leather-armor", session.Player.Equipment.ArmorItemId);
-        Assert.True(session.Player.Inventory.Find("delve.item.potion-of-healing") >= 0);
+        Assert.True(session.Player.Inventory.Find("delve.item.potion-red") >= 0);
     }
 }

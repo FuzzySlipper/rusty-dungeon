@@ -65,6 +65,7 @@ public sealed partial class RunSession
         float attackPower = Player.AttackCharge / (float)Math.Max(1, chargeTicks);
         Player.AttackCharge = 0;
         StartSwing(weapon, attackPower);
+        Wear(Player.WieldedSlot);
     }
 
     /// <summary>
@@ -80,7 +81,7 @@ public sealed partial class RunSession
         ActorState body = Player.Body;
         bool strong = attackPower >= 0.5f && weapon.StrongSwing is not null;
         SwingTiming? timing = strong ? weapon.StrongSwing : weapon.WeakSwing;
-        float playback = Math.Max(0.05f, (weapon.Speed * 0.25f) + ((body.Stats.Dexterity - 4) * 0.015f));
+        float playback = Math.Max(0.05f, ((weapon.Speed + WieldedNumbers(weapon).AttackSpeedBonus) * 0.25f) + ((body.Stats.Dexterity - 4) * 0.015f));
         int length = timing is null ? _tuning.AttackCooldownTicks : (int)MathF.Round(timing.Length / playback);
         int cooldown = timing is null ? _tuning.AttackCooldownTicks : (int)MathF.Round(length * 0.75f);
 
@@ -139,8 +140,9 @@ public sealed partial class RunSession
         if (pot is not null
             && (target is null || Distance(Player.Body.X, Player.Body.Y, pot.X, pot.Y) < Distance(Player.Body, target.Body)))
         {
+            WeaponNumbers potNumbers = weapon is null ? default : WieldedNumbers(weapon);
             DamagePot(pot, Math.Max(1, CombatResolver.WeaponDamage(
-                _random, weapon?.Power ?? 0, weapon?.RandDamage ?? 0, Player.Body.Stats.Attack, attackPower)));
+                _random, potNumbers.BaseDamage, potNumbers.RandDamage, EffectiveStats().Attack, attackPower)));
             return;
         }
 
@@ -150,8 +152,9 @@ public sealed partial class RunSession
             return;
         }
 
+        WeaponNumbers numbers = weapon is null ? default : WieldedNumbers(weapon);
         int damage = CombatResolver.WeaponDamage(
-            _random, weapon?.Power ?? 0, weapon?.RandDamage ?? 0, Player.Body.Stats.Attack, attackPower);
+            _random, numbers.BaseDamage, numbers.RandDamage, EffectiveStats().Attack, attackPower) + numbers.ElementalDamage;
 
         // The donor shoves along the facing times the distance the blow
         // landed at, at most the weapon's reach ([donor] items/Sword.java:95-100).
@@ -160,10 +163,10 @@ public sealed partial class RunSession
         HitMonster(
             target,
             damage,
-            weapon?.DamageType ?? DamageType.Physical,
+            weapon is null ? DamageType.Physical : numbers.DamageType,
             facingX * WeaponPushReach,
             facingY * WeaponPushReach,
-            attackPower * (weapon?.Knockback ?? 0f));
+            attackPower * ((weapon?.Knockback ?? 0f) + numbers.KnockbackBonus));
         ShowMessage($"You hit the {target.Archetype.DisplayName} for {damage}.");
     }
 
@@ -184,7 +187,12 @@ public sealed partial class RunSession
             DropItem(carried, monster.Body.TileX, monster.Body.TileY);
         }
 
-        if (_random.Chance(_tuning.EnchantChance) && _rules.RollLootId(_random, Level.DifficultyLevel) is string lootId)
+        if (RollUnique() is string uniqueId)
+        {
+            AddGroundItem(uniqueId, monster.Body.TileX, monster.Body.TileY);
+            ShowMessage("Something rare glints where it fell.");
+        }
+        else if (_random.Chance(_tuning.EnchantChance) && _rules.RollLootId(_random, Level.DifficultyLevel) is string lootId)
         {
             AddGroundItem(lootId, monster.Body.TileX, monster.Body.TileY);
         }
@@ -328,25 +336,33 @@ public sealed partial class RunSession
         switch (archetype.Kind)
         {
             case ItemKind.Potion:
+                Player.Inventory.TryConsumeOne(slot);
+                DrinkPotion(archetype);
+                return;
             case ItemKind.Food:
                 Player.Body.Hp = Math.Min(Player.Body.MaxHp, Player.Body.Hp + archetype.HealAmount);
                 Player.Inventory.TryConsumeOne(slot);
-                ShowMessage($"You consume the {archetype.DisplayName}.");
+                ShowMessage($"You eat the {archetype.DisplayName}.");
                 return;
             case ItemKind.Weapon:
             case ItemKind.RangedWeapon:
             case ItemKind.Wand:
                 Player.Equipment.WeaponItemId = archetype.Id;
                 Player.WieldedSlot = slot;
-                ShowMessage($"You wield the {archetype.DisplayName}.");
+                ShowMessage($"You wield the {ItemName(item)}.");
+                IdentifyOnEquip(slot);
                 return;
             case ItemKind.Armor:
                 Player.Equipment.ArmorItemId = archetype.Id;
-                ShowMessage($"You wear the {archetype.DisplayName}.");
+                Player.ArmorSlot = slot;
+                ShowMessage($"You wear the {ItemName(item)}.");
+                IdentifyOnEquip(slot);
                 return;
             case ItemKind.Helmet:
                 Player.Equipment.HelmetItemId = archetype.Id;
-                ShowMessage($"You wear the {archetype.DisplayName}.");
+                Player.HelmetSlot = slot;
+                ShowMessage($"You wear the {ItemName(item)}.");
+                IdentifyOnEquip(slot);
                 return;
             default:
                 ShowMessage($"You cannot use the {archetype.DisplayName} here.");
@@ -401,7 +417,7 @@ public sealed partial class RunSession
                 if (Player.Inventory.TryAdd(item.Item, _rules.IsStackable(item.Item.ArchetypeId)))
                 {
                     _groundItems.Remove(item);
-                    ShowMessage($"You pick up the {archetype.DisplayName}.");
+                    ShowMessage($"You pick up the {ItemName(item.Item)}.");
                 }
                 else
                 {
@@ -484,7 +500,11 @@ public sealed partial class RunSession
     private void TickEffects()
     {
         int playerDamage = Player.Body.Effects.Tick(Player.Body.Hp);
-        if (playerDamage > 0)
+        if (playerDamage < 0)
+        {
+            Player.Body.Hp = Math.Min(Player.Body.MaxHp, Player.Body.Hp - playerDamage);
+        }
+        else if (playerDamage > 0)
         {
             HurtPlayer(playerDamage);
             ShowMessage($"You suffer {playerDamage} damage.");
@@ -605,33 +625,12 @@ public sealed partial class RunSession
         DropItem(Fresh(archetype), tileX, tileY);
     }
 
-    /// <summary>A newly found item: a bundle of its stack size, a wand at full charge.</summary>
-    private static ItemInstance Fresh(ItemArchetype archetype) =>
-        new(archetype.Id, Math.Max(1, archetype.StackSize), archetype.Charges);
-
     private (int X, int Y) TileInFront(float distance)
     {
         ActorState body = Player.Body;
         float facingX = MathF.Sin(body.Facing);
         float facingY = -MathF.Cos(body.Facing);
         return (TileAt(body.X + (facingX * distance)), TileAt(body.Y + (facingY * distance)));
-    }
-
-    /// <summary>Armor class from the player's gear only; the defense stat is added by the resolver.</summary>
-    private int GearArmorClass()
-    {
-        int armor = 0;
-        if (Player.Equipment.ArmorItemId is string armorId && _rules.Item(armorId) is ItemArchetype armorItem)
-        {
-            armor += armorItem.Power;
-        }
-
-        if (Player.Equipment.HelmetItemId is string helmetId && _rules.Item(helmetId) is ItemArchetype helmetItem)
-        {
-            armor += helmetItem.Power;
-        }
-
-        return armor;
     }
 
     private void ShowMessage(string text) => _messages.Add(new RunMessage(text, MessageDurationTicks));

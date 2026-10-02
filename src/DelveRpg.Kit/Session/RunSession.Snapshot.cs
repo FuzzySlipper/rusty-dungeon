@@ -6,13 +6,39 @@ using DelveRpg.Kit.World;
 namespace DelveRpg.Kit.Session;
 
 /// <summary>Serializable shape of one slot at a save boundary.</summary>
-public sealed record SnapshotSlot(string? ArchetypeId, int Count, int Charges = 0);
+public sealed record SnapshotSlot(string? ArchetypeId, int Count, int Charges = 0)
+{
+    public int Condition { get; init; }
+
+    public string? Prefix { get; init; }
+
+    public string? Suffix { get; init; }
+
+    public bool Unidentified { get; init; }
+
+    public int Wear { get; init; }
+
+    public int ItemLevel { get; init; }
+}
 
 /// <summary>Serializable shape of one monster at a save boundary.</summary>
 public sealed record SnapshotMonster(string ArchetypeId, float X, float Y, int Hp, float Facing, int Level = 0);
 
 /// <summary>Serializable shape of one floor item at a save boundary.</summary>
-public sealed record SnapshotGroundItem(string ArchetypeId, int Count, int X, int Y, int Charges = 0);
+public sealed record SnapshotGroundItem(string ArchetypeId, int Count, int X, int Y, int Charges = 0)
+{
+    public int Condition { get; init; }
+
+    public string? Prefix { get; init; }
+
+    public string? Suffix { get; init; }
+
+    public bool Unidentified { get; init; }
+
+    public int Wear { get; init; }
+
+    public int ItemLevel { get; init; }
+}
 
 /// <summary>Serializable shape of one floor at a save boundary.</summary>
 public sealed record SnapshotFloor(
@@ -62,6 +88,16 @@ public sealed record RunSnapshot(
 {
     /// <summary>The floor's traps, triggers and pots; null in saves from before they existed.</summary>
     public IReadOnlyList<SnapshotFeature>? Features { get; init; }
+
+    public int ArmorSlot { get; init; } = -1;
+
+    public int HelmetSlot { get; init; } = -1;
+
+    /// <summary>Uniques already found this run.</summary>
+    public IReadOnlyList<string>? SpawnedUniques { get; init; }
+
+    /// <summary>Potion effects identified this run.</summary>
+    public IReadOnlyList<string>? KnownPotions { get; init; }
 }
 
 public sealed partial class RunSession
@@ -87,6 +123,14 @@ public sealed partial class RunSession
         {
             slots[i] = Player.Inventory.Slot(i) is ItemInstance item
                 ? new SnapshotSlot(item.ArchetypeId, item.Count, item.Charges)
+                {
+                    Condition = (int)item.Condition,
+                    Prefix = item.Prefix,
+                    Suffix = item.Suffix,
+                    Unidentified = item.Unidentified,
+                    Wear = item.Wear,
+                    ItemLevel = item.ItemLevel,
+                }
                 : new SnapshotSlot(null, 0);
         }
 
@@ -131,11 +175,23 @@ public sealed partial class RunSession
                 monster.Body.Facing,
                 monster.Level)).ToList(),
             GroundItems: _groundItems.Select(item => new SnapshotGroundItem(
-                item.Item.ArchetypeId, item.Item.Count, item.X, item.Y, item.Item.Charges)).ToList(),
+                item.Item.ArchetypeId, item.Item.Count, item.X, item.Y, item.Item.Charges)
+            {
+                Condition = (int)item.Item.Condition,
+                Prefix = item.Item.Prefix,
+                Suffix = item.Item.Suffix,
+                Unidentified = item.Item.Unidentified,
+                Wear = item.Item.Wear,
+                ItemLevel = item.Item.ItemLevel,
+            }).ToList(),
             LevelUpOffers: LevelUpOffers.ToList(),
             LevelUpCursor: LevelUpCursor)
         {
             Features = CaptureFeatures(),
+            ArmorSlot = Player.ArmorSlot,
+            HelmetSlot = Player.HelmetSlot,
+            SpawnedUniques = _spawnedUniques.ToList(),
+            KnownPotions = _knownPotions.Select(effect => effect.ToString()).ToList(),
         };
     }
 
@@ -196,7 +252,7 @@ public sealed partial class RunSession
             SnapshotSlot slot = snapshot.Slots[i];
             player.Inventory.RestoreSlot(
                 i,
-                slot.ArchetypeId is null ? null : new ItemInstance(slot.ArchetypeId, slot.Count, slot.Charges));
+                slot.ArchetypeId is null ? null : RestoreItem(slot.ArchetypeId, slot.Count, slot.Charges, slot.Condition, slot.Prefix, slot.Suffix, slot.Unidentified, slot.Wear, slot.ItemLevel));
         }
 
         if (player.WieldedSlot < -1 || player.WieldedSlot >= player.Inventory.Capacity
@@ -205,8 +261,35 @@ public sealed partial class RunSession
             player.WieldedSlot = -1;
         }
 
+        player.ArmorSlot = ValidSlot(player, snapshot.ArmorSlot, snapshot.ArmorItemId);
+        player.HelmetSlot = ValidSlot(player, snapshot.HelmetSlot, snapshot.HelmetItemId);
         return player;
     }
+
+    /// <summary>A saved equipment slot that still holds its item; else the first slot that does.</summary>
+    private static int ValidSlot(PlayerState player, int slot, string? itemId)
+    {
+        if (itemId is null)
+        {
+            return -1;
+        }
+
+        return slot >= 0 && slot < player.Inventory.Capacity && player.Inventory.Slot(slot)?.ArchetypeId == itemId
+            ? slot
+            : player.Inventory.Find(itemId);
+    }
+
+    private static ItemInstance RestoreItem(
+        string archetypeId, int count, int charges, int condition, string? prefix, string? suffix, bool unidentified, int wear, int itemLevel) =>
+        new(archetypeId, count, charges)
+        {
+            Condition = Enum.IsDefined((ItemCondition)condition) ? (ItemCondition)condition : ItemCondition.Normal,
+            Prefix = prefix,
+            Suffix = suffix,
+            Unidentified = unidentified,
+            Wear = Math.Max(0, wear),
+            ItemLevel = Math.Max(0, itemLevel),
+        };
 
     private void RestoreFloor(RunSnapshot snapshot)
     {
@@ -263,7 +346,11 @@ public sealed partial class RunSession
                 continue;
             }
 
-            _groundItems.Add(new GroundItem(_nextActorId++, new ItemInstance(item.ArchetypeId, item.Count, item.Charges), item.X, item.Y));
+            _groundItems.Add(new GroundItem(
+                _nextActorId++,
+                RestoreItem(item.ArchetypeId, item.Count, item.Charges, item.Condition, item.Prefix, item.Suffix, item.Unidentified, item.Wear, item.ItemLevel),
+                item.X,
+                item.Y));
         }
 
         EscapePressureTicks = snapshot.EscapePressureTicks;

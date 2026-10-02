@@ -6,6 +6,24 @@ namespace DelveRpg.Kit.Inventory;
 /// </summary>
 public readonly record struct ItemInstance(string ArchetypeId, int Count, int Charges = 0)
 {
+    /// <summary>Wear and tear; a default instance is in normal condition.</summary>
+    public Rules.ItemCondition Condition { get; init; }
+
+    /// <summary>The prefix enchantment's id, if any.</summary>
+    public string? Prefix { get; init; }
+
+    /// <summary>The suffix enchantment's id, if any.</summary>
+    public string? Suffix { get; init; }
+
+    /// <summary>Its enchantments are not yet known; unknown mods do nothing ([donor] Item.java:748).</summary>
+    public bool Unidentified { get; init; }
+
+    /// <summary>Uses since its condition last dropped.</summary>
+    public int Wear { get; init; }
+
+    /// <summary>The level it was found at; enchantments and damage grow with it.</summary>
+    public int ItemLevel { get; init; }
+
     public static ItemInstance One(string archetypeId) => new(archetypeId, 1);
 }
 

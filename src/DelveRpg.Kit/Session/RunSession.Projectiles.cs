@@ -49,16 +49,17 @@ public sealed partial class RunSession
 
         string ammoId = Player.Inventory.Slot(ammoSlot)!.Value.ArchetypeId;
         ItemArchetype ammo = _rules.Item(ammoId)!;
-        float knockback = bow.Knockback * attackPower;
+        WeaponNumbers numbers = WieldedNumbers(bow);
+        float knockback = (bow.Knockback + numbers.KnockbackBonus) * attackPower;
         Player.Inventory.TryConsumeOne(ammoSlot);
         int damage = Math.Max(1, CombatResolver.WeaponDamage(
-            _random, bow.Power, bow.RandDamage, Player.Body.Stats.Attack, attackPower));
+            _random, numbers.BaseDamage, numbers.RandDamage, EffectiveStats().Attack, attackPower)) + numbers.ElementalDamage;
         LaunchFromPlayer(
             attackPower * bow.Range / 8f,
             0f,
             floating: false,
             damage,
-            bow.DamageType,
+            numbers.DamageType,
             ammo.ProjectileSpriteId.Length > 0 ? ammo.ProjectileSpriteId : ammo.SpriteId,
             ammoId,
             knockback);
@@ -82,7 +83,7 @@ public sealed partial class RunSession
             return;
         }
 
-        int randDamage = wand.RandDamage + Math.Max(0, Player.Body.Stats.Magic - 4);
+        int randDamage = wand.RandDamage + Math.Max(0, EffectiveStats().Magic - 4);
         int damage = wand.Power + _random.Next(0, randDamage + 1);
         float scatter = (1f - Math.Clamp(wand.Accuracy, 0f, 1f)) * 45f;
         float spread = scatter <= 0f ? 0f : _random.Next(0, 1000) / 1000f * scatter;
@@ -267,7 +268,7 @@ public sealed partial class RunSession
                 return false;
             }
 
-            HurtPlayer(projectile.Damage);
+            HurtPlayer(projectile.Damage, projectile.DamageType);
             ElementalEffects.ApplyOnHit(projectile.DamageType, player.Effects, _random);
             ShowMessage($"A bolt hits you for {projectile.Damage}.");
             return true;

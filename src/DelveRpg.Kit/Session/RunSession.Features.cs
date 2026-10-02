@@ -237,7 +237,7 @@ public sealed partial class RunSession
 
         if (DistanceSquared(x, y, Player.Body.X, Player.Body.Y) <= radius * radius)
         {
-            HurtPlayer(damage);
+            HurtPlayer(damage, damageType);
             ElementalEffects.ApplyOnHit(damageType, Player.Body.Effects, _random);
             ShowMessage($"The blast hits you for {damage}.");
         }

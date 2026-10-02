@@ -34,6 +34,43 @@ public sealed class DelverContentPack
     /// actionTime). Weapons name a style with <c>swing</c>.
     /// </summary>
     public Dictionary<string, DelverSwingStyle> SwingStyles { get; set; } = new();
+
+    /// <summary>
+    /// Prefix and suffix enchantments for weapons and armor ([data] items.dat
+    /// weaponEnchantments, weaponPrefixEnchantments, armorEnchantments,
+    /// armorPrefixEnchantments).
+    /// </summary>
+    public List<DelverEnchantment> Enchantments { get; set; } = new();
+
+    /// <summary>The potion items whose effects are shuffled across them each run, in order.</summary>
+    public List<string> PotionColours { get; set; } = new();
+}
+
+/// <summary>One enchantment, or a unique's fixed mods (then its id and slot are ignored).</summary>
+public sealed class DelverEnchantment
+{
+    public string Id { get; set; } = "";
+
+    public required string Name { get; init; }
+
+    /// <summary>weaponPrefix, weaponSuffix, armorPrefix or armorSuffix.</summary>
+    public string Slot { get; set; } = "weaponSuffix";
+
+    public int AttackMod { get; init; }
+
+    public int ArmorMod { get; init; }
+
+    public int MagicMod { get; init; }
+
+    public int MoveSpeedMod { get; init; }
+
+    public int DamageMod { get; init; }
+
+    public float AttackSpeedMod { get; init; }
+
+    public float KnockbackMod { get; init; }
+
+    public string DamageType { get; set; } = "Physical";
 }
 
 public sealed class DelverSwingStyle
@@ -171,6 +208,15 @@ public sealed class DelverItemDefinition
 
     /// <summary>A swing style from the pack's swingStyles; empty for none.</summary>
     public string Swing { get; set; } = "";
+
+    /// <summary>Uses before its condition drops a step (donor durability, 25 by default).</summary>
+    public int Durability { get; set; } = 25;
+
+    /// <summary>A unique: found once a run from monster loot, never enchanted.</summary>
+    public bool Unique { get; init; }
+
+    /// <summary>A unique's fixed mods (donor baseMods).</summary>
+    public DelverEnchantment? BaseMods { get; init; }
 
     /// <summary>A bow's range (donor Bow.range).</summary>
     public int Range { get; init; }

@@ -1,5 +1,6 @@
 using DelveRpg.Kit.Actors;
 using DelveRpg.Kit.Combat;
+using DelveRpg.Kit.Effects;
 
 namespace DelveRpg.Kit.Session;
 
@@ -69,12 +70,23 @@ public sealed partial class RunSession
         }
     }
 
-    /// <summary>Damage the player from any source: the hit points drop and the screen flashes.</summary>
-    private void HurtPlayer(int damage)
+    /// <summary>
+    /// Damage the player from any source: Iron Skin halves physical damage
+    /// and Resist Magic the rest (the donor's damageMod / magicDamageMod,
+    /// [donor] entities/Actor.java:184-199); the hit points drop and the
+    /// screen flashes.
+    /// </summary>
+    private void HurtPlayer(int damage, DamageType damageType = DamageType.Physical)
     {
         if (damage <= 0)
         {
             return;
+        }
+
+        EffectKind ward = damageType == DamageType.Physical ? EffectKind.IronSkin : EffectKind.MagicResist;
+        if (Player.Body.Effects.IsActive(ward))
+        {
+            damage = Math.Max(1, damage / 2);
         }
 
         Player.Body.Hp = Math.Max(0, Player.Body.Hp - damage);
