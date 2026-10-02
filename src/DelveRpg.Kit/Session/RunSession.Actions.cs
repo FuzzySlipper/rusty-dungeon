@@ -15,7 +15,17 @@ public sealed partial class RunSession
     {
         ActorState body = Player.Body;
         ItemArchetype? weapon = Player.Equipment.WeaponItemId is string weaponId ? _rules.Item(weaponId) : null;
-        int chargeTicks = weapon?.ChargeTicks ?? _tuning.AttackChargeTicks;
+        AdvanceSwing(weapon);
+
+        // The donor has no unarmed attack: an empty hand neither charges nor
+        // swings ([donor] entities/Player.java:1597 Attack, gfx/GlRenderer.java:2014).
+        if (weapon is null || weapon.Kind is not (ItemKind.Weapon or ItemKind.RangedWeapon or ItemKind.Wand))
+        {
+            Player.AttackCharge = 0;
+            return;
+        }
+
+        int chargeTicks = weapon.ChargeTicks;
 
         // An auto-fire wand zaps for as long as the attack is held, a bolt
         // per its fire interval ([donor] entities/Player.java:1215, 1243-1249).
@@ -27,6 +37,7 @@ public sealed partial class RunSession
                 _attackedThisTick = true;
                 ZapWand(weapon);
                 body.AttackCooldownRemaining = weapon.AutoFireTicks;
+                Player.Swing = new SwingState(false, 1f, weapon.AutoFireTicks, 0, landed: true);
             }
 
             return;
@@ -41,26 +52,83 @@ public sealed partial class RunSession
             {
                 Player.AttackCharge = Math.Min(chargeTicks, Player.AttackCharge + 1);
             }
-        }
-        else if (Player.AttackCharge > 0)
-        {
-            _attackedThisTick = true;
-            float attackPower = Player.AttackCharge / (float)Math.Max(1, chargeTicks);
-            switch (weapon?.Kind)
-            {
-                case ItemKind.RangedWeapon:
-                    ShootBow(weapon, attackPower);
-                    break;
-                case ItemKind.Wand:
-                    ZapWand(weapon);
-                    break;
-                default:
-                    SwingWeapon(weapon, attackPower);
-                    break;
-            }
 
-            Player.AttackCharge = 0;
-            body.AttackCooldownRemaining = _tuning.AttackCooldownTicks;
+            return;
+        }
+
+        if (Player.AttackCharge == 0)
+        {
+            return;
+        }
+
+        _attackedThisTick = true;
+        float attackPower = Player.AttackCharge / (float)Math.Max(1, chargeTicks);
+        Player.AttackCharge = 0;
+        StartSwing(weapon, attackPower);
+    }
+
+    /// <summary>
+    /// Release an attack. A bow or wand fires at once; a melee weapon starts
+    /// its swing, whose blow lands partway through (<see cref="AdvanceSwing"/>).
+    /// The quick swing plays below half charge and the full one from half up,
+    /// at playback <c>speed × 0.25 + (DEX − 4) × 0.015</c>; the next attack waits
+    /// three quarters of the swing ([donor] entities/Player.java:1566-1581,
+    /// items/Sword.java:56-69). Bows set no wait, as in the donor.
+    /// </summary>
+    private void StartSwing(ItemArchetype weapon, float attackPower)
+    {
+        ActorState body = Player.Body;
+        bool strong = attackPower >= 0.5f && weapon.StrongSwing is not null;
+        SwingTiming? timing = strong ? weapon.StrongSwing : weapon.WeakSwing;
+        float playback = Math.Max(0.05f, (weapon.Speed * 0.25f) + ((body.Stats.Dexterity - 4) * 0.015f));
+        int length = timing is null ? _tuning.AttackCooldownTicks : (int)MathF.Round(timing.Length / playback);
+        int cooldown = timing is null ? _tuning.AttackCooldownTicks : (int)MathF.Round(length * 0.75f);
+
+        switch (weapon.Kind)
+        {
+            case ItemKind.RangedWeapon:
+                ShootBow(weapon, attackPower);
+                Player.Swing = new SwingState(strong, attackPower, length, 0, landed: true);
+                body.AttackCooldownRemaining = 0;
+                return;
+            case ItemKind.Wand:
+                ZapWand(weapon);
+                Player.Swing = new SwingState(strong, attackPower, length, 0, landed: true);
+                body.AttackCooldownRemaining = cooldown;
+                return;
+        }
+
+        if (timing is null)
+        {
+            // A weapon without swing timing strikes on release.
+            SwingWeapon(weapon, attackPower);
+            body.AttackCooldownRemaining = cooldown;
+            return;
+        }
+
+        int hitAt = Math.Max(1, (int)MathF.Round(timing.ActionTime / playback * 0.5f));
+        Player.Swing = new SwingState(strong, attackPower, length, hitAt, landed: false);
+        body.AttackCooldownRemaining = cooldown;
+    }
+
+    /// <summary>Play the current swing on by a tick; its blow lands at the action time.</summary>
+    private void AdvanceSwing(ItemArchetype? weapon)
+    {
+        if (Player.Swing is not SwingState swing)
+        {
+            return;
+        }
+
+        swing.ElapsedTicks++;
+        if (!swing.Landed && swing.ElapsedTicks >= swing.HitAtTicks)
+        {
+            swing.Landed = true;
+            SwingWeapon(weapon, swing.Power);
+        }
+
+        if (swing.ElapsedTicks >= swing.LengthTicks && swing.Landed)
+        {
+            Player.Swing = null;
         }
     }
 
@@ -73,9 +141,8 @@ public sealed partial class RunSession
             return;
         }
 
-        // Bare hands hit for a point; the donor has no unarmed swing at all.
         int damage = CombatResolver.WeaponDamage(
-            _random, weapon?.Power ?? 1, weapon?.RandDamage ?? 0, Player.Body.Stats.Attack, attackPower);
+            _random, weapon?.Power ?? 0, weapon?.RandDamage ?? 0, Player.Body.Stats.Attack, attackPower);
 
         // The donor shoves along the facing times the distance the blow
         // landed at, at most the weapon's reach ([donor] items/Sword.java:95-100).

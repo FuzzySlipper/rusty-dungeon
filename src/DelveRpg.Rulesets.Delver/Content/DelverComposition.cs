@@ -174,6 +174,7 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
         Sections = left.Sections.Concat(right.Sections).ToList(),
         Loot = left.Loot.Concat(right.Loot).ToList(),
         StartingKit = left.StartingKit.Concat(right.StartingKit).ToList(),
+        SwingStyles = left.SwingStyles.Concat(right.SwingStyles).ToDictionary(entry => entry.Key, entry => entry.Value),
     };
 
     /// <summary>All-or-nothing validation at load; a bad pack fails the load, not a run.</summary>
@@ -218,6 +219,11 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
             if (DelverCatalog.TryParseDamageType(item.DamageType) is null)
             {
                 problems.Add($"item '{item.Id}' names unknown damage type '{item.DamageType}'");
+            }
+
+            if (item.Swing.Length > 0 && !pack.SwingStyles.ContainsKey(item.Swing))
+            {
+                problems.Add($"item '{item.Id}' names unknown swing style '{item.Swing}'");
             }
 
             if (string.Equals(item.Kind, "RangedWeapon", StringComparison.OrdinalIgnoreCase) && item.Range <= 0)

@@ -1,0 +1,29 @@
+{
+  "schema": "delve.art.held.v1",
+  "description": "Held-weapon animation shapes, authored for this product (not copied from the donor): a charge pose reached as the charge fills, and a quick and a full swing played over the swing's length from the Kit. The donor's keyframed clips (data/animations.dat daggerCharge/daggerAttack/daggerAttackStrong, sword*, mace*, bow*, wand*) set the kind of motion: the dagger stabs then slashes, the sword sweeps, the mace chops down. Each swing peaks where its blow lands (actionTime / length x 0.5). Keyframe t runs 0..1 over the clip; right/up/forward offset the rest pose in tiles of the camera-local viewmodel space; roll and pitch are degrees. A swing's first keyframe is replaced by the pose it was released from.",
+  "styles": {
+    "dagger": {
+      "charge": [ { "t": 0 }, { "t": 1, "up": 0.06, "forward": -0.1, "roll": 35, "pitch": 10 } ],
+      "weak": [ { "t": 0 }, { "t": 0.33, "right": -0.08, "up": 0.04, "forward": 0.22, "roll": -10, "pitch": -15 }, { "t": 0.5, "right": -0.08, "up": 0.03, "forward": 0.2, "roll": -10 }, { "t": 1 } ],
+      "strong": [ { "t": 0 }, { "t": 0.15, "right": 0.06, "up": 0.1, "forward": -0.02, "roll": 45 }, { "t": 0.3, "right": -0.1, "up": 0.04, "forward": 0.16, "roll": -30 }, { "t": 0.5, "right": -0.26, "up": -0.06, "forward": 0.1, "roll": -85 }, { "t": 0.75, "right": -0.2, "up": -0.12, "roll": -60 }, { "t": 1 } ]
+    },
+    "sword": {
+      "charge": [ { "t": 0 }, { "t": 1, "up": 0.08, "forward": -0.12, "roll": 50, "pitch": 10 } ],
+      "weak": [ { "t": 0 }, { "t": 0.2, "right": 0.05, "up": 0.06, "roll": 30 }, { "t": 0.4, "right": -0.12, "up": 0.02, "forward": 0.18, "roll": -40 }, { "t": 0.6, "right": -0.28, "up": -0.08, "forward": 0.08, "roll": -95 }, { "t": 1 } ],
+      "strong": [ { "t": 0 }, { "t": 0.22, "right": -0.05, "up": 0.1, "forward": 0.2, "roll": 10 }, { "t": 0.4, "right": -0.2, "up": -0.04, "forward": 0.12, "roll": -80 }, { "t": 0.7, "right": -0.28, "up": -0.14, "roll": -110 }, { "t": 1 } ]
+    },
+    "mace": {
+      "charge": [ { "t": 0 }, { "t": 1, "up": 0.14, "forward": -0.08, "roll": 70, "pitch": 20 } ],
+      "weak": [ { "t": 0 }, { "t": 0.34, "right": -0.04, "up": -0.06, "forward": 0.2, "roll": -20, "pitch": -40 }, { "t": 0.6, "right": -0.04, "up": -0.12, "forward": 0.12, "roll": -25, "pitch": -50 }, { "t": 1 } ],
+      "strong": [ { "t": 0 }, { "t": 0.24, "up": -0.08, "forward": 0.24, "roll": -30, "pitch": -55 }, { "t": 0.6, "up": -0.16, "forward": 0.1, "roll": -35, "pitch": -60 }, { "t": 1 } ]
+    },
+    "bow": {
+      "charge": [ { "t": 0 }, { "t": 1, "right": -0.04, "up": 0.02, "forward": -0.08, "roll": 20 } ],
+      "weak": [ { "t": 0 }, { "t": 0.3, "up": 0.03, "forward": 0.04, "roll": 10 }, { "t": 1 } ]
+    },
+    "wand": {
+      "charge": [ { "t": 0 }, { "t": 1, "up": 0.04, "forward": -0.04, "roll": 15 } ],
+      "weak": [ { "t": 0 }, { "t": 0.3, "up": 0.02, "forward": 0.12, "roll": 10 }, { "t": 1 } ]
+    }
+  }
+}

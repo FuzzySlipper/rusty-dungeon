@@ -27,6 +27,28 @@ public sealed class DelverContentPack
     /// startingInventory).
     /// </summary>
     public List<string> StartingKit { get; set; } = new();
+
+    /// <summary>
+    /// Swing timings by style name, in the donor's animation units: each
+    /// style's quick and full swing (donor data/animations.dat lengths and
+    /// actionTime). Weapons name a style with <c>swing</c>.
+    /// </summary>
+    public Dictionary<string, DelverSwingStyle> SwingStyles { get; set; } = new();
+}
+
+public sealed class DelverSwingStyle
+{
+    public DelverSwingTiming? Weak { get; init; }
+
+    public DelverSwingTiming? Strong { get; init; }
+}
+
+public sealed class DelverSwingTiming
+{
+    public required float Length { get; init; }
+
+    /// <summary>The donor animation's actionTime (6 when the donor omits it).</summary>
+    public float ActionTime { get; set; } = 6f;
 }
 
 public sealed class DelverMonsterDefinition
@@ -143,6 +165,12 @@ public sealed class DelverItemDefinition
 
     /// <summary>How hard a full-power blow or shot shoves (donor knockback).</summary>
     public float Knockback { get; init; }
+
+    /// <summary>Donor weapon speed: scales swing playback.</summary>
+    public float Speed { get; set; } = 1f;
+
+    /// <summary>A swing style from the pack's swingStyles; empty for none.</summary>
+    public string Swing { get; set; } = "";
 
     /// <summary>A bow's range (donor Bow.range).</summary>
     public int Range { get; init; }

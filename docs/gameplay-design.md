@@ -93,11 +93,37 @@ Weapon `power` is the donor `baseDamage`, `randDamage` its random part, and
 items' ([data] `data/items.dat`: rusty dagger = Iron dagger 2+1, short sword =
 Steel shortsword 5+3, mace = Iron mace 2+2, hunting bow = Hunter's Bow 3+6 at
 speed 1.125, wand of sparks = Lesser missile wand 1+1; leather armor 3,
-chain mail = Chainmail 7, iron helmet = Iron cap 2). **Approximate:** an
-unarmed swing hits for 1 (the donor has no unarmed swing), and the cooldown
-after a swing is a flat `attackCooldownTicks` rather than the donor's
-animation-length wait. Item conditions/degradation
+chain mail = Chainmail 7, iron helmet = Iron cap 2). Item conditions/degradation
 ([donor] `entities/items/Item.java` `ItemCondition`) are **deferred**.
+
+**Swing cadence — faithful in timing.** A released swing plays out
+before its blow lands.
+- **Quick or full.** Below half charge it is the quick swing; from half up,
+  the full one ([donor] `entities/Player.java:1578-1581`).
+- **Timing.** It plays at `speed × 0.25 + (DEX − 4) × 0.015` (:1567), where
+  `speed` is the donor weapon speed. The blow lands at
+  `actionTime / playback × 0.5` ticks, and the next attack may start after
+  `0.75` of the swing's `length / playback` ([donor]
+  `entities/items/Sword.java:56-69`).
+- **Swing styles.** Each weapon names a style in the pack's `swingStyles`,
+  whose lengths and action times are the donor clips' ([data]
+  `data/animations.dat` `daggerAttack` 7.5/5, `daggerAttackStrong` 11.25/6.5,
+  `swordAttack` 12.5/10, `swordAttackStrong` 15.75/7, `maceAttack` 17.5/12,
+  `maceStrongAttack` 18.75/9). The dagger, sword and mace take the dagger,
+  sword and mace styles; [data] `items.dat` gives Steel shortsword the
+  sword clips.
+- **Example.** The rusty dagger's quick swing lasts 30 ticks at DEX 4 and
+  lands at tick 10. The next attack can follow at tick 22.
+- **Bows and wands.** A bow fires at release and sets no wait. A wand fires
+  at release and waits on its 2.5-length clip at the donor's default 0.5
+  speed (15 ticks); an auto-fire wand waits its fire interval.
+- **Charging.** Walking while charging slows by up to
+  `0.5 × (1.2 − DEX × 0.06)` (:879-884).
+- **No unarmed attack.** An empty hand neither charges nor swings, as in the
+  donor (:1597).
+
+**Approximate:** a weapon without a swing style strikes on release and
+waits the flat `attackCooldownTicks`; no shipped weapon lacks one.
 
 **Ranged weapons — approximate.** Bows, wands and casting monsters fire
 projectiles that the Kit flies over its own tile grid; the Engine only draws
@@ -483,6 +509,26 @@ cells, looped and drawn fullbright: `particles.png` 52–55 for the wand and
 a coloured point light (intensity 4, range 2.5) that is created, moved and
 disposed with it.
 
+**Held weapon — approximate.** The held weapon is posed from
+`content/delve/art/held.json`, with these clips per swing style:
+- a charge clip, followed by the charge fraction;
+- a quick and a full swing, played over the Kit's swing length. A swing
+  starts from the pose it was released from, as the donor blends a new clip
+  from the previous pose.
+
+Keyframes interpolate linearly, the donor `LerpedAnimation` default
+([donor] `gfx/animation/lerp3d/LerpedAnimation.java`, `Player.java:1374-1405`).
+The weapon follows the donor's head bob,
+`sin(tick × 0.319) × min(speed, 0.15) × 0.3`, at 0.55, and so does the camera
+([donor] `Player.java:582`, `gfx/GlRenderer.java:452, 2034`).
+
+**Deliberate divergence:** the keyframes are authored for this product.
+They are not the donor's `animations.dat` clips, which are its game data.
+They take the donor's kind of motion (the dagger stabs, then slashes; the
+sword sweeps; the mace chops down) and peak where each swing's blow lands.
+They move the sprite in the camera-local viewmodel layer by right/up/forward
+offsets, a roll and a pitch, rather than the donor's decal rotations.
+
 Sprites are lit by the scene's lights through a normal sheet per sprite sheet
 (`lighting.mode` `authored-normal`, strength 1.5). The normal sheets are
 derived offline by `scripts/derive-sprite-normals.py` — a dome over each
@@ -494,9 +540,7 @@ on atlas sprites, because the Engine's dome spans the whole atlas UV rather
 than the cell; authored normals give the soft rounded volume the donor's
 light-mapped billboards suggest. **Deliberate divergences:** lit normals
 rather than the donor's light-map tint, and whole cells rather than the
-donor's alpha-trimmed regions; the held weapon follows a simple charge-rise and
-cooldown-sweep pose instead of the donor's keyframed `daggerCharge` /
-`daggerAttack` animations ([data] `data/animations.dat`); the giant rat,
+donor's alpha-trimmed regions; the giant rat,
 ogre and stone golem have no donor monster and borrow the worm, zombie and
 eye art. Palette-mode sheets (armor.png) are expanded to RGBA when staged,
 since the Engine admits RGB/RGBA PNGs.

@@ -193,6 +193,8 @@
       "displayName": "rusty dagger",
       "kind": "Weapon",
       "sprite": "item.dagger",
+      "swing": "dagger",
+      "speed": 1.0,
       "knockback": 0.1,
       "power": 2,
       "randDamage": 1,
@@ -206,6 +208,8 @@
       "displayName": "short sword",
       "kind": "Weapon",
       "sprite": "item.sword",
+      "swing": "sword",
+      "speed": 1.0,
       "knockback": 0.2,
       "power": 5,
       "randDamage": 3,
@@ -219,6 +223,8 @@
       "displayName": "mace",
       "kind": "Weapon",
       "sprite": "item.mace",
+      "swing": "mace",
+      "speed": 1.0,
       "knockback": 0.4,
       "power": 2,
       "randDamage": 2,
@@ -232,6 +238,8 @@
       "displayName": "hunting bow",
       "kind": "RangedWeapon",
       "sprite": "item.bow",
+      "swing": "bow",
+      "speed": 1.125,
       "knockback": 0.2,
       "power": 3,
       "randDamage": 6,
@@ -246,6 +254,8 @@
       "displayName": "wand of sparks",
       "kind": "Wand",
       "sprite": "item.wand",
+      "swing": "wand",
+      "speed": 0.5,
       "knockback": 0.01,
       "power": 1,
       "randDamage": 1,
@@ -404,6 +414,13 @@
       "transitionLevel": { "theme": "Cold", "generated": true }
     }
   ],
+  "swingStyles": {
+    "dagger": { "weak": { "length": 7.5, "actionTime": 5 }, "strong": { "length": 11.25, "actionTime": 6.5 } },
+    "sword": { "weak": { "length": 12.5, "actionTime": 10 }, "strong": { "length": 15.75, "actionTime": 7 } },
+    "mace": { "weak": { "length": 17.5, "actionTime": 12 }, "strong": { "length": 18.75, "actionTime": 9 } },
+    "bow": { "weak": { "length": 3.0 } },
+    "wand": { "weak": { "length": 2.5 } }
+  },
   "startingKit": [
     "delve.item.rusty-dagger",
     "delve.item.leather-armor",

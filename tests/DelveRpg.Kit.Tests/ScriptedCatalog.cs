@@ -22,6 +22,12 @@ public sealed class ScriptedCatalog : IRulesCatalog
         _items["test.item.potion"] = new ItemArchetype("test.item.potion", "potion", ItemKind.Potion, 0, 0, 10, 3, "item.potion");
         _items["test.item.gold"] = new ItemArchetype("test.item.gold", "gold", ItemKind.Gold, 0, 0, 0, 25, "item.gold");
         _items["test.item.orb"] = new ItemArchetype("test.item.orb", "the orb", ItemKind.QuestOrb, 0, 0, 0, 0, "item.orb");
+        _items["test.item.dagger"] = new ItemArchetype("test.item.dagger", "dagger", ItemKind.Weapon, 2, 40, 0, 5, "item.dagger", 1)
+        {
+            SwingStyle = "dagger",
+            WeakSwing = new SwingTiming(7.5f, 5f),
+            StrongSwing = new SwingTiming(11.25f, 6.5f),
+        };
         _items["test.item.bow"] = new ItemArchetype("test.item.bow", "bow", ItemKind.RangedWeapon, 3, 36, 0, 25, "item.bow", 6)
         {
             Range = 8,

@@ -97,19 +97,47 @@ public sealed class DelveSpriteAssetsTests
     }
 
     [Fact]
-    public void The_held_weapon_rests_low_right_rises_on_charge_and_sweeps_on_the_blow()
+    public void The_shipped_dagger_rests_low_right_charges_back_stabs_on_the_quick_swing_and_returns()
     {
-        DelveSceneRenderer.HeldPose rest = DelveSceneRenderer.HeldWeaponPose(0f, 0f);
-        DelveSceneRenderer.HeldPose charged = DelveSceneRenderer.HeldWeaponPose(1f, 0f);
-        DelveSceneRenderer.HeldPose blow = DelveSceneRenderer.HeldWeaponPose(0f, 0.5f);
+        HeldAnimations held = HeldAnimations.Load(ShippedContent.Read);
 
+        HeldPose rest = held.Sample("dagger", 0f, null);
+        HeldPose charged = held.Sample("dagger", 1f, null);
+        Assert.Equal(HeldAnimations.RestPosition, rest.Position);
         Assert.True(rest.Position.X > 0f && rest.Position.Y < 0f && rest.Position.Z < 0f);
-        Assert.True(charged.Position.Y > rest.Position.Y);
+        Assert.True(charged.Position.Y > rest.Position.Y && charged.Position.Z > rest.Position.Z); // up and back
         Assert.True(charged.RollDegrees > rest.RollDegrees);
-        Assert.True(blow.Position.X < rest.Position.X);
-        Assert.True(blow.RollDegrees < rest.RollDegrees);
-        DelveSceneRenderer.HeldPose settled = DelveSceneRenderer.HeldWeaponPose(0f, 1f);
-        Assert.True(Vector3.Distance(rest.Position, settled.Position) < 0.001f);
+
+        // The quick swing starts from the released pose, reaches forward at
+        // its blow (a third of the way through) and comes back to rest.
+        var swing = new SwingState(strong: false, power: 0.25f, lengthTicks: 30, hitAtTicks: 10, landed: false);
+        Assert.Equal(held.Sample("dagger", 0.25f, null).Position, held.Sample("dagger", 0f, swing).Position);
+        swing.ElapsedTicks = 10;
+        Assert.True(held.Sample("dagger", 0f, swing).Position.Z < rest.Position.Z - 0.15f);
+        swing.ElapsedTicks = 30;
+        Assert.Equal(rest.Position, held.Sample("dagger", 0f, swing).Position);
+    }
+
+    [Fact]
+    public void Every_shipped_weapon_style_has_a_held_animation_and_unknown_styles_rest()
+    {
+        HeldAnimations held = HeldAnimations.Load(ShippedContent.Read);
+        foreach (string style in new[] { "dagger", "sword", "mace", "bow", "wand" })
+        {
+            Assert.NotEqual(HeldAnimations.RestPosition, held.Sample(style, 1f, null).Position);
+        }
+
+        Assert.Equal(HeldAnimations.RestPosition, held.Sample("nothing", 1f, null).Position);
+    }
+
+    [Fact]
+    public void The_head_bob_grows_with_walking_speed_and_vanishes_at_rest()
+    {
+        Assert.Equal(0f, HeldAnimations.HeadBob(0f, 5));
+        float slow = MathF.Abs(HeldAnimations.HeadBob(0.02f, 5));
+        float fast = MathF.Abs(HeldAnimations.HeadBob(0.06f, 5));
+        Assert.True(fast > slow && slow > 0f);
+        Assert.True(MathF.Abs(HeldAnimations.HeadBob(1f, 5)) <= 0.15f * 0.3f); // capped like the donor's
     }
 }
 

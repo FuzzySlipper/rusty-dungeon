@@ -94,6 +94,9 @@ public sealed class PlayerState
     /// <summary>Ticks left on the red hurt flash; set whenever the player takes damage.</summary>
     public int HurtFlashRemaining { get; set; }
 
+    /// <summary>The swing or shot playing out, for its blow and for the held animation; null at rest.</summary>
+    public SwingState? Swing { get; set; }
+
     /// <summary>Which hotbar slot the wielded weapon lives in; −1 when bare-handed.</summary>
     public int WieldedSlot { get; set; } = -1;
 }
@@ -173,4 +176,37 @@ public enum MonsterBrainState
     Idle,
     Chasing,
     Fleeing,
+}
+
+/// <summary>
+/// One swing in progress. <see cref="Strong"/> picks the full-charge
+/// animation; <see cref="Power"/> is the charge it was released at;
+/// <see cref="HitAtTicks"/> is when the blow lands (already true of a shot,
+/// whose effect is immediate).
+/// </summary>
+public sealed class SwingState
+{
+    public SwingState(bool strong, float power, int lengthTicks, int hitAtTicks, bool landed)
+    {
+        Strong = strong;
+        Power = power;
+        LengthTicks = lengthTicks;
+        HitAtTicks = hitAtTicks;
+        Landed = landed;
+    }
+
+    public bool Strong { get; }
+
+    public float Power { get; }
+
+    public int LengthTicks { get; }
+
+    public int HitAtTicks { get; }
+
+    public int ElapsedTicks { get; set; }
+
+    public bool Landed { get; set; }
+
+    /// <summary>How far through the swing, 0 to 1.</summary>
+    public float Progress => LengthTicks <= 0 ? 1f : Math.Min(1f, ElapsedTicks / (float)LengthTicks);
 }

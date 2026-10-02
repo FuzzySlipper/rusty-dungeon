@@ -73,6 +73,10 @@ public sealed class DelverCatalog : IRulesCatalog
             {
                 DamageType = ParseDamageType(item.DamageType),
                 Knockback = item.Knockback,
+                Speed = item.Speed,
+                SwingStyle = item.Swing,
+                WeakSwing = Timing(pack, item.Swing, strong: false),
+                StrongSwing = Timing(pack, item.Swing, strong: true),
                 Range = item.Range,
                 Charges = item.Charges,
                 AutoFireTicks = item.AutoFireTicks,
@@ -132,6 +136,12 @@ public sealed class DelverCatalog : IRulesCatalog
     public bool IsStackable(string id) =>
         _items.TryGetValue(id, out ItemArchetype? archetype)
         && archetype.Kind is ItemKind.Gold or ItemKind.Key or ItemKind.Potion or ItemKind.Food or ItemKind.Ammo;
+
+    private static SwingTiming? Timing(DelverContentPack pack, string style, bool strong) =>
+        pack.SwingStyles.TryGetValue(style, out DelverSwingStyle? found)
+        && (strong ? found.Strong : found.Weak) is DelverSwingTiming timing
+            ? new SwingTiming(timing.Length, timing.ActionTime)
+            : null;
 
     /// <summary>A damage type name, or null when the name is not one.</summary>
     public static DamageType? TryParseDamageType(string name) =>

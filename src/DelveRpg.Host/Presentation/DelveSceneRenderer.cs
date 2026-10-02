@@ -59,6 +59,7 @@ public sealed class DelveSceneRenderer : IDisposable
     private readonly Material _material;
     private readonly DelveArtAssets _art;
     private readonly DelveSpriteAssets _sprites;
+    private readonly HeldAnimations _held;
     private readonly IRulesCatalog _rules;
     private readonly Dictionary<ulong, Appearance> _actorAppearances = new();
     private readonly Dictionary<ulong, uint> _spriteFrames = new();
@@ -80,6 +81,7 @@ public sealed class DelveSceneRenderer : IDisposable
         _rules = rules;
         _art = DelveArtAssets.Load(engine, readText, contentExists);
         _sprites = DelveSpriteAssets.Load(engine, readText, contentExists);
+        _held = HeldAnimations.Load(readText);
         _material = engine.Graphics.CreateMaterial(new MaterialRequest(
             new Color(1f, 1f, 1f, 1f),
             default,
@@ -147,7 +149,7 @@ public sealed class DelveSceneRenderer : IDisposable
             _camera,
             new CameraDescriptor(
                 new CameraPose(
-                    new Vector3(player.X, eyeHeight, player.Y),
+                    new Vector3(player.X, eyeHeight + HeldAnimations.HeadBob(session.PlayerSpeed, session.ElapsedTicks), player.Y),
                     player.PitchDegrees,
                     player.Facing * (180.0 / Math.PI)),
                 CameraBasisMode.Derived,
@@ -377,9 +379,10 @@ public sealed class DelveSceneRenderer : IDisposable
     /// <summary>
     /// The wielded weapon, drawn camera-local in the viewmodel layer (the
     /// donor's drawHeldItem, [donor] gfx/GlRenderer.java): it sits low and to
-    /// the right, rises and pulls back while a swing charges, and sweeps
-    /// across through the attack cooldown. Without a weapon or its art the
-    /// hand is empty.
+    /// the right, takes its style's charge pose as the charge fills, plays the
+    /// quick or full swing over the Kit's swing, and bobs with the walk
+    /// (<see cref="HeldAnimations"/>). Without a weapon or its art the hand is
+    /// empty.
     /// </summary>
     private void AddHeldWeapon(RunSession session, GameTuning tuning, List<AppearanceFact> facts, HashSet<ulong> live)
     {
@@ -413,15 +416,21 @@ public sealed class DelveSceneRenderer : IDisposable
             sprite.Material)));
         ShowFrame(WeaponObjectId, appearance, sprite, (uint)sprite.Definition.Frame);
 
-        HeldPose pose = HeldWeaponPose(
+        HeldPose pose = _held.Sample(
+            weapon.SwingStyle,
             player.AttackCharge / (float)Math.Max(1, weapon.ChargeTicks),
-            player.Body.AttackCooldownRemaining / (float)Math.Max(1, tuning.AttackCooldownTicks));
+            player.Swing);
+        float bob = HeldAnimations.HeadBob(session.PlayerSpeed, session.ElapsedTicks) * HeldAnimations.WeaponBobShare;
         float roll = (sprite.Definition.HeldRoll + pose.RollDegrees) * (MathF.PI / 180f);
+        float pitch = pose.PitchDegrees * (MathF.PI / 180f);
         facts.Add(new AppearanceFact(
             WeaponObjectId,
             false,
             0,
-            new Transform(pose.Position, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, roll), Vector3.One),
+            new Transform(
+                pose.Position - new Vector3(0f, bob, 0f),
+                Quaternion.CreateFromAxisAngle(Vector3.UnitX, pitch) * Quaternion.CreateFromAxisAngle(Vector3.UnitZ, roll),
+                Vector3.One),
             appearance,
             true,
             RenderLayer.Viewmodel));
@@ -699,24 +708,6 @@ public sealed class DelveSceneRenderer : IDisposable
     private const float HandLightIntensity = 1.5f;
     private const float BoltLightIntensity = 4f;
     private const float BoltLightRange = 2.5f;
-
-    /// <summary>Camera-local weapon pose; the viewmodel camera looks down -Z.</summary>
-    public readonly record struct HeldPose(Vector3 Position, float RollDegrees);
-
-    /// <summary>
-    /// Pose for a charge fraction (0..1, wind-up) and the remaining fraction
-    /// of the post-swing cooldown (1 just after the blow, 0 at rest).
-    /// </summary>
-    public static HeldPose HeldWeaponPose(float charge, float cooldownRemaining)
-    {
-        charge = Math.Clamp(charge, 0f, 1f);
-        float swing = MathF.Sin(Math.Clamp(cooldownRemaining, 0f, 1f) * MathF.PI);
-        var position = new Vector3(
-            0.30f - (0.28f * swing),
-            -0.28f + (0.10f * charge) - (0.04f * swing),
-            -0.62f + (0.10f * charge) - (0.12f * swing));
-        return new HeldPose(position, (25f * charge) - (75f * swing));
-    }
 
     private Appearance CreateWorldSprite(DelveSprite sprite, Color? tint = null) =>
         _engine.Graphics.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(

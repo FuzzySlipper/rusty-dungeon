@@ -5,8 +5,8 @@ using Xunit;
 
 namespace DelveRpg.Host.Tests;
 
-/// <summary>Every sprite id the shipped pack names is mapped by the shipped sprite manifest.</summary>
-public sealed class ShippedSpriteCoverageTests
+/// <summary>Reads the repository's shipped content tree.</summary>
+internal static class ShippedContent
 {
     private static string ContentRoot()
     {
@@ -21,11 +21,17 @@ public sealed class ShippedSpriteCoverageTests
             "content");
     }
 
-    private static string? Read(string path)
+    public static string? Read(string path)
     {
         string full = Path.Combine(ContentRoot(), path);
         return File.Exists(full) ? File.ReadAllText(full) : null;
     }
+}
+
+/// <summary>Every sprite id the shipped pack names is mapped by the shipped sprite manifest.</summary>
+public sealed class ShippedSpriteCoverageTests
+{
+    private static string? Read(string path) => ShippedContent.Read(path);
 
     [Fact]
     public void Items_monsters_and_their_projectiles_all_have_sprites()

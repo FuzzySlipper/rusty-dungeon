@@ -242,12 +242,15 @@ public sealed partial class RunSession
         body.Facing += DegreesToRadians(input.LookYawDegrees);
         body.PitchDegrees = Math.Clamp(body.PitchDegrees + input.LookPitchDegrees, -80f, 80f);
 
-        // Charging a swing slows the walk, like the donor's attack wind-up.
+        // Charging slows the walk by up to half, less for the dexterous
+        // ([donor] entities/Player.java:879-884).
         float speedMultiplier = Player.Body.Effects.SpeedMultiplier();
         if (Player.AttackCharge > 0)
         {
             int chargeTicks = Math.Max(1, _tuning.AttackChargeTicks);
-            speedMultiplier *= 1f - (0.5f * Math.Min(1f, Player.AttackCharge / (float)chargeTicks));
+            float charged = Math.Min(1f, Player.AttackCharge / (float)chargeTicks);
+            float dexterity = Math.Max(0f, 1.2f - (Player.Body.Stats.Dexterity * 0.06f));
+            speedMultiplier *= 1f - (0.5f * charged * dexterity);
         }
 
         bool paralyzed = Player.Body.Effects.IsParalyzed;
@@ -343,6 +346,9 @@ public sealed partial class RunSession
 
         return false;
     }
+
+    /// <summary>The player's walking speed this tick, in tiles per tick; the Host bobs the view with it.</summary>
+    public float PlayerSpeed => MathF.Sqrt((_velocityX * _velocityX) + (_velocityY * _velocityY));
 
     private static float DistanceSquared(float ax, float ay, float bx, float by) =>
         ((ax - bx) * (ax - bx)) + ((ay - by) * (ay - by));

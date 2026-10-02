@@ -43,13 +43,24 @@ public sealed class RangedContentTests
     }
 
     [Fact]
+    public void Shipped_weapons_carry_the_donor_swing_timings()
+    {
+        ItemArchetype dagger = Catalog.Item("delve.item.rusty-dagger")!;
+        Assert.Equal("dagger", dagger.SwingStyle);
+        Assert.Equal(new SwingTiming(7.5f, 5f), dagger.WeakSwing);
+        Assert.Equal(new SwingTiming(11.25f, 6.5f), dagger.StrongSwing);
+        Assert.Equal(0.5f, Catalog.Item("delve.item.wand-of-sparks")!.Speed);
+        Assert.Null(Catalog.Item("delve.item.hunting-bow")!.StrongSwing);
+    }
+
+    [Fact]
     public void An_unknown_damage_type_and_a_bow_without_range_are_named_at_load()
     {
         string pack = ContentFixtures.FixturePackJson.Replace(
             """{"id":"i.sword","displayName":"sword","kind":"Weapon","power":3},""",
             """
             {"id":"i.sword","displayName":"sword","kind":"Weapon","power":3,"damageType":"Plasma"},
-            {"id":"i.bow","displayName":"bow","kind":"RangedWeapon","power":3},
+            {"id":"i.bow","displayName":"bow","kind":"RangedWeapon","power":3,"swing":"lute"},
             """);
         var load = () => DelverComposition.Load(path => path switch
         {
@@ -63,5 +74,6 @@ public sealed class RangedContentTests
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(load);
         Assert.Contains("Plasma", error.Message, StringComparison.Ordinal);
         Assert.Contains("'i.bow' has no range", error.Message, StringComparison.Ordinal);
+        Assert.Contains("unknown swing style 'lute'", error.Message, StringComparison.Ordinal);
     }
 }

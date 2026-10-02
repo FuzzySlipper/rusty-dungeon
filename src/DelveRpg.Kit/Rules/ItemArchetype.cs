@@ -34,6 +34,21 @@ public sealed record ItemArchetype(
     string SpriteId,
     int RandDamage = 0)
 {
+    /// <summary>
+    /// The donor weapon speed: it scales the swing's playback
+    /// (<c>speed × 0.25 + (DEX − 4) × 0.015</c>) and so its timing.
+    /// </summary>
+    public float Speed { get; init; } = 1f;
+
+    /// <summary>The held-animation style the Host plays for this weapon ("dagger", "sword", ...).</summary>
+    public string SwingStyle { get; init; } = "";
+
+    /// <summary>The quick swing, below half charge; null for a weapon that does not swing.</summary>
+    public SwingTiming? WeakSwing { get; init; }
+
+    /// <summary>The full swing, from half charge up; null to always use the quick one.</summary>
+    public SwingTiming? StrongSwing { get; init; }
+
     /// <summary>How hard a full-power blow or shot shoves its target (donor knockback).</summary>
     public float Knockback { get; init; }
 
@@ -61,3 +76,12 @@ public sealed record ItemArchetype(
     /// <summary>The sprite a fired bolt or arrow flies as; empty when the item fires nothing.</summary>
     public string ProjectileSpriteId { get; init; } = "";
 }
+
+/// <summary>
+/// One swing's shape in the donor's animation units: its whole
+/// <see cref="Length"/> and the <see cref="ActionTime"/> the blow is keyed to.
+/// At playback speed <c>p</c> the swing lasts <c>Length / p</c> ticks, the blow
+/// lands <c>ActionTime / p × 0.5</c> ticks in, and the next attack may start
+/// after <c>0.75</c> of the swing ([donor] entities/items/Sword.java:56-69).
+/// </summary>
+public sealed record SwingTiming(float Length, float ActionTime);
