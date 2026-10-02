@@ -17,7 +17,8 @@ public readonly record struct RunInput(
     bool MenuConfirm,
     bool MenuCancel,
     bool MenuUp,
-    bool MenuDown)
+    bool MenuDown,
+    bool JumpPressed = false)
 {
     public static RunInput Idle => new(0f, 0f, 0f, 0f, false, false, 0, false, false, false, false, false, false);
 }

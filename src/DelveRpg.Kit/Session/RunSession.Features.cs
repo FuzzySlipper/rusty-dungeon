@@ -202,10 +202,10 @@ public sealed partial class RunSession
     /// </summary>
     private void ShootFromWall(float x, float y)
     {
-        float fromZ = _tuning.EyeHeight;
+        float fromZ = Level.FloorHeight(TileAt(x), TileAt(y)) + _tuning.EyeHeight;
         float dx = Player.Body.X - x;
         float dy = Player.Body.Y - y;
-        float dz = (_tuning.EyeHeight * 0.8f) - fromZ;
+        float dz = Player.Body.Z + (_tuning.EyeHeight * 0.8f) - fromZ;
         float length = MathF.Sqrt((dx * dx) + (dy * dy) + (dz * dz));
         if (length <= 0.0001f)
         {
@@ -390,15 +390,10 @@ public sealed partial class RunSession
     /// <summary>A projectile meeting a pot breaks it a little and is spent.</summary>
     private bool StrikePot(Projectile projectile)
     {
-        if (projectile.Z > 0.5f)
-        {
-            return false;
-        }
-
         float reach = PotRadius + ProjectileRadius;
         foreach (Pot pot in _pots)
         {
-            if (DistanceSquared(projectile.X, projectile.Y, pot.X, pot.Y) <= reach * reach)
+            if (projectile.Z <= Level.StandHeight(pot.TileX, pot.TileY) + 0.5f && DistanceSquared(projectile.X, projectile.Y, pot.X, pot.Y) <= reach * reach)
             {
                 DamagePot(pot, projectile.Damage);
                 if (projectile.AmmoItemId is string ammoId)

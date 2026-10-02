@@ -19,6 +19,11 @@
   "wallBoltRoomChance": 0.1,
   "potChance": 0.03,
   "decorChance": 0.05,
+  "roomTemplateChance": 0.35,
+  "stepHeight": 0.35,
+  "jumpVelocity": 0.05,
+  "gravity": 0.0035,
+  "waterDrag": 0.04,
   "seenRadius": 5,
   "startingGold": 40,
   "eyeHeight": 0.5

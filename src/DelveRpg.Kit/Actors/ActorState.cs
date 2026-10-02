@@ -40,6 +40,15 @@ public sealed class ActorState
     /// <summary>Look pitch in degrees; the player's alone is meaningful.</summary>
     public float PitchDegrees { get; set; }
 
+    /// <summary>Height of the feet above the start's ground level, in tiles.</summary>
+    public float Z { get; set; }
+
+    /// <summary>Vertical velocity in tiles per tick; the player's alone jumps and falls.</summary>
+    public float VelocityZ { get; set; }
+
+    /// <summary>True while standing on the floor rather than in the air.</summary>
+    public bool Grounded { get; set; } = true;
+
     public int Hp { get; set; }
 
     public int MaxHp { get; set; }

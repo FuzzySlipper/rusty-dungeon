@@ -20,6 +20,7 @@ public sealed class DelverCatalog : IRulesCatalog
     private readonly Dictionary<string, ItemModification> _modifications;
     private readonly List<string> _potionColours;
     private readonly Dictionary<string, List<DelverDecor>> _decor;
+    private readonly Dictionary<string, List<DelverRoomTemplate>> _roomTemplates;
 
     public DelverCatalog(DelverContentPack pack)
     {
@@ -27,6 +28,7 @@ public sealed class DelverCatalog : IRulesCatalog
         _loot = pack.Loot;
         _potionColours = pack.PotionColours;
         _decor = pack.Decor;
+        _roomTemplates = pack.RoomTemplates;
         _modifications = pack.Enchantments.ToDictionary(enchantment => enchantment.Id, ToModification, StringComparer.Ordinal);
         _itemDefinitions = pack.Items.ToDictionary(item => item.Id, StringComparer.Ordinal);
         _monsters = pack.Monsters.ToDictionary(
@@ -122,6 +124,15 @@ public sealed class DelverCatalog : IRulesCatalog
         _items.Values.Where(item => item.Unique).Select(item => item.Id).ToList();
 
     public IReadOnlyList<string> PotionColourIds => _potionColours;
+
+    public IReadOnlyList<Kit.World.RoomTemplate> RoomTemplatesFor(string theme) =>
+        new[] { AnyTheme, theme }
+            .SelectMany(key => _roomTemplates.TryGetValue(key, out List<DelverRoomTemplate>? templates) ? templates : [])
+            .Select(template => new Kit.World.RoomTemplate(template.Id, template.Rows))
+            .ToList();
+
+    /// <summary>The room-template key every theme draws from.</summary>
+    public const string AnyTheme = "Any";
 
     public IReadOnlyList<Kit.World.DecorKind> DecorFor(string theme) =>
         _decor.TryGetValue(theme, out List<DelverDecor>? kinds)

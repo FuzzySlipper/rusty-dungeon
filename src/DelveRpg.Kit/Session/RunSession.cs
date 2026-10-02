@@ -313,7 +313,15 @@ public sealed partial class RunSession
             _velocityY = 0f;
         }
 
+        // Wading drags at the walk ([donor] entities/Player.java:614-616).
+        if (Level.At(body.TileX, body.TileY).Kind == TileKind.Water)
+        {
+            _velocityX *= 1f - _tuning.WaterDrag;
+            _velocityY *= 1f - _tuning.WaterDrag;
+        }
+
         MovePlayer(_velocityX, _velocityY);
+        TickVertical(input);
     }
 
     private void MovePlayer(float deltaX, float deltaY)
@@ -342,11 +350,92 @@ public sealed partial class RunSession
         CollectItemAtPlayerTile();
     }
 
-    private bool IsFree(float x, float y) =>
-        Level.IsWalkable(TileAt(x - BodyRadius), TileAt(y - BodyRadius))
-        && Level.IsWalkable(TileAt(x + BodyRadius), TileAt(y - BodyRadius))
-        && Level.IsWalkable(TileAt(x - BodyRadius), TileAt(y + BodyRadius))
-        && Level.IsWalkable(TileAt(x + BodyRadius), TileAt(y + BodyRadius));
+    /// <summary>
+    /// The body fits at a point: every tile under it is walkable and no more
+    /// than a step above the feet. Every walkable tile has a tile of headroom,
+    /// so ceilings bound only jumps (<see cref="TickVertical"/>).
+    /// </summary>
+    private bool IsFree(float x, float y)
+    {
+        ActorState body = Player.Body;
+        float climbBase = Level.ClimbBase(body.TileX, body.TileY, body.Z);
+        foreach ((float cx, float cy) in new[] { (x - BodyRadius, y - BodyRadius), (x + BodyRadius, y - BodyRadius), (x - BodyRadius, y + BodyRadius), (x + BodyRadius, y + BodyRadius) })
+        {
+            int tx = TileAt(cx);
+            int ty = TileAt(cy);
+            if (!Level.CanStepOnto(tx, ty, climbBase, _tuning.StepHeight))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The player's height: standing on the highest floor under the body,
+    /// walking up a step at once, jumping at the donor's 0.05 and falling at
+    /// its 0.0035 per tick ([donor] entities/Player.java:62, 551, 627, 1066).
+    /// </summary>
+    private void TickVertical(RunInput input)
+    {
+        ActorState body = Player.Body;
+        float ground = GroundUnder(body.X, body.Y);
+        if (body.Grounded && input.JumpPressed && !Player.Body.Effects.IsParalyzed)
+        {
+            body.VelocityZ = _tuning.JumpVelocity;
+            body.Grounded = false;
+        }
+
+        if (body.Grounded && body.Z >= ground - 0.001f && body.Z <= ground + 0.001f)
+        {
+            body.Z = ground;
+            return;
+        }
+
+        if (body.Grounded && body.Z < ground)
+        {
+            body.Z = ground; // a step up
+            return;
+        }
+
+        body.Grounded = false;
+        body.VelocityZ -= _tuning.Gravity;
+        body.Z += body.VelocityZ;
+        float ceiling = Level.CeilingHeight(body.TileX, body.TileY);
+        if (body.Z + PlayerHeight > ceiling)
+        {
+            body.Z = ceiling - PlayerHeight;
+            body.VelocityZ = Math.Min(0f, body.VelocityZ);
+        }
+
+        if (body.Z <= ground)
+        {
+            body.Z = ground;
+            body.VelocityZ = 0f;
+            body.Grounded = true;
+        }
+    }
+
+    /// <summary>The highest standing height under the body's footprint.</summary>
+    private float GroundUnder(float x, float y)
+    {
+        float ground = float.MinValue;
+        foreach ((float cx, float cy) in new[] { (x - BodyRadius, y - BodyRadius), (x + BodyRadius, y - BodyRadius), (x - BodyRadius, y + BodyRadius), (x + BodyRadius, y + BodyRadius) })
+        {
+            int tx = TileAt(cx);
+            int ty = TileAt(cy);
+            if (Level.IsWalkable(tx, ty))
+            {
+                ground = Math.Max(ground, Level.StandHeight(tx, ty));
+            }
+        }
+
+        return ground == float.MinValue ? Level.StandHeight(TileAt(x), TileAt(y)) : ground;
+    }
+
+    /// <summary>How tall the player's body is, for ceilings and projectile hits ([donor] entities/Player.java:235 collision z).</summary>
+    private const float PlayerHeight = 0.65f;
 
     /// <summary>
     /// True when a step ends inside a monster's separation and closer than it
@@ -492,6 +581,9 @@ public sealed partial class RunSession
     {
         Player.Body.X = tileX + 0.5f;
         Player.Body.Y = tileY + 0.5f;
+        Player.Body.Z = Level.StandHeight(tileX, tileY);
+        Player.Body.VelocityZ = 0f;
+        Player.Body.Grounded = true;
         _velocityX = 0f;
         _velocityY = 0f;
         _lastPlayerTileX = int.MinValue;
@@ -511,11 +603,12 @@ public sealed partial class RunSession
             _tuning,
             floor,
             _rules.MonstersForFloor(floor.DungeonLevel),
-            _rules.ItemsForFloor(floor.DungeonLevel));
+            _rules.ItemsForFloor(floor.DungeonLevel),
+            _rules.RoomTemplatesFor(floor.Theme));
 
         Level = generated.Level;
         Fog = new FogMap(Level.Width, Level.Height);
-        Torches = TorchPlacement.Place(Level);
+        Torches = generated.Torches;
         Decorations = DecorPlacement.Place(Level, _rules.DecorFor(floor.Theme), _tuning.DecorChance);
         LoadFeatures(generated.Features);
         _monsters.Clear();
@@ -524,6 +617,9 @@ public sealed partial class RunSession
         _corpses.Clear();
         Player.Body.X = generated.StartX + 0.5f;
         Player.Body.Y = generated.StartY + 0.5f;
+        Player.Body.Z = Level.StandHeight(generated.StartX, generated.StartY);
+        Player.Body.VelocityZ = 0f;
+        Player.Body.Grounded = true;
         _velocityX = 0f;
         _velocityY = 0f;
         _lastPlayerTileX = int.MinValue;

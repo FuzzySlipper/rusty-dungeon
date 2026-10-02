@@ -6,7 +6,9 @@ namespace DelveRpg.Host.Presentation;
 
 /// <summary>
 /// Turns one tile grid into a retained static mesh: floor and ceiling quads
-/// for open tiles and wall boxes for solids that touch open space. Geometry is
+/// at each open tile's own heights, wall boxes for solids that touch open
+/// space spanning their neighbours' floors to ceilings, and risers where
+/// neighbouring floors or ceilings step. Geometry is
 /// emitted in role blocks (floor, wall, water, door, ceiling) so each block can bind its own
 /// material; UVs map every face into the role's atlas cell when local art is
 /// present. Vertex colors carry the theme tint either way.
@@ -79,13 +81,42 @@ public static class LevelMesh
                     _ => FloorColor(tile, r, g, b),
                 };
 
-                if (role is "wall" or "door")
+                var mesh = new MeshLists(positions, normals, uvs, colors, indices);
+                switch (role)
                 {
-                    AddBox(positions, normals, uvs, colors, indices, x, y, 0f, 1f, color, rect);
+                    case "wall" when tile.Kind == TileKind.Wall:
+                        (float bottom, float top) = NeighbourSpan(level, x, y);
+                        AddBox(mesh, x, y, bottom, top, color, rect);
+                        break;
+                    case "wall":
+                        AddRisers(level, mesh, x, y, color, rect);
+                        break;
+                    case "door":
+                        // A closed door stands one tile tall on its floor; a
+                        // lintel of wall fills the span above it.
+                        float doorFloor = level.FloorHeight(x, y);
+                        AddBox(mesh, x, y, doorFloor, doorFloor + 1f, color, rect);
+                        break;
+                    case "ceiling":
+                        AddQuad(mesh, x, y, level.CeilingHeight(x, y), ceiling: true, color, rect);
+                        break;
+                    default:
+                        AddQuad(mesh, x, y, VisualFloor(level, x, y), ceiling: false, color, rect);
+                        break;
                 }
-                else
+            }
+
+            if (role == "wall")
+            {
+                // Door lintels: wall from the door top to the highest ceiling beside it.
+                foreach ((int x, int y, Tile tile) in TilesOf(level, "door"))
                 {
-                    AddQuad(positions, normals, uvs, colors, indices, x, y, role == "ceiling", color, rect);
+                    float top = NeighbourSpan(level, x, y).Top;
+                    float doorTop = level.FloorHeight(x, y) + 1f;
+                    if (top > doorTop)
+                    {
+                        AddBox(new MeshLists(positions, normals, uvs, colors, indices), x, y, doorTop, top, WallColor(Tile.Wall, r, g, b), rectFor(role, x, y));
+                    }
                 }
             }
 
@@ -114,7 +145,7 @@ public static class LevelMesh
                 Tile tile = level.At(x, y);
                 bool match = role switch
                 {
-                    "wall" => tile.Kind == TileKind.Wall && TouchesOpen(level, x, y),
+                    "wall" => tile.Kind == TileKind.Wall ? TouchesOpen(level, x, y) : !tile.BlocksMovement,
                     "door" => tile.Kind is TileKind.DoorClosed or TileKind.DoorLocked && TouchesOpen(level, x, y),
                     "floor" => !tile.BlocksMovement && tile.Kind != TileKind.Water,
                     "water" => tile.Kind == TileKind.Water,
@@ -155,100 +186,137 @@ public static class LevelMesh
     private static Color Clamped(float r, float g, float b) =>
         new(Math.Clamp(r, 0f, 1f), Math.Clamp(g, 0f, 1f), Math.Clamp(b, 0f, 1f), 1f);
 
-    private static void AddQuad(
-        List<Vector3> positions,
-        List<Vector3> normals,
-        List<Vector2> uvs,
-        List<Color> colors,
-        List<uint> indices,
-        int x,
-        int y,
-        bool ceiling,
-        Color color,
-        UvRect rect)
+    /// <summary>The lists one mesh is built into.</summary>
+    private readonly record struct MeshLists(
+        List<Vector3> Positions,
+        List<Vector3> Normals,
+        List<Vector2> Uvs,
+        List<Color> Colors,
+        List<uint> Indices);
+
+    /// <summary>Water shows its surface a little below the floor around it; wading stands lower still.</summary>
+    private const float WaterSurfaceDrop = 0.1f;
+
+    private static readonly (int X, int Y)[] Sides = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+
+    private static float VisualFloor(DungeonLevel level, int x, int y) =>
+        level.FloorHeight(x, y) - (level.At(x, y).Kind == TileKind.Water ? WaterSurfaceDrop : 0f);
+
+    /// <summary>The lowest floor and highest ceiling among a solid's open neighbours.</summary>
+    private static (float Bottom, float Top) NeighbourSpan(DungeonLevel level, int x, int y)
     {
-        // A floor quad sits at 0 facing up; a ceiling quad sits at the wall
-        // top facing down, wound the other way so back-face culling keeps the
-        // side seen from below.
-        float height = ceiling ? 1f : 0f;
-        uint start = (uint)positions.Count;
-        positions.Add(new Vector3(x, height, y));
-        positions.Add(new Vector3(x + 1, height, y));
-        positions.Add(new Vector3(x + 1, height, y + 1));
-        positions.Add(new Vector3(x, height, y + 1));
-        for (int i = 0; i < 4; i++)
+        float bottom = float.MaxValue;
+        float top = float.MinValue;
+        foreach ((int dx, int dy) in Sides)
         {
-            normals.Add(ceiling ? -Vector3.UnitY : Vector3.UnitY);
-            colors.Add(color);
+            if (level.InBounds(x + dx, y + dy) && !level.At(x + dx, y + dy).BlocksMovement)
+            {
+                bottom = Math.Min(bottom, VisualFloor(level, x + dx, y + dy));
+                top = Math.Max(top, level.CeilingHeight(x + dx, y + dy));
+            }
         }
 
-        uvs.Add(new Vector2(rect.U0, rect.V0));
-        uvs.Add(new Vector2(rect.U1, rect.V0));
-        uvs.Add(new Vector2(rect.U1, rect.V1));
-        uvs.Add(new Vector2(rect.U0, rect.V1));
-        indices.AddRange(ceiling
+        return bottom == float.MaxValue ? (0f, 1f) : (bottom, top);
+    }
+
+    /// <summary>
+    /// The faces between an open tile and a lower floor or a higher ceiling
+    /// beside it, each facing the neighbour that sees it.
+    /// </summary>
+    private static void AddRisers(DungeonLevel level, MeshLists mesh, int x, int y, Color color, UvRect rect)
+    {
+        float floor = VisualFloor(level, x, y);
+        float ceiling = level.CeilingHeight(x, y);
+        foreach ((int dx, int dy) in Sides)
+        {
+            if (!level.InBounds(x + dx, y + dy) || level.At(x + dx, y + dy).BlocksMovement)
+            {
+                continue;
+            }
+
+            float otherFloor = VisualFloor(level, x + dx, y + dy);
+            if (otherFloor < floor - 0.001f)
+            {
+                AddSide(mesh, x, y, dx, dy, otherFloor, floor, color, rect);
+            }
+
+            float otherCeiling = level.CeilingHeight(x + dx, y + dy);
+            if (otherCeiling > ceiling + 0.001f)
+            {
+                AddSide(mesh, x, y, dx, dy, ceiling, otherCeiling, color, rect);
+            }
+        }
+    }
+
+    private static void AddQuad(MeshLists mesh, int x, int y, float height, bool ceiling, Color color, UvRect rect)
+    {
+        // A floor quad faces up; a ceiling quad faces down, wound the other
+        // way so back-face culling keeps the side seen from below.
+        uint start = (uint)mesh.Positions.Count;
+        mesh.Positions.Add(new Vector3(x, height, y));
+        mesh.Positions.Add(new Vector3(x + 1, height, y));
+        mesh.Positions.Add(new Vector3(x + 1, height, y + 1));
+        mesh.Positions.Add(new Vector3(x, height, y + 1));
+        for (int i = 0; i < 4; i++)
+        {
+            mesh.Normals.Add(ceiling ? -Vector3.UnitY : Vector3.UnitY);
+            mesh.Colors.Add(color);
+        }
+
+        mesh.Uvs.Add(new Vector2(rect.U0, rect.V0));
+        mesh.Uvs.Add(new Vector2(rect.U1, rect.V0));
+        mesh.Uvs.Add(new Vector2(rect.U1, rect.V1));
+        mesh.Uvs.Add(new Vector2(rect.U0, rect.V1));
+        mesh.Indices.AddRange(ceiling
             ? new uint[] { start, start + 1, start + 2, start, start + 2, start + 3 }
             : new uint[] { start, start + 2, start + 1, start, start + 3, start + 2 });
     }
 
-    private static void AddBox(
-        List<Vector3> positions,
-        List<Vector3> normals,
-        List<Vector2> uvs,
-        List<Color> colors,
-        List<uint> indices,
-        int x,
-        int y,
-        float bottom,
-        float top,
-        Color color,
-        UvRect rect)
+    private static void AddBox(MeshLists mesh, int x, int y, float bottom, float top, Color color, UvRect rect)
     {
-        Vector3 a = new(x, bottom, y);
-        Vector3 b = new(x + 1, bottom, y);
-        Vector3 c = new(x + 1, bottom, y + 1);
-        Vector3 d = new(x, bottom, y + 1);
-        Vector3 e = new(x, top, y);
-        Vector3 f = new(x + 1, top, y);
-        Vector3 g = new(x + 1, top, y + 1);
-        Vector3 h = new(x, top, y + 1);
-
-        AddFace(positions, normals, uvs, colors, indices, e, f, g, h, Vector3.UnitY, color, rect);
-        AddFace(positions, normals, uvs, colors, indices, a, b, f, e, -Vector3.UnitZ, color, rect);
-        AddFace(positions, normals, uvs, colors, indices, c, d, h, g, Vector3.UnitZ, color, rect);
-        AddFace(positions, normals, uvs, colors, indices, b, c, g, f, Vector3.UnitX, color, rect);
-        AddFace(positions, normals, uvs, colors, indices, d, a, e, h, -Vector3.UnitX, color, rect);
-    }
-
-    private static void AddFace(
-        List<Vector3> positions,
-        List<Vector3> normals,
-        List<Vector2> uvs,
-        List<Color> colors,
-        List<uint> indices,
-        Vector3 v0,
-        Vector3 v1,
-        Vector3 v2,
-        Vector3 v3,
-        Vector3 normal,
-        Color color,
-        UvRect rect)
-    {
-        uint start = (uint)positions.Count;
-        positions.Add(v0);
-        positions.Add(v1);
-        positions.Add(v2);
-        positions.Add(v3);
-        for (int i = 0; i < 4; i++)
+        foreach ((int dx, int dy) in Sides)
         {
-            normals.Add(normal);
-            colors.Add(color);
+            AddSide(mesh, x, y, dx, dy, bottom, top, color, rect);
         }
 
-        uvs.Add(new Vector2(rect.U0, rect.V0));
-        uvs.Add(new Vector2(rect.U1, rect.V0));
-        uvs.Add(new Vector2(rect.U1, rect.V1));
-        uvs.Add(new Vector2(rect.U0, rect.V1));
-        indices.AddRange(new uint[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+        AddQuad(mesh, x, y, top, ceiling: false, color, rect);
+    }
+
+    /// <summary>
+    /// One vertical side of tile (x, y), facing (dx, dy), from bottom to top,
+    /// in tile-tall slices so the texture repeats rather than stretches.
+    /// </summary>
+    private static void AddSide(MeshLists mesh, int x, int y, int dx, int dy, float bottom, float top, Color color, UvRect rect)
+    {
+        // Corners of the side seen from outside, left then right.
+        (Vector2 left, Vector2 right) = (dx, dy) switch
+        {
+            (0, -1) => (new Vector2(x, y), new Vector2(x + 1, y)),
+            (0, 1) => (new Vector2(x + 1, y + 1), new Vector2(x, y + 1)),
+            (1, 0) => (new Vector2(x + 1, y), new Vector2(x + 1, y + 1)),
+            _ => (new Vector2(x, y + 1), new Vector2(x, y)),
+        };
+        var normal = new Vector3(dx, 0f, dy);
+        for (float from = bottom; from < top - 0.001f; from += 1f)
+        {
+            float to = Math.Min(top, from + 1f);
+            float v1 = rect.V0 + ((rect.V1 - rect.V0) * (to - from));
+            uint start = (uint)mesh.Positions.Count;
+            mesh.Positions.Add(new Vector3(left.X, from, left.Y));
+            mesh.Positions.Add(new Vector3(right.X, from, right.Y));
+            mesh.Positions.Add(new Vector3(right.X, to, right.Y));
+            mesh.Positions.Add(new Vector3(left.X, to, left.Y));
+            for (int i = 0; i < 4; i++)
+            {
+                mesh.Normals.Add(normal);
+                mesh.Colors.Add(color);
+            }
+
+            mesh.Uvs.Add(new Vector2(rect.U0, rect.V0));
+            mesh.Uvs.Add(new Vector2(rect.U1, rect.V0));
+            mesh.Uvs.Add(new Vector2(rect.U1, v1));
+            mesh.Uvs.Add(new Vector2(rect.U0, v1));
+            mesh.Indices.AddRange(new uint[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+        }
     }
 }

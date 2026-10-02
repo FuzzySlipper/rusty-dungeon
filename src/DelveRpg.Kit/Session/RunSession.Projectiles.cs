@@ -22,7 +22,6 @@ public sealed partial class RunSession
     private const float ProjectileRadius = 0.05f;
     private const float MonsterRadius = 0.3f;
     private const float BodyHeight = 0.8f;
-    private const float CeilingHeight = 1f;
     private const int ProjectileLifetimeTicks = 600;
     private const float LaunchOffsetTiles = 0.3f;
 
@@ -134,7 +133,7 @@ public sealed partial class RunSession
             fromPlayer: true,
             startX,
             startY,
-            _tuning.EyeHeight - 0.1f,
+            body.Z + _tuning.EyeHeight - 0.1f,
             MathF.Sin(yaw) * flat,
             -MathF.Cos(yaw) * flat,
             MathF.Sin(pitch) * speed)
@@ -157,10 +156,10 @@ public sealed partial class RunSession
     {
         ActorState from = monster.Body;
         ActorState to = Player.Body;
-        float fromZ = BodyHeight * 0.6f;
+        float fromZ = from.Z + (BodyHeight * 0.6f);
         float dx = to.X - from.X;
         float dy = to.Y - from.Y;
-        float dz = (_tuning.EyeHeight * 0.8f) - fromZ;
+        float dz = to.Z + (_tuning.EyeHeight * 0.8f) - fromZ;
         float length = MathF.Sqrt((dx * dx) + (dy * dy) + (dz * dz));
         if (length <= 0.0001f)
         {
@@ -231,9 +230,13 @@ public sealed partial class RunSession
             float nextY = projectile.Y + (projectile.VelocityY / steps);
             float nextZ = projectile.Z + (projectile.VelocityZ / steps);
 
-            if (Level.BlocksSight(TileAt(nextX), TileAt(nextY))
-                || nextZ <= 0f
-                || nextZ >= CeilingHeight)
+            // Each tile has its own floor and ceiling ([donor] entities/Entity.java
+            // tickPhysics checks the level's floor and ceiling heights under it).
+            int tileX = TileAt(nextX);
+            int tileY = TileAt(nextY);
+            if (Level.BlocksSight(tileX, tileY)
+                || nextZ <= Level.StandHeight(tileX, tileY)
+                || nextZ >= Level.CeilingHeight(tileX, tileY))
             {
                 LandProjectile(projectile);
                 return true;
@@ -254,14 +257,14 @@ public sealed partial class RunSession
     /// <summary>Hit the first body the projectile overlaps; true when it struck one.</summary>
     private bool StrikeBody(Projectile projectile)
     {
-        if (projectile.Z > BodyHeight)
-        {
-            return false;
-        }
-
         if (!projectile.FromPlayer)
         {
             ActorState player = Player.Body;
+            if (projectile.Z < player.Z || projectile.Z > player.Z + PlayerHeight)
+            {
+                return false;
+            }
+
             float reach = BodyRadius + ProjectileRadius;
             if (DistanceSquared(projectile.X, projectile.Y, player.X, player.Y) > reach * reach)
             {
@@ -276,7 +279,7 @@ public sealed partial class RunSession
 
         foreach (MonsterState monster in _monsters)
         {
-            if (monster.IsDying)
+            if (monster.IsDying || projectile.Z < monster.Body.Z || projectile.Z > monster.Body.Z + BodyHeight)
             {
                 continue;
             }

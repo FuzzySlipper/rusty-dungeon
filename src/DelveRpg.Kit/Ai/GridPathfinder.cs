@@ -17,7 +17,8 @@ public static class GridPathfinder
         int fromY,
         int toX,
         int toY,
-        int maxSteps)
+        int maxSteps,
+        float stepHeight = float.MaxValue)
     {
         if ((fromX == toX && fromY == toY) || !level.IsNavigable(toX, toY))
         {
@@ -36,7 +37,9 @@ public static class GridPathfinder
             (int x, int y) = queue.Dequeue();
             foreach ((int nextX, int nextY) in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
             {
-                if (!level.IsNavigable(nextX, nextY) || previous.ContainsKey((nextX, nextY)))
+                // A path climbs no more than a step at a time.
+                if (!level.IsNavigable(nextX, nextY) || previous.ContainsKey((nextX, nextY))
+                    || level.StandHeight(nextX, nextY) > level.ClimbBase(x, y, level.StandHeight(x, y)) + stepHeight)
                 {
                     continue;
                 }

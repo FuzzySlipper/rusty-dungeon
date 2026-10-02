@@ -70,6 +70,9 @@ public sealed record GameTuning
     /// <summary>Chance a room hides a wall-bolt tripwire.</summary>
     public float WallBoltRoomChance { get; init; } = 0.1f;
 
+    /// <summary>Chance a room other than the entrance takes an authored room template.</summary>
+    public float RoomTemplateChance { get; init; } = 0.35f;
+
     /// <summary>Chance per open floor tile of a cluster of the theme's decorations.</summary>
     public float DecorChance { get; init; } = 0.05f;
 
@@ -81,6 +84,18 @@ public sealed record GameTuning
 
     /// <summary>Gold a fresh character starts with.</summary>
     public int StartingGold { get; init; } = 40;
+
+    /// <summary>Tallest step a body walks up without jumping ([donor] entities/Player.java:118: 0.35).</summary>
+    public float StepHeight { get; init; } = 0.35f;
+
+    /// <summary>Upward velocity of a jump, tiles per tick ([donor] Player.java:62 jumpHeight 0.05).</summary>
+    public float JumpVelocity { get; init; } = 0.05f;
+
+    /// <summary>Fall acceleration, tiles per tick² ([donor] Player.java:551: 0.0035).</summary>
+    public float Gravity { get; init; } = 0.0035f;
+
+    /// <summary>Fraction of walking velocity water takes each tick ([donor] Player.java:614-616: 0.5 × 0.08).</summary>
+    public float WaterDrag { get; init; } = 0.04f;
 
     /// <summary>Eye height above the floor, in tiles.</summary>
     public float EyeHeight { get; init; } = 0.5f;

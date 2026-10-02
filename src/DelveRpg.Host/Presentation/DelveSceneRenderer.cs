@@ -65,6 +65,7 @@ public sealed class DelveSceneRenderer : IDisposable
     private RenderResource? _flashTexture;
     private SpriteAtlas? _flashAtlas;
     private IReadOnlyList<WallTorch> _wallTorches = Array.Empty<WallTorch>();
+    private DungeonLevel? _level;
     private readonly Material _material;
     private readonly DelveArtAssets _art;
     private readonly DelveSpriteAssets _sprites;
@@ -153,12 +154,13 @@ public sealed class DelveSceneRenderer : IDisposable
             _loadedLevelRevision = session.LevelRevision;
         }
 
+        _level = session.Level;
         ActorState player = session.Player.Body;
         _engine.CameraView.UpdateCamera(new CameraUpdateRequest(
             _camera,
             new CameraDescriptor(
                 new CameraPose(
-                    new Vector3(player.X, eyeHeight + HeldAnimations.HeadBob(session.PlayerSpeed, session.ElapsedTicks), player.Y),
+                    new Vector3(player.X, player.Z + eyeHeight + HeldAnimations.HeadBob(session.PlayerSpeed, session.ElapsedTicks), player.Y),
                     player.PitchDegrees,
                     player.Facing * (180.0 / Math.PI)),
                 CameraBasisMode.Derived,
@@ -167,7 +169,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 new CameraViewport(0, 0, 1, 1))));
 
         _engine.Graphics.UpdateLight(new LightUpdateRequest(
-            _torch, TorchRequest(new Vector3(player.X, eyeHeight, player.Y))));
+            _torch, TorchRequest(new Vector3(player.X, player.Z + eyeHeight, player.Y))));
 
         var facts = new List<AppearanceFact>();
         var live = new HashSet<ulong>();
@@ -196,7 +198,7 @@ public sealed class DelveSceneRenderer : IDisposable
                     objectId,
                     false,
                     0,
-                    new Transform(new Vector3(monster.Body.X, sprite.Definition.Lift, monster.Body.Y), Quaternion.Identity, Vector3.One),
+                    new Transform(new Vector3(monster.Body.X, monster.Body.Z + sprite.Definition.Lift, monster.Body.Y), Quaternion.Identity, Vector3.One),
                     appearance,
                     true,
                     RenderLayer.Scene));
@@ -212,7 +214,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 false,
                 0,
                 new Transform(
-                    new Vector3(monster.Body.X, 0.45f, monster.Body.Y),
+                    new Vector3(monster.Body.X, monster.Body.Z + 0.45f, monster.Body.Y),
                     Quaternion.Identity,
                     new Vector3(0.55f, 0.9f, 0.55f)),
                 plate,
@@ -233,7 +235,7 @@ public sealed class DelveSceneRenderer : IDisposable
                     objectId,
                     false,
                     0,
-                    new Transform(new Vector3(item.X + 0.5f, sprite.Definition.Lift, item.Y + 0.5f), Quaternion.Identity, Vector3.One),
+                    new Transform(new Vector3(item.X + 0.5f, Ground(item.X, item.Y) + sprite.Definition.Lift, item.Y + 0.5f), Quaternion.Identity, Vector3.One),
                     appearance,
                     true,
                     RenderLayer.Scene));
@@ -249,7 +251,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 false,
                 0,
                 new Transform(
-                    new Vector3(item.X + 0.5f, 0.12f, item.Y + 0.5f),
+                    new Vector3(item.X + 0.5f, Ground(item.X, item.Y) + 0.12f, item.Y + 0.5f),
                     Quaternion.Identity,
                     new Vector3(0.22f, 0.22f, 0.22f)),
                 plate,
@@ -362,6 +364,7 @@ public sealed class DelveSceneRenderer : IDisposable
         }
 
         _burstLights.Clear();
+        _level = level;
         _wallTorches = torches;
         for (int i = 0; i < _wallTorches.Count; i++)
         {
@@ -532,7 +535,11 @@ public sealed class DelveSceneRenderer : IDisposable
             ulong objectId = DecorObjectBase + (ulong)i;
             live.Add(objectId);
             Appearance appearance = RequireAppearance(objectId, () => CreateWorldSprite(sprite));
-            float y = decor.OnCeiling ? 1f - sprite.Definition.Size : 0f;
+            int decorX = (int)MathF.Floor(decor.X);
+            int decorY = (int)MathF.Floor(decor.Y);
+            float y = decor.OnCeiling
+                ? (_level?.CeilingHeight(decorX, decorY) ?? 1f) - sprite.Definition.Size
+                : Ground(decorX, decorY);
             facts.Add(new AppearanceFact(objectId, false, 0,
                 new Transform(new Vector3(decor.X, y, decor.Y), Quaternion.Identity, Vector3.One),
                 appearance, true, RenderLayer.Scene));
@@ -563,7 +570,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 live.Add(objectId);
                 Appearance appearance = RequireAppearance(objectId, () => CreateWorldSprite(sprite));
                 facts.Add(new AppearanceFact(objectId, false, 0,
-                    new Transform(new Vector3(pot.X, 0f, pot.Y), Quaternion.Identity, Vector3.One),
+                    new Transform(new Vector3(pot.X, Ground(pot.TileX, pot.TileY), pot.Y), Quaternion.Identity, Vector3.One),
                     appearance, true, RenderLayer.Scene));
             }
         }
@@ -584,7 +591,7 @@ public sealed class DelveSceneRenderer : IDisposable
             Appearance appearance = RequireAppearance(objectId, () => _engine.Graphics.CreateMeshAppearance(_spikeMesh));
             facts.Add(new AppearanceFact(objectId, false, 0,
                 new Transform(
-                    new Vector3(spikes.TileX + 0.5f, -FeatureMeshes.SpikeHeight * (1f - extension), spikes.TileY + 0.5f),
+                    new Vector3(spikes.TileX + 0.5f, Ground(spikes.TileX, spikes.TileY) - (FeatureMeshes.SpikeHeight * (1f - extension)), spikes.TileY + 0.5f),
                     Quaternion.Identity,
                     Vector3.One),
                 appearance, true, RenderLayer.Scene));
@@ -598,7 +605,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 PrimitiveGeometry.Cube, false, new Color(0.42f, 0.36f, 0.26f, 1f))));
             facts.Add(new AppearanceFact(objectId, false, 0,
                 new Transform(
-                    new Vector3(plate.TileX + 0.5f, plate.Pressed ? -0.01f : 0.015f, plate.TileY + 0.5f),
+                    new Vector3(plate.TileX + 0.5f, Ground(plate.TileX, plate.TileY) + (plate.Pressed ? -0.01f : 0.015f), plate.TileY + 0.5f),
                     Quaternion.Identity,
                     new Vector3(0.7f, 0.04f, 0.7f)),
                 appearance, true, RenderLayer.Scene));
@@ -663,7 +670,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 objectId,
                 false,
                 0,
-                new Transform(new Vector3(corpse.X, 0f, corpse.Y), Quaternion.Identity, Vector3.One),
+                new Transform(new Vector3(corpse.X, Ground((int)MathF.Floor(corpse.X), (int)MathF.Floor(corpse.Y)), corpse.Y), Quaternion.Identity, Vector3.One),
                 appearance,
                 true,
                 RenderLayer.Scene));
@@ -781,7 +788,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 objectId,
                 false,
                 0,
-                new Transform(new Vector3(_wallTorches[i].SpriteX, 0.3f, _wallTorches[i].SpriteY), Quaternion.Identity, Vector3.One),
+                new Transform(new Vector3(_wallTorches[i].SpriteX, Ground(_wallTorches[i].TileX, _wallTorches[i].TileY) + 0.3f, _wallTorches[i].SpriteY), Quaternion.Identity, Vector3.One),
                 appearance,
                 true,
                 RenderLayer.Scene));
@@ -789,7 +796,10 @@ public sealed class DelveSceneRenderer : IDisposable
     }
 
     /// <summary>A wall torch's light sits a little out from the wall, above the flame.</summary>
-    private static Vector3 TorchLightPosition(WallTorch torch) => new(torch.LightX, 0.65f, torch.LightY);
+    private Vector3 TorchLightPosition(WallTorch torch) => new(torch.LightX, Ground(torch.TileX, torch.TileY) + 0.65f, torch.LightY);
+
+    /// <summary>The floor height of a tile, for standing things on it.</summary>
+    private float Ground(int tileX, int tileY) => _level?.FloorHeight(tileX, tileY) ?? 0f;
 
     /// <summary>
     /// The player's torch: a warm point light carried at eye height, the

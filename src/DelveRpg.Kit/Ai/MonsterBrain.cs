@@ -127,7 +127,7 @@ public static class MonsterBrain
         if (monster.PathRefreshRemaining <= 0 || monster.PathIndex >= monster.Path.Count)
         {
             monster.Path = GridPathfinder.FindPath(
-                level, monster.Body.TileX, monster.Body.TileY, target.TileX, target.TileY, PathHorizon);
+                level, monster.Body.TileX, monster.Body.TileY, target.TileX, target.TileY, PathHorizon, tuning.StepHeight);
             monster.PathIndex = 0;
             monster.PathRefreshRemaining = PathRefreshTicks;
         }
@@ -301,16 +301,19 @@ public static class MonsterBrain
             return false;
         }
 
-        if (level.IsWalkable((int)MathF.Floor(nextX), (int)MathF.Floor(body.Y)))
+        // Monsters walk up a step at most; they do not jump.
+        float standing = level.ClimbBase(body.TileX, body.TileY, level.StandHeight(body.TileX, body.TileY));
+        if (level.CanStepOnto((int)MathF.Floor(nextX), (int)MathF.Floor(body.Y), standing, tuning.StepHeight))
         {
             body.X = nextX;
         }
 
-        if (level.IsWalkable((int)MathF.Floor(body.X), (int)MathF.Floor(nextY)))
+        if (level.CanStepOnto((int)MathF.Floor(body.X), (int)MathF.Floor(nextY), standing, tuning.StepHeight))
         {
             body.Y = nextY;
         }
 
+        body.Z = level.StandHeight(body.TileX, body.TileY);
         return distance <= speed;
     }
 

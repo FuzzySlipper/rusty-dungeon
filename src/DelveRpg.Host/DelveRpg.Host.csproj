@@ -52,6 +52,7 @@
     <RustyEngineProductInputIntent Include="move.right" Value="digital" />
     <RustyEngineProductInputIntent Include="attack" Value="digital" />
     <RustyEngineProductInputIntent Include="use" Value="digital" />
+    <RustyEngineProductInputIntent Include="jump" Value="digital" />
     <RustyEngineProductInputIntent Include="hotbar.1" Value="digital" />
     <RustyEngineProductInputIntent Include="hotbar.2" Value="digital" />
     <RustyEngineProductInputIntent Include="hotbar.3" Value="digital" />
@@ -80,6 +81,7 @@
     <RustyEngineProductInputMapping Include="move.right.key-d" Intent="move.right" Trigger="key:key-d:held" />
     <RustyEngineProductInputMapping Include="attack.pointer-primary" Intent="attack" Trigger="pointer-button:primary:held" />
     <RustyEngineProductInputMapping Include="use.key-e" Intent="use" Trigger="key:key-e:pressed" />
+    <RustyEngineProductInputMapping Include="jump.space" Intent="jump" Trigger="key:space:pressed" />
     <RustyEngineProductInputMapping Include="hotbar.1.digit-1" Intent="hotbar.1" Trigger="key:digit-1:pressed" />
     <RustyEngineProductInputMapping Include="hotbar.2.digit-2" Intent="hotbar.2" Trigger="key:digit-2:pressed" />
     <RustyEngineProductInputMapping Include="hotbar.3.digit-3" Intent="hotbar.3" Trigger="key:digit-3:pressed" />

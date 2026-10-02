@@ -35,6 +35,7 @@ public sealed class DelveInputRouter
     private static readonly byte[] MoveRight = "move.right"u8.ToArray();
     private static readonly byte[] Attack = "attack"u8.ToArray();
     private static readonly byte[] Use = "use"u8.ToArray();
+    private static readonly byte[] Jump = "jump"u8.ToArray();
     private static readonly byte[] Inventory = "inventory"u8.ToArray();
     private static readonly byte[] Map = "map"u8.ToArray();
     private static readonly byte[] MenuConfirm = "menu.confirm"u8.ToArray();
@@ -48,6 +49,7 @@ public sealed class DelveInputRouter
     private bool _right;
     private bool _attackHeld;
     private bool _usePressed;
+    private bool _jumpPressed;
     private bool _inventoryToggled;
     private bool _mapToggled;
     private bool _menuConfirm;
@@ -122,6 +124,10 @@ public sealed class DelveInputRouter
         else if (released)
         {
             return;
+        }
+        else if (Matches(input, Jump))
+        {
+            _jumpPressed = true;
         }
         else if (Matches(input, Use))
         {
@@ -209,6 +215,7 @@ public sealed class DelveInputRouter
             LookPitchDegrees: pitchDegrees,
             AttackHeld: _attackHeld,
             UsePressed: _usePressed,
+            JumpPressed: _jumpPressed,
             HotbarPressed: _hotbarPressed,
             InventoryToggled: _inventoryToggled,
             MapToggled: _mapToggled,
@@ -220,6 +227,7 @@ public sealed class DelveInputRouter
         _lookYawUnits = 0f;
         _lookPitchUnits = 0f;
         _usePressed = false;
+        _jumpPressed = false;
         _hotbarPressed = 0;
         _inventoryToggled = false;
         _mapToggled = false;
@@ -243,6 +251,7 @@ public sealed class DelveInputRouter
         _right = false;
         _attackHeld = false;
         _usePressed = false;
+        _jumpPressed = false;
         _inventoryToggled = false;
         _mapToggled = false;
         _menuConfirm = false;

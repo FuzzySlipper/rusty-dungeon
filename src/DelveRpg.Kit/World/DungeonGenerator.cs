@@ -47,6 +47,9 @@ public sealed record GeneratedLevel(
 
     /// <summary>Where the vault's key lies, when the floor has a locked vault.</summary>
     public (int X, int Y)? KeySpot { get; init; }
+
+    /// <summary>Wall torches from the floor's torch markers.</summary>
+    public IReadOnlyList<WallTorch> Torches { get; init; } = [];
 }
 
 /// <summary>
@@ -63,7 +66,8 @@ public static class DungeonGenerator
         GameTuning tuning,
         FloorSpec floor,
         IReadOnlyList<string> eligibleMonsterIds,
-        IReadOnlyList<string> eligibleItemIds)
+        IReadOnlyList<string> eligibleItemIds,
+        IReadOnlyList<RoomTemplate>? templates = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(config.MonsterCount);
         ArgumentOutOfRangeException.ThrowIfNegative(config.ItemCount);
@@ -76,7 +80,7 @@ public static class DungeonGenerator
 
         for (int attempt = 0; attempt < config.MaxGenerationAttempts; attempt++)
         {
-            GeneratedLevel? candidate = TryGenerate(random, config, tuning, floor, eligibleMonsterIds, eligibleItemIds);
+            GeneratedLevel? candidate = TryGenerate(random, config, tuning, floor, eligibleMonsterIds, eligibleItemIds, templates ?? []);
             if (candidate is not null)
             {
                 return candidate;
@@ -93,7 +97,8 @@ public static class DungeonGenerator
         GameTuning tuning,
         FloorSpec floor,
         IReadOnlyList<string> eligibleMonsterIds,
-        IReadOnlyList<string> eligibleItemIds)
+        IReadOnlyList<string> eligibleItemIds,
+        IReadOnlyList<RoomTemplate> templates)
     {
         var level = new DungeonLevel(config.Width, config.Height, floor.DungeonLevel, floor.Theme);
         List<(int X, int Y, int Width, int Height)> rooms = PlaceRooms(random, config);
@@ -115,6 +120,12 @@ public static class DungeonGenerator
         }
 
         PlaceDoors(level, rooms);
+        List<RoomBounds> roomBounds = rooms.Select(room => new RoomBounds(room.X, room.Y, room.Width, room.Height)).ToList();
+        LevelShaping.ShapeHeights(random, level, roomBounds);
+        StampedMarkers stamped = LevelShaping.StampTemplates(
+            random, level, roomBounds, roomBounds[0], templates, tuning.RoomTemplateChance);
+        List<WallTorch> torches = LevelShaping.RoomTorches(random, level, roomBounds);
+        torches.AddRange(stamped.Torches);
 
         (int startX, int startY) = RoomCenter(rooms[0]);
         level.Set(startX, startY, Tile.StairsUp);
@@ -161,11 +172,22 @@ public static class DungeonGenerator
             }
         }
 
+        // A room piece's own markers spawn too.
+        foreach ((int x, int y) in stamped.Monsters.Where(_ => eligibleMonsterIds.Count > 0))
+        {
+            monsters.Add(new MonsterSpawn(eligibleMonsterIds[random.Next(0, eligibleMonsterIds.Count)], x, y));
+        }
+
+        foreach ((int x, int y) in stamped.Loot.Where(_ => eligibleItemIds.Count > 0))
+        {
+            items.Add(new ItemSpawn(eligibleItemIds[random.Next(0, eligibleItemIds.Count)], x, y));
+        }
+
         var entrance = new RoomBounds(entranceX, entranceY, entranceWidth, entranceHeight);
         (FloorFeatures features, Vault? vault) = FeaturePlacement.Place(
             random,
             level,
-            rooms.Select(room => new RoomBounds(room.X, room.Y, room.Width, room.Height)).ToList(),
+            roomBounds,
             entrance,
             (startX, startY),
             (stairsX, stairsY),
@@ -179,6 +201,10 @@ public static class DungeonGenerator
             }
         }
 
+        FloorFeatures withPots = features with
+        {
+            Pots = [.. features.Pots, .. stamped.Pots.Select((spot, i) => new Pot(10_000 + i, (PotKind)random.Next(0, 3), spot.X + 0.5f, spot.Y + 0.5f))],
+        };
         return new GeneratedLevel(
             level,
             startX,
@@ -190,8 +216,9 @@ public static class DungeonGenerator
             bonusLoot,
             entrance)
         {
-            Features = features,
+            Features = withPots,
             KeySpot = vault?.Key,
+            Torches = torches,
         };
     }
 

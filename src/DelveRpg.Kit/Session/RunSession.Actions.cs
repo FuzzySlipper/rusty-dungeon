@@ -533,11 +533,13 @@ public sealed partial class RunSession
             MonsterBrainState before = monster.BrainState;
             if (monster.HurtTicksRemaining > 0)
             {
+                monster.Body.Z = Level.StandHeight(monster.Body.TileX, monster.Body.TileY);
                 // A flinching monster stands where the blow left it.
                 continue;
             }
 
             MonsterBrain.Tick(monster, Level, Player, _tuning, speedMultiplier, NoticeRadius, _monsters, _random);
+            monster.Body.Z = Level.StandHeight(monster.Body.TileX, monster.Body.TileY);
             if (before == MonsterBrainState.Idle && monster.BrainState == MonsterBrainState.Chasing)
             {
                 // Alerted monsters wait a beat before the first cast

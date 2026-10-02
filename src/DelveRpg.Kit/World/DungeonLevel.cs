@@ -40,6 +40,14 @@ public readonly record struct Tile(TileKind Kind)
 public sealed class DungeonLevel
 {
     private readonly Tile[] _tiles;
+    private readonly float[] _floors;
+    private readonly float[] _ceilings;
+
+    /// <summary>How far below its floor height a water tile's bed lies ([donor] tiles/Tile.java:167, 195: 0.4).</summary>
+    public const float WaterDepth = 0.4f;
+
+    /// <summary>Default ceiling height above a floor at height zero ([donor] Tile.java:76-77: one tile).</summary>
+    public const float DefaultCeiling = 1f;
 
     public DungeonLevel(int width, int height, int dungeonLevel, string theme)
     {
@@ -51,6 +59,9 @@ public sealed class DungeonLevel
         Theme = theme;
         _tiles = new Tile[width * height];
         Array.Fill(_tiles, Tile.Wall);
+        _floors = new float[width * height];
+        _ceilings = new float[width * height];
+        Array.Fill(_ceilings, DefaultCeiling);
     }
 
     public int Width { get; }
@@ -78,6 +89,39 @@ public sealed class DungeonLevel
     }
 
     public bool InBounds(int x, int y) => x >= 0 && y >= 0 && x < Width && y < Height;
+
+    /// <summary>A tile's floor height, in tiles; zero is the ground level of the start.</summary>
+    public float FloorHeight(int x, int y) => InBounds(x, y) ? _floors[(y * Width) + x] : 0f;
+
+    /// <summary>A tile's ceiling height, in tiles.</summary>
+    public float CeilingHeight(int x, int y) => InBounds(x, y) ? _ceilings[(y * Width) + x] : DefaultCeiling;
+
+    /// <summary>Where a body stands on a tile: its floor, or the bed under its water.</summary>
+    public float StandHeight(int x, int y) =>
+        FloorHeight(x, y) - (InBounds(x, y) && At(x, y).Kind == TileKind.Water ? WaterDepth : 0f);
+
+    /// <summary>Set a tile's floor and ceiling heights (generation and restore).</summary>
+    public void SetHeights(int x, int y, float floor, float ceiling)
+    {
+        _floors[(y * Width) + x] = floor;
+        _ceilings[(y * Width) + x] = Math.Max(ceiling, floor + 0.5f);
+        Revision++;
+    }
+
+    /// <summary>
+    /// True when a body standing at <paramref name="height"/> can walk onto a
+    /// tile: it is walkable and its standing height is no more than a step up.
+    /// </summary>
+    /// <summary>
+    /// The height a climb out of a tile starts from: the feet, or for a
+    /// wader the floor around the water, so water never traps
+    /// ([donor] entities/Player.java:619-620 stepHeight + depth in water).
+    /// </summary>
+    public float ClimbBase(int x, int y, float feet) =>
+        InBounds(x, y) && At(x, y).Kind == TileKind.Water ? Math.Max(feet, FloorHeight(x, y)) : feet;
+
+    public bool CanStepOnto(int x, int y, float height, float stepHeight) =>
+        IsWalkable(x, y) && StandHeight(x, y) <= height + stepHeight;
 
     public bool IsWalkable(int x, int y) => InBounds(x, y) && At(x, y).IsWalkable;
 

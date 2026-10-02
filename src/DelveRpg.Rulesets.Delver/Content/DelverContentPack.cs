@@ -48,6 +48,13 @@ public sealed class DelverContentPack
     /// </summary>
     public Dictionary<string, List<DelverDecor>> Decor { get; set; } = new();
 
+    /// <summary>
+    /// Authored room pieces per floor theme, plus <c>Any</c> for every theme:
+    /// small stand-ins for the donor's prefab chunks
+    /// ([data] generator/&lt;Theme&gt;/*.bin, [donor] generator/RoomGenerator.java).
+    /// </summary>
+    public Dictionary<string, List<DelverRoomTemplate>> RoomTemplates { get; set; } = new();
+
     /// <summary>The potion items whose effects are shuffled across them each run, in order.</summary>
     public List<string> PotionColours { get; set; } = new();
 }
@@ -62,6 +69,14 @@ public sealed class DelverDecor
     public bool Ceiling { get; init; }
 
     public bool Solid { get; init; }
+}
+
+/// <summary>One room piece: marker rows as <see cref="Kit.World.RoomTemplate"/> reads them.</summary>
+public sealed class DelverRoomTemplate
+{
+    public required string Id { get; init; }
+
+    public List<string> Rows { get; init; } = new();
 }
 
 /// <summary>One enchantment, or a unique's fixed mods (then its id and slot are ignored).</summary>

@@ -19,7 +19,7 @@ public sealed class DelvePlaytest
 {
     public static readonly IReadOnlyList<string> Actions =
     [
-        "forward", "back", "left", "right", "use", "attack", "quick-attack", "confirm",
+        "forward", "back", "left", "right", "use", "jump", "attack", "quick-attack", "confirm",
         "hotbar-1", "hotbar-2", "hotbar-3", "hotbar-4", "hotbar-5", "hotbar-6",
     ];
 
@@ -62,6 +62,7 @@ public sealed class DelvePlaytest
             "left" => new PlaytestAction(id, "KeyA", MoveMs, true, reason is null, reason),
             "right" => new PlaytestAction(id, "KeyD", MoveMs, true, reason is null, reason),
             "use" => new PlaytestAction(id, "KeyE", TapMs, false, reason is null, reason),
+            "jump" => new PlaytestAction(id, "Space", TapMs, false, reason is null, reason),
             "attack" or "quick-attack" => AttackAction(id, session, weapon, reason),
             _ => new PlaytestAction(id, "Digit" + id["hotbar-".Length..], TapMs, false, reason is null, reason),
         };
@@ -137,6 +138,10 @@ public sealed class DelvePlaytest
         w.WriteStartObject("player");
         w.WriteNumber("x", Math.Round(body.X, 3));
         w.WriteNumber("y", Math.Round(body.Y, 3));
+        w.WriteNumber("z", Math.Round(body.Z, 3));
+        w.WriteBoolean("grounded", body.Grounded);
+        w.WriteNumber("floor", Math.Round(session.Level.FloorHeight(body.TileX, body.TileY), 3));
+        w.WriteNumber("ceiling", Math.Round(session.Level.CeilingHeight(body.TileX, body.TileY), 3));
         w.WriteNumber("yawDegrees", Math.Round(body.Facing * 180 / Math.PI % 360, 1));
         w.WriteNumber("pitchDegrees", Math.Round(body.PitchDegrees, 1));
         w.WriteNumber("hp", body.Hp);

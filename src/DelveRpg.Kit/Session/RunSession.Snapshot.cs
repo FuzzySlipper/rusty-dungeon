@@ -46,7 +46,11 @@ public sealed record SnapshotFloorState(
     SnapshotFloor Floor,
     IReadOnlyList<SnapshotMonster> Monsters,
     IReadOnlyList<SnapshotGroundItem> GroundItems,
-    IReadOnlyList<SnapshotFeature>? Features);
+    IReadOnlyList<SnapshotFeature>? Features)
+{
+    /// <summary>The floor's wall torches as (tile x, tile y, wall dx, wall dy); null in older saves.</summary>
+    public IReadOnlyList<int[]>? Torches { get; init; }
+}
 
 /// <summary>Serializable shape of one floor at a save boundary.</summary>
 public sealed record SnapshotFloor(
@@ -59,7 +63,17 @@ public sealed record SnapshotFloor(
     int StartX,
     int StartY,
     int StairsX,
-    int StairsY);
+    int StairsY)
+{
+    /// <summary>
+    /// Floor heights in 1/400 of a tile, which holds the generator's 0.2
+    /// steps, sixteenth ramps and 0.4375 daises exactly; null in older saves (flat).
+    /// </summary>
+    public short[]? FloorHeights { get; init; }
+
+    /// <summary>Ceiling heights in 1/400 of a tile.</summary>
+    public short[]? CeilingHeights { get; init; }
+}
 
 /// <summary>
 /// The complete state of one run at a save boundary. The donor snapshots the
@@ -94,6 +108,9 @@ public sealed record RunSnapshot(
     IReadOnlyList<string> LevelUpOffers,
     int LevelUpCursor)
 {
+    /// <summary>The current floor's wall torches (see <see cref="SnapshotFloorState.Torches"/>); null in older saves.</summary>
+    public IReadOnlyList<int[]>? Torches { get; init; }
+
     /// <summary>Floors visited before and left, as they were left; null in older saves.</summary>
     public IReadOnlyList<SnapshotFloorState>? VisitedFloors { get; init; }
 
@@ -167,6 +184,7 @@ public sealed partial class RunSession
             LevelUpCursor: LevelUpCursor)
         {
             Features = here.Features,
+            Torches = here.Torches,
             VisitedFloors = _visitedFloors.Values.OrderBy(floor => floor.RunIndex).ToList(),
             ArmorSlot = Player.ArmorSlot,
             HotbarSize = Player.Inventory.HotbarSize,
@@ -192,9 +210,24 @@ public sealed partial class RunSession
         }
 
         (int startX, int startY, int stairsX, int stairsY) = FindMarkers();
+        var floors = new short[Level.Width * Level.Height];
+        var ceilings = new short[Level.Width * Level.Height];
+        for (int y = 0; y < Level.Height; y++)
+        {
+            for (int x = 0; x < Level.Width; x++)
+            {
+                floors[(y * Level.Width) + x] = PackHeight(Level.FloorHeight(x, y));
+                ceilings[(y * Level.Width) + x] = PackHeight(Level.CeilingHeight(x, y));
+            }
+        }
+
         return new SnapshotFloorState(
             RunIndex,
-            new SnapshotFloor(Level.Width, Level.Height, Level.DifficultyLevel, Level.Theme, tiles, explored, startX, startY, stairsX, stairsY),
+            new SnapshotFloor(Level.Width, Level.Height, Level.DifficultyLevel, Level.Theme, tiles, explored, startX, startY, stairsX, stairsY)
+            {
+                FloorHeights = floors,
+                CeilingHeights = ceilings,
+            },
             _monsters.Where(monster => !monster.IsDying).Select(monster => new SnapshotMonster(
                 monster.Archetype.Id,
                 monster.Body.X,
@@ -212,8 +245,18 @@ public sealed partial class RunSession
                 Wear = item.Item.Wear,
                 ItemLevel = item.Item.ItemLevel,
             }).ToList(),
-            CaptureFeatures());
+            CaptureFeatures())
+        {
+            Torches = Torches.Select(torch => new[] { torch.TileX, torch.TileY, torch.WallDx, torch.WallDy }).ToList(),
+        };
     }
+
+    private const float HeightUnits = 400f;
+
+    private static short PackHeight(float height) =>
+        (short)Math.Clamp((int)MathF.Round(height * HeightUnits), short.MinValue, short.MaxValue);
+
+    private static float UnpackHeight(short packed) => packed / HeightUnits;
 
     private (int StartX, int StartY, int StairsX, int StairsY) FindMarkers()
     {
@@ -314,7 +357,10 @@ public sealed partial class RunSession
     private void RestoreFloor(RunSnapshot snapshot)
     {
         RunIndex = snapshot.RunIndex;
-        LoadFloorState(new SnapshotFloorState(snapshot.RunIndex, snapshot.Floor, snapshot.Monsters, snapshot.GroundItems, snapshot.Features));
+        LoadFloorState(new SnapshotFloorState(snapshot.RunIndex, snapshot.Floor, snapshot.Monsters, snapshot.GroundItems, snapshot.Features)
+        {
+            Torches = snapshot.Torches,
+        });
         foreach (SnapshotFloorState visited in snapshot.VisitedFloors ?? [])
         {
             if (visited.RunIndex != snapshot.RunIndex && visited.RunIndex >= 0 && visited.RunIndex < _plan.FloorCount)
@@ -343,9 +389,20 @@ public sealed partial class RunSession
             }
         }
 
+        if (floor.FloorHeights is { } floorHeights && floor.CeilingHeights is { } ceilingHeights
+            && floorHeights.Length == floor.Width * floor.Height && ceilingHeights.Length == floorHeights.Length)
+        {
+            for (int i = 0; i < floorHeights.Length; i++)
+            {
+                level.SetHeights(i % floor.Width, i / floor.Width, UnpackHeight(floorHeights[i]), UnpackHeight(ceilingHeights[i]));
+            }
+        }
+
         Level = level;
         Fog = new FogMap(level.Width, level.Height);
-        Torches = TorchPlacement.Place(level);
+        Torches = state.Torches is { } savedTorches
+            ? savedTorches.Where(torch => torch.Length == 4).Select(torch => new WallTorch(torch[0], torch[1], torch[2], torch[3])).ToList()
+            : TorchPlacement.Place(level);
         Decorations = DecorPlacement.Place(level, _rules.DecorFor(floor.Theme), _tuning.DecorChance);
         LoadFeatures(RestoreFeatures(state.Features));
         for (int y = 0; y < floor.Height; y++)

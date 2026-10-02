@@ -40,6 +40,41 @@ public sealed class DelverCatalogAndTuningTests
         Assert.Equal(0.1f, Composition.Tuning.WallBoltRoomChance);
         Assert.Equal(0.03f, Composition.Tuning.PotChance);
         Assert.Equal(0.05f, Composition.Tuning.DecorChance);
+        Assert.Equal(0.35f, Composition.Tuning.RoomTemplateChance);
+        Assert.Equal(0.35f, Composition.Tuning.StepHeight);
+        Assert.Equal(0.05f, Composition.Tuning.JumpVelocity);
+        Assert.Equal(0.0035f, Composition.Tuning.Gravity);
+        Assert.Equal(0.04f, Composition.Tuning.WaterDrag);
+    }
+
+    [Fact]
+    public void Every_theme_draws_the_shared_room_templates_and_its_own()
+    {
+        var catalog = new DelverCatalog(Composition.Pack);
+        IReadOnlyList<Kit.World.RoomTemplate> sewer = catalog.RoomTemplatesFor("Sewer");
+        IReadOnlyList<Kit.World.RoomTemplate> unknown = catalog.RoomTemplatesFor("Nowhere");
+
+        Assert.Contains(sewer, template => template.Id == "pillar-hall");
+        Assert.Contains(sewer, template => template.Id == "sewer-pool");
+        Assert.Contains(unknown, template => template.Id == "pillar-hall");
+        Assert.DoesNotContain(unknown, template => template.Id == "sewer-pool");
+    }
+
+    [Fact]
+    public void A_room_template_with_an_unknown_marker_fails_the_load()
+    {
+        string pack = ContentFixtures.FixturePackJson.TrimEnd().TrimEnd('}')
+            + ",\"roomTemplates\":{\"Any\":[{\"id\":\"bad\",\"rows\":[\"..?\"]}]}}";
+        var load = () => DelverComposition.Load(path => path switch
+        {
+            "delve/bundles/delve-run.json" => ContentFixtures.FixtureBundleJson,
+            "delve/content-packs/delve-core.json" => ContentFixtures.FixturePackDescriptorJson,
+            "delve/packs/test.json" => pack,
+            "delve/tuning/test.json" => ContentFixtures.FixtureTuningJson,
+            _ => null,
+        });
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(load);
+        Assert.Contains("room template 'bad' (Any) uses unknown marker '?'", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

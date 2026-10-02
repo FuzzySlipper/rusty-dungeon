@@ -82,6 +82,16 @@ public sealed class DelverTuningDefinition
 
     public float DecorChance { get; set; } = 0.05f;
 
+    public float RoomTemplateChance { get; set; } = 0.35f;
+
+    public float StepHeight { get; set; } = 0.35f;
+
+    public float JumpVelocity { get; set; } = 0.05f;
+
+    public float Gravity { get; set; } = 0.0035f;
+
+    public float WaterDrag { get; set; } = 0.04f;
+
     public int SeenRadius { get; set; } = 5;
 
     public int StartingGold { get; set; } = 40;
@@ -110,6 +120,11 @@ public sealed class DelverTuningDefinition
         WallBoltRoomChance = WallBoltRoomChance,
         PotChance = PotChance,
         DecorChance = DecorChance,
+        RoomTemplateChance = RoomTemplateChance,
+        StepHeight = StepHeight,
+        JumpVelocity = JumpVelocity,
+        Gravity = Gravity,
+        WaterDrag = WaterDrag,
         SeenRadius = SeenRadius,
         StartingGold = StartingGold,
         EyeHeight = EyeHeight,
@@ -193,7 +208,11 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
         Enchantments = left.Enchantments.Concat(right.Enchantments).ToList(),
         PotionColours = left.PotionColours.Concat(right.PotionColours).ToList(),
         Decor = left.Decor.Concat(right.Decor).ToDictionary(entry => entry.Key, entry => entry.Value),
+        RoomTemplates = left.RoomTemplates.Concat(right.RoomTemplates).ToDictionary(entry => entry.Key, entry => entry.Value),
     };
+
+    /// <summary>The markers <see cref="Kit.World.RoomTemplate"/> reads.</summary>
+    private const string RoomTemplateMarkers = ".#^*~TMLo";
 
     /// <summary>All-or-nothing validation at load; a bad pack fails the load, not a run.</summary>
     private static void Validate(DelverBundleDefinition bundle, DelverContentPack pack)
@@ -212,6 +231,21 @@ public sealed record DelverComposition(DelverBundleDefinition Bundle, DelverCont
         if (pack.Sections.Count == 0)
         {
             problems.Add("the pack defines no sections");
+        }
+
+        foreach ((string theme, List<DelverRoomTemplate> templates) in pack.RoomTemplates)
+        {
+            foreach (DelverRoomTemplate template in templates)
+            {
+                if (template.Rows.Count == 0 || template.Rows.Any(row => row.Length == 0))
+                {
+                    problems.Add($"room template '{template.Id}' ({theme}) has an empty row");
+                }
+                else if (template.Rows.SelectMany(row => row).FirstOrDefault(marker => !RoomTemplateMarkers.Contains(marker)) is char unknown and not '\0')
+                {
+                    problems.Add($"room template '{template.Id}' ({theme}) uses unknown marker '{unknown}'");
+                }
+            }
         }
 
         if (pack.Monsters.Select(monster => monster.Id).Distinct().Count() != pack.Monsters.Count)

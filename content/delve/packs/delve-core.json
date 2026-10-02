@@ -625,6 +625,74 @@
       {"sprite": "decor.cold.mushroom"}
     ]
   },
+  "roomTemplates": {
+    "Any": [
+      {"id": "pillar-hall", "rows": [
+        ".....",
+        ".#.#.",
+        ".....",
+        ".#.#.",
+        "....."]},
+      {"id": "raised-cache", "rows": [
+        ".....",
+        ".^^^.",
+        ".^*^.",
+        ".^^^.",
+        "....."]},
+      {"id": "storeroom", "rows": [
+        "o.o.o",
+        ".....",
+        "o.L.o"]},
+      {"id": "den", "rows": [
+        "#...#",
+        "..M..",
+        ".M.M.",
+        "#...#"]}
+    ],
+    "Sewer": [
+      {"id": "sewer-pool", "rows": [
+        ".......",
+        ".~~~~~.",
+        ".~~L~~.",
+        ".~~~~~.",
+        "......."]},
+      {"id": "sewer-channel", "rows": [
+        "..~~..",
+        "..~~..",
+        "M.~~.o",
+        "..~~.."]}
+    ],
+    "Temple": [
+      {"id": "temple-shrine", "rows": [
+        ".......",
+        ".T^^^T.",
+        ".#^*^#.",
+        "......."]}
+    ],
+    "Undead": [
+      {"id": "crypt-aisle", "rows": [
+        ".......",
+        ".#.M.#.",
+        "T.....T",
+        "#.....#",
+        ".#.L.#."]}
+    ],
+    "Cave": [
+      {"id": "cave-ledges", "rows": [
+        "^^...",
+        "^*.M.",
+        "....~",
+        "...~~"]}
+    ],
+    "Cold": [
+      {"id": "frozen-pool", "rows": [
+        ".....",
+        ".~~~.",
+        ".~^~.",
+        ".~~~.",
+        "....."]}
+    ]
+  },
   "potionColours": [
     "delve.item.potion-red",
     "delve.item.potion-blue",

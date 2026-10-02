@@ -31,8 +31,30 @@ step-up physics ([donor] `entities/Player.java`, `collision/Collidor.java`)
 are simplified to accelerate–friction–clamp with per-axis grid collision
 (body radius 0.25 tiles). Charging a swing slows the walk
 ([donor] `Player.java` `walkMod`). Look pitch clamps at ±80°.
-**Approximate** (no slopes, jump, or step-up heights; `Water` tiles are floor
-with a different color).
+
+**Heights, steps and jumping.** Each tile has its own floor and ceiling
+(see *Heights and room pieces* below), and the player has a height:
+- They walk up anything within the donor's step height of 0.35 at once
+  ([donor] `entities/Player.java:118, 627`).
+- Space jumps with the donor's 0.05 per tick, and gravity pulls 0.0035 per
+  tick (`Player.java:62, 551, 1067`). That clears about a third of a tile,
+  enough to get onto a 0.4375 dais.
+- They stand on the highest floor under the body's footprint.
+- Walking off a ledge falls over several ticks.
+- A jump stops at the ceiling of the tile overhead, against a body 0.65 tall
+  (`Player.java:235` collision z).
+- Water stands 0.4 below its floor and drags the walk by 4% a tick, the
+  donor's water friction (`Player.java:614-618`). A wader climbs out by the
+  water's depth, as the donor raises its step height in water
+  (`Player.java:619-620`), so pools never trap.
+- Monsters walk up a step at most, never jump, and path only over steps they
+  can climb.
+
+**Approximate:**
+- No slopes: ramps are sixteenth-tile steps.
+- No pits, ladders, swimming, or lava damage. Water is a slow wade, not a danger.
+- A ceiling over a neighbouring tile does not stop the walk, because every
+  walkable tile has at least a tile of headroom.
 
 ## Level model and generation
 
@@ -55,6 +77,45 @@ tiles away. Generation is validated: disconnected or unusable floors
 regenerate, and an impossible config fails loudly.
 **Approximate** — the guarantees (connected floor, exits far from start,
 seams become doors) are kept; the chunk-prefab system is not.
+
+**Heights and room pieces** (`LevelShaping`). Floors are not flat:
+- **Room floors** take a random walk of ±0.2 from one room to the next,
+  within ±0.6.
+- **Room ceilings** sit at `floor + 1 + rand(8) × 0.2`, the donor's own
+  formula ([donor] `generator/rooms/Room.java:82`).
+- **Corridors** step evenly from one end's height to the other, in
+  sixteenths, as the donor's hallways interpolate between their ends
+  (`generator/halls/Hallway.java:106-159`). Their ceilings sit one tile above.
+- **Flattening.** A floor whose steepest step between walkable neighbours
+  would pass 0.3 is flattened, keeping its ceilings.
+- **Room pieces.** Each room other than the entrance takes an authored piece
+  with `roomTemplateChance` (35%), centred where it fits, in the place of the
+  donor's 17×17 prefab chunks (`[data] generator/<Theme>/*.bin`,
+  `generator/RoomGenerator.java`).
+  - Pieces are content: `roomTemplates` per theme, plus `Any` for every
+    theme. They are marker rows:
+    - `#` pillar, `^` dais, `*` a find on a dais, `~` water;
+    - `T` a torch on the pillar beside it, `M` a monster, `L` a find, `o` a pot.
+  - A dais rises 0.4375, the rise the donor's room builder gives its raised
+    tiles (`RoomGenerator.java:1120`). That is above a step, so a find on a
+    dais takes a jump.
+  - A piece that would cut the floor apart is taken back.
+  - The shipped pieces are this repository's own small layouts, not donor
+    chunks: a pillar hall, a raised cache, a storeroom, a den, a sewer pool
+    and channel, a temple shrine, a crypt aisle, cave ledges and a frozen pool.
+- **Room torches** hang along each room's long walls every five tiles, as the
+  donor's room builder hangs them (`RoomGenerator.java:302, 506`). Corridors
+  stay dark.
+- **Saves.** Heights and torches are saved with each floor, in 1/400 of a
+  tile, which holds every generated height exactly.
+
+**Ownership** (the Engine questions in 9078): the level's mesh is product-side
+— a retained static mesh `LevelMesh` builds from the grid. Collision stays the
+Kit's tile grid with per-tile heights. Neither needs an Engine mechanism, and
+no Engine gap is named.
+**Approximate** — the donor's heightbox tiles also slope, and its chunks carry
+whole authored rooms; here heights are flat per tile and pieces are small
+stamps.
 
 ## Depth: sections and floors
 
@@ -166,11 +227,11 @@ dodge and armor on both sides, because the donor's projectile calls
 `entities/Player.java:2066-2070`).
 
 **Approximate:**
-- Flight is swept in steps of 0.1 tile against walls and closed doors, the
-  floor (height 0) and the ceiling (height 1), instead of the donor's
-  collision boxes.
-- Bodies are cylinders: monsters have radius 0.3 and the player radius 0.25,
-  both 0.8 tall.
+- Flight is swept in steps of 0.1 tile against walls and closed doors, and
+  against each tile's own floor and ceiling, instead of the donor's collision
+  boxes. Shots leave from the shooter's height and aim at the target's.
+- Bodies are cylinders standing at their tile's height. Monsters have radius
+  0.3 and are 0.8 tall; the player has radius 0.25 and is 0.65 tall.
 - Knockback, splash damage, hit decals, trails and Zelda-style deflection are
   left out.
 - An arrow flies as its item icon rather than a direction-facing sprite.
@@ -658,8 +719,19 @@ continuous session.
 
 ## Presentation and audio
 
-**Ceilings.** Every open tile gets a ceiling quad at wall height, as the
-donor tesselates one per tile ([donor] `gfx/Tesselator.java:430-472`),
+**Ceilings and heights.** Every open tile gets a floor quad and a ceiling quad
+at its own heights, as the donor tesselates one per tile ([donor]
+`gfx/Tesselator.java:430-472`). Between them:
+- Walls span from the lowest neighbouring floor to the highest neighbouring
+  ceiling.
+- Risers close every step between neighbouring floors or ceilings.
+- A closed door stands one tile tall, with a lintel of wall above it.
+- Vertical faces repeat their texture by the tile instead of stretching.
+- Water shows its surface 0.1 below the floor around it.
+- Sprites, torches and features stand on their tile's floor, and the camera
+  rides the player's height.
+
+The ceiling is
 textured with the donor's default ceiling cell (t1 cell 1). One retained
 ambient light keeps the downward faces readable under the Engine's default
 rig, standing in for the donor's level ambient. **Deliberate divergence:** no
