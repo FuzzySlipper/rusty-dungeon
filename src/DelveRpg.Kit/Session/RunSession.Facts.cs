@@ -39,7 +39,11 @@ public sealed record HudFacts(
     StatBlock Stats,
     IReadOnlyList<string> LevelUpOffers,
     int LevelUpCursor,
-    MinimapFacts Minimap);
+    MinimapFacts Minimap)
+{
+    /// <summary>The backpack slots after the hotbar, in grid order.</summary>
+    public IReadOnlyList<HudSlot> Backpack { get; init; } = [];
+}
 
 public sealed partial class RunSession
 {
@@ -71,13 +75,16 @@ public sealed partial class RunSession
                 1f),
             Messages: messages,
             UsePrompt: UsePromptText(),
-            Hotbar: BuildHotbar(),
+            Hotbar: BuildSlots(0, Player.Inventory.HotbarSize),
             InventoryOpen: InventoryOpen,
             MapOpen: MapOpen,
             Stats: Player.Body.Stats,
             LevelUpOffers: LevelUpOffers,
             LevelUpCursor: LevelUpCursor,
-            Minimap: BuildMinimap());
+            Minimap: BuildMinimap())
+        {
+            Backpack = BuildSlots(Player.Inventory.HotbarSize, Player.Inventory.Capacity),
+        };
     }
 
     private string UsePromptText()
@@ -104,10 +111,10 @@ public sealed partial class RunSession
         };
     }
 
-    private IReadOnlyList<HudSlot> BuildHotbar()
+    private IReadOnlyList<HudSlot> BuildSlots(int from, int to)
     {
         var slots = new List<HudSlot>();
-        for (int i = 0; i < Player.Inventory.HotbarSize; i++)
+        for (int i = from; i < to; i++)
         {
             ItemInstance? instance = Player.Inventory.Slot(i);
             ItemArchetype? archetype = instance is ItemInstance item ? _rules.Item(item.ArchetypeId) : null;

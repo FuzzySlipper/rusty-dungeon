@@ -718,6 +718,37 @@ continuous session.
 
 ## Presentation and audio
 
+**HUD — approximate (donor layout, our frames).** The HUD lies over the game
+view the way the donor's does:
+- **Health bar** at the bottom left: a red fill over a dark frame, with
+  `hp / max` in white, red at a fifth or less ([donor]
+  `gfx/GlRenderer.java:1603-1624`).
+- **Hotbar** along the bottom centre, one slot per hotbar slot, and the
+  backpack in rows of the same width above it while the inventory is open
+  ([donor] `ui/Hotbar.java:80-100`, columns = hotbar size).
+  - Each slot shows its item's icon (the item's sprite cell), its key, a
+    stack count and a wand's charges.
+  - The wielded slot is outlined.
+- Messages sit at the top left, the map window at the top right, and stats
+  replace the map while the inventory is open.
+
+The HUD is split by what each side can draw. `HudLayout` (Host) owns every
+rectangle, in viewport fractions from the lower left, and the projection
+carries them.
+- **The Engine** draws the icons and the slot backings as viewport-placed
+  sprites (`Graphics.SetSpriteViewport`), last in the viewmodel layer so they
+  cover the held weapon. The Engine's `Ui` layer draws with the world, under
+  the viewmodel.
+- **The DOM** draws the frames, keys, counts, health bar and text over the
+  same rectangles. It cannot show content-bundle images (rusty-engine 9129
+  asks for a UI image port). It positions itself over the canvas, so it never
+  grows the Engine's UI root, and keeps item names as visually hidden text for
+  assistive technology.
+
+**Divergences:**
+- Our frames are CSS and a flat backing rather than the donor's UI atlas.
+- There is no drag-and-drop inventory, tooltip art or equipment doll.
+
 **Ceilings and heights.** Every open tile gets a floor quad and a ceiling quad
 at its own heights, as the donor tesselates one per tile ([donor]
 `gfx/Tesselator.java:430-472`). Between them:

@@ -2,6 +2,13 @@
  * Rusty Dungeon's DOM companion: the HUD of a Delver-style descent — vitals,
  * messages, the flat hotbar, the explored map window, and the level-up choice.
  *
+ * It lays itself over the game view like the donor's HUD: a health bar at the
+ * bottom left and the hotbar along the bottom, at the rectangles the C#
+ * projection names (viewport fractions from the lower left). The Engine draws
+ * each slot's item icon into the same rectangle; this panel draws the slot
+ * frame, its key, count and charges, and keeps the item's name as text for
+ * assistive technology.
+ *
  * It owns no state, evaluates no rules, and starts no loop or timer. Every
  * pixel is rendered from the last admitted `delve.ui.snapshot.v1` projection,
  * and every control claims one declared intent from the staged manifest, so a
@@ -11,8 +18,12 @@
 
 import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 
+/** A rectangle in viewport fractions from the lower left: [x, y, width, height]. */
+type HudRect = readonly [number, number, number, number];
+
 interface HudSlot {
   readonly index: number;
+  readonly rect?: HudRect;
   readonly itemId: string | null;
   readonly name: string | null;
   readonly kind: string;
@@ -62,6 +73,8 @@ interface HudSnapshot {
   readonly mapOpen?: boolean;
   readonly messages?: readonly string[];
   readonly hotbar?: readonly HudSlot[];
+  readonly backpack?: readonly HudSlot[];
+  readonly healthBar?: HudRect;
   readonly stats?: Record<string, number>;
   readonly levelUp?: { readonly offers: readonly string[]; readonly cursor: number };
   readonly camp?: CampFacts;
@@ -69,6 +82,47 @@ interface HudSnapshot {
 }
 
 const CONTRACT = 'delve.ui.snapshot.v1';
+
+/**
+ * The panel lies over the game view and never grows the Engine's UI root, so
+ * the root and the canvas stay the same rectangle the projection measures.
+ * Colours follow the donor HUD: dark frames, white text, a red health fill.
+ */
+const HUD_STYLE = `
+.delve-hud { position: absolute; inset: 0; overflow: hidden; color: #f2ead8;
+  font: 14px/1.3 ui-monospace, 'DejaVu Sans Mono', monospace; text-shadow: 1px 1px 0 #000; }
+.delve-hud h1, .delve-hud h2, .delve-hud p { margin: 0; }
+.delve-hud-body > .delve-phase { position: absolute; top: 8px; left: 10px; }
+.delve-phase h1 { display: none; }
+.delve-messages { position: absolute; top: 30px; left: 10px; max-width: 45%; }
+.delve-use-prompt { position: absolute; left: 0; right: 0; bottom: 26%; text-align: center; }
+.delve-placed { position: absolute; box-sizing: border-box; }
+.delve-health { background: #1a1210; border: 2px solid #5a4430; }
+.delve-hp-fill { position: absolute; inset: 0 auto 0 0; background: #a51e16; }
+.delve-hp { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.delve-hp-low { color: #ff3a2e; }
+.delve-slots { list-style: none; margin: 0; padding: 0; }
+.delve-slot { border: 2px solid #4a3a2a; }
+.delve-slot-wielded { border-color: #e8c25a; }
+.delve-slot-key { position: absolute; top: 1px; left: 3px; font-size: 11px; color: #c8b89a; }
+.delve-slot-count, .delve-slot-charges { position: absolute; right: 3px; bottom: 1px; font-size: 12px; }
+.delve-slot-charges { color: #9fd0ff; }
+.delve-stats { position: absolute; top: 30px; right: 10px; text-align: right; }
+.delve-minimap { position: absolute; top: 8px; right: 10px; }
+.delve-stats ~ .delve-minimap { display: none; }
+.delve-minimap h2 { display: none; }
+.delve-minimap-grid { font-size: 9px; line-height: 9px; white-space: pre; opacity: 0.8; }
+.delve-minimap-player { color: #ffd257; }
+.delve-escape { position: absolute; top: 40%; left: 0; right: 0; text-align: center; color: #ffd257; font-size: 20px; }
+.delve-camp, .delve-levelup, .delve-status { position: absolute; top: 18%; left: 50%; transform: translateX(-50%);
+  min-width: 40%; padding: 14px 18px; background: rgba(16, 11, 8, 0.88); border: 2px solid #5a4430; }
+.delve-camp ul, .delve-levelup ul { list-style: none; padding: 0; margin: 8px 0; }
+.delve-offer-cursor { color: #ffd257; }
+.delve-offer-cursor::before { content: '> '; }
+.delve-camp-offer-dear { opacity: 0.55; }
+.delve-controls { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 4px; }
+.delve-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+`;
 
 /** Declared direct intents; the csproj declares the same names. */
 const INTENTS = {
@@ -116,8 +170,14 @@ export function renderHud(doc: Document, root: HTMLElement, snapshot: HudSnapsho
   root.append(phase);
 
   if (snapshot.hp !== undefined && snapshot.maxHp !== undefined) {
+    // The donor's bar: a red fill over the frame and "hp/max" in white,
+    // red at a fifth or less (gfx/GlRenderer.java:1603-1624).
     const health = el(doc, 'section', 'delve-health');
+    placeAt(health, snapshot.healthBar);
     const low = snapshot.hp <= snapshot.maxHp * 0.2;
+    const fill = el(doc, 'div', 'delve-hp-fill');
+    fill.style.width = `${Math.max(0, Math.min(1, snapshot.hp / Math.max(1, snapshot.maxHp))) * 100}%`;
+    health.append(fill);
     health.append(el(doc, 'output', low ? 'delve-hp delve-hp-low' : 'delve-hp', `${snapshot.hp} / ${snapshot.maxHp}`));
     root.append(health);
   }
@@ -135,27 +195,14 @@ export function renderHud(doc: Document, root: HTMLElement, snapshot: HudSnapsho
   }
 
   if (snapshot.hotbar !== undefined) {
-    const hotbar = el(doc, 'section', 'delve-hotbar');
-    hotbar.append(el(doc, 'h2', undefined, 'Hotbar'));
-    const list = el(doc, 'ul', 'delve-hotbar-slots');
-    for (const slot of snapshot.hotbar) {
-      const item = el(doc, 'li', slot.wielded ? 'delve-slot delve-slot-wielded' : 'delve-slot');
-      item.dataset.slot = String(slot.index + 1);
-      item.append(el(doc, 'span', 'delve-slot-key', String(slot.index + 1)));
-      item.append(el(doc, 'span', 'delve-slot-name', slot.name ?? '—'));
-      if (slot.count > 1) {
-        item.append(el(doc, 'span', 'delve-slot-count', `×${slot.count}`));
-      }
-      if (slot.charges !== undefined && slot.charges >= 0) {
-        item.append(el(doc, 'span', 'delve-slot-charges', `${slot.charges} charges`));
-      }
-      list.append(item);
-    }
-    hotbar.append(list);
-    root.append(hotbar);
+    root.append(renderSlots(doc, 'delve-hotbar', 'Hotbar', snapshot.hotbar, true));
   }
 
-  if (snapshot.stats !== undefined) {
+  if (snapshot.inventoryOpen === true && snapshot.backpack !== undefined) {
+    root.append(renderSlots(doc, 'delve-backpack', 'Backpack', snapshot.backpack, false));
+  }
+
+  if (snapshot.stats !== undefined && snapshot.inventoryOpen === true) {
     const stats = el(doc, 'section', 'delve-stats');
     const parts = Object.entries(snapshot.stats).map(([name, value]) => `${name} ${value}`);
     stats.append(el(doc, 'p', undefined, `Level ${snapshot.playerLevel ?? 1} · xp ${snapshot.experience ?? 0}/${snapshot.experienceToNext ?? 0}`));
@@ -187,6 +234,49 @@ export function renderHud(doc: Document, root: HTMLElement, snapshot: HudSnapsho
     chooser.append(list);
     root.append(chooser);
   }
+}
+
+/** Position an element at a projected rectangle; without one it stays in flow. */
+function placeAt(node: HTMLElement, rect: HudRect | undefined): void {
+  if (rect === undefined) {
+    return;
+  }
+  const [x, y, width, height] = rect;
+  node.classList.add('delve-placed');
+  node.style.left = `${x * 100}%`;
+  node.style.bottom = `${y * 100}%`;
+  node.style.width = `${width * 100}%`;
+  node.style.height = `${height * 100}%`;
+}
+
+/** A row of slots. Hotbar slots show their key; the item's icon is the Engine's, under the frame. */
+function renderSlots(doc: Document, className: string, title: string, slots: readonly HudSlot[], keyed: boolean): HTMLElement {
+  const section = el(doc, 'section', className);
+  section.append(el(doc, 'h2', 'delve-visually-hidden', title));
+  const list = el(doc, 'ul', 'delve-slots');
+  for (const slot of slots) {
+    const item = el(doc, 'li', slot.wielded ? 'delve-slot delve-slot-wielded' : 'delve-slot');
+    placeAt(item, slot.rect);
+    item.dataset.slot = String(slot.index + 1);
+    if (keyed) {
+      item.append(el(doc, 'span', 'delve-slot-key', String(slot.index + 1)));
+    }
+    item.append(el(doc, 'span', 'delve-slot-name delve-visually-hidden', slot.name ?? '—'));
+    if (slot.name !== null) {
+      item.title = slot.name;
+    }
+    if (slot.count > 1) {
+      item.append(el(doc, 'span', 'delve-slot-count', `×${slot.count}`));
+    }
+    if (slot.charges !== undefined && slot.charges >= 0) {
+      const charges = el(doc, 'span', 'delve-slot-charges', String(slot.charges));
+      charges.append(el(doc, 'span', 'delve-visually-hidden', ' charges'));
+      item.append(charges);
+    }
+    list.append(item);
+  }
+  section.append(list);
+  return section;
 }
 
 function renderCamp(doc: Document, camp: CampFacts): HTMLElement {
@@ -255,6 +345,8 @@ function renderMinimap(doc: Document, minimap: MinimapFacts): HTMLElement {
  */
 export function mountProductUi(root: HTMLElement, context?: RustyApplicationUiContext): { dispose(): void } {
   const doc = root.ownerDocument;
+  const style = el(doc, 'style', undefined, HUD_STYLE);
+  root.append(style);
   const panel = el(doc, 'aside', 'delve-hud');
   panel.setAttribute('aria-label', 'Rusty Dungeon status');
 
@@ -293,6 +385,7 @@ export function mountProductUi(root: HTMLElement, context?: RustyApplicationUiCo
     dispose: () => {
       unsubscribe?.();
       panel.remove();
+      style.remove();
     },
   });
 }

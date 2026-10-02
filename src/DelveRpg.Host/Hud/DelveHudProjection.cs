@@ -41,7 +41,13 @@ public static class DelveHudProjection
                 ("inventoryOpen", new UiDocument.Flag(facts.InventoryOpen)),
                 ("mapOpen", new UiDocument.Flag(facts.MapOpen)),
                 ("messages", UiDocument.Array(facts.Messages.Select(message => (UiDocument)new UiDocument.Str(message)).ToArray())),
-                ("hotbar", UiDocument.Array(facts.Hotbar.Select(SlotDocument).ToArray())),
+                ("hotbar", UiDocument.Array(facts.Hotbar
+                    .Select(slot => SlotDocument(slot, HudLayout.HotbarSlot(slot.Index, facts.Hotbar.Count)))
+                    .ToArray())),
+                ("backpack", UiDocument.Array(facts.Backpack
+                    .Select((slot, index) => SlotDocument(slot, HudLayout.BackpackSlot(index, facts.Hotbar.Count)))
+                    .ToArray())),
+                ("healthBar", RectDocument(HudLayout.HealthBar)),
                 ("stats", UiDocument.Object(
                     ("attack", new UiDocument.Num(facts.Stats.Attack)),
                     ("defense", new UiDocument.Num(facts.Stats.Defense)),
@@ -77,8 +83,17 @@ public static class DelveHudProjection
             ("stash", UiDocument.Array(camp.Stash.Select(name => (UiDocument)new UiDocument.Str(name)).ToArray())),
             ("message", new UiDocument.Str(camp.Message)));
 
-    private static UiDocument SlotDocument(HudSlot slot) =>
+    /// <summary>A layout rectangle as [x, y, width, height] viewport fractions from the lower left.</summary>
+    private static UiDocument RectDocument(HudRect rect) =>
+        UiDocument.Array(
+            new UiDocument.Num(rect.X),
+            new UiDocument.Num(rect.Y),
+            new UiDocument.Num(rect.Width),
+            new UiDocument.Num(rect.Height));
+
+    private static UiDocument SlotDocument(HudSlot slot, HudRect rect) =>
         UiDocument.Object(
+            ("rect", RectDocument(rect)),
             ("index", new UiDocument.Num(slot.Index)),
             ("itemId", slot.ItemId is null ? new UiDocument.Nothing() : new UiDocument.Str(slot.ItemId)),
             ("name", slot.DisplayName is null ? new UiDocument.Nothing() : new UiDocument.Str(slot.DisplayName)),

@@ -34,8 +34,8 @@ public static class TorchFlicker
 /// </summary>
 public sealed class TorchEffects : IDisposable
 {
-    private const ulong LightBase = 5_000_000_000;
-    private const ulong EmberBase = 6_000_000_000;
+    private const ulong LightBase = 4_100_000_000;
+    private const ulong EmberBase = 4_400_000_000;
     private static readonly Vector3 LightColor = new(1f, 0.8f, 0.2f);
     private const float LightIntensity = 8f;
     private const float LightRange = 4f;

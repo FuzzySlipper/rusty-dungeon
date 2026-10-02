@@ -187,3 +187,35 @@ test('renderHud shows the camp menu with the purse, the cursor and dear offers',
   assert.match(root.textContent, /Enter to buy or descend/);
 });
 
+
+test('renderHud places slots and the health bar at the projected rectangles', () => {
+  const { dom, root } = setup();
+  const placed = {
+    ...snapshot,
+    healthBar: [0.02, 0.02, 0.22, 0.055],
+    hotbar: snapshot.hotbar.map((slot, index) => ({ ...slot, rect: [0.3125 + index * 0.0625, 0.02, 0.0625, 0.1] })),
+  };
+  renderHud(dom.window.document, root, placed);
+  const first = root.querySelector('.delve-hotbar .delve-slot');
+  assert.equal(first.style.left, '31.25%');
+  assert.equal(first.style.bottom, '2%');
+  assert.equal(first.style.width, '6.25%');
+  assert.equal(first.title, 'short sword');
+  const health = root.querySelector('.delve-health');
+  assert.equal(health.style.width, '22%');
+  assert.equal(root.querySelector('.delve-hp-fill').style.width, `${(7 / 16) * 100}%`);
+});
+
+test('renderHud shows the backpack and stats only while the inventory is open', () => {
+  const { dom, root } = setup();
+  const backpack = [{ index: 6, itemId: 'delve.item.bread', name: 'bread', kind: 'Food', count: 2, wielded: false, rect: [0.3125, 0.13, 0.0625, 0.1] }];
+  renderHud(dom.window.document, root, { ...snapshot, backpack });
+  assert.equal(root.querySelector('.delve-backpack'), null);
+  assert.equal(root.querySelector('.delve-stats'), null);
+  renderHud(dom.window.document, root, { ...snapshot, backpack, inventoryOpen: true });
+  const slots = root.querySelectorAll('.delve-backpack .delve-slot');
+  assert.equal(slots.length, 1);
+  assert.match(slots[0].textContent, /bread/);
+  assert.equal(slots[0].querySelector('.delve-slot-key'), null);
+  assert.ok(root.querySelector('.delve-stats'));
+});

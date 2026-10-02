@@ -1,4 +1,5 @@
 using System.Numerics;
+using DelveRpg.Host.Hud;
 using DelveRpg.Kit.Actors;
 using DelveRpg.Kit.Ai;
 using DelveRpg.Kit.Combat;
@@ -39,6 +40,10 @@ public sealed class DelveSceneRenderer : IDisposable
     private const ulong PlateObjectBase = 8_200_000_000;
     private const ulong BurstObjectBase = 8_300_000_000;
     private const ulong DecorObjectBase = 8_400_000_000;
+    private const ulong HudIconObjectBase = 8_500_000_000;
+    private const int HudIconRenderOrder = 1000;
+    private const ulong HudBackingObjectBase = 8_600_000_000;
+    private static readonly Color SlotBackingColor = new(0.09f, 0.065f, 0.045f, 1f);
     private const ulong BurstLightBase = 4_300_000_000;
     private const ulong FlashObjectId = 3_000_000_001;
     private const string FlashTexturePath = "delve/art/white.png";
@@ -56,6 +61,8 @@ public sealed class DelveSceneRenderer : IDisposable
     private readonly Light _torch;
     private Light? _handLight;
     private readonly TorchEffects _torchEffects;
+    private readonly Dictionary<ulong, string> _hudIconItems = new();
+    private readonly Dictionary<ulong, (Appearance Appearance, HudRect Rect)> _hudIconRects = new();
     private readonly Dictionary<long, Light> _boltLights = new();
     private readonly Dictionary<long, Light> _burstLights = new();
     private MeshResource? _spikeMesh;
@@ -267,6 +274,7 @@ public sealed class DelveSceneRenderer : IDisposable
         AddWallTorches(session.ElapsedTicks, facts, live);
         AddHeldWeapon(session, tuning, facts, live);
         AddHurtFlash(session, facts, live);
+        AddHudIcons(session, facts, live);
 
         foreach (ulong stale in _actorAppearances.Keys.Where(id => !live.Contains(id)).ToList())
         {
@@ -915,6 +923,105 @@ public sealed class DelveSceneRenderer : IDisposable
         }
 
         return (uint)definition.Frame;
+    }
+
+    /// <summary>
+    /// The hotbar's item icons, and the backpack's while the inventory is
+    /// open: each item's sprite cell placed by the Engine in its slot's
+    /// rectangle (<see cref="HudLayout"/>), unlit, last in the viewmodel layer
+    /// so it covers the world and the held weapon (the Engine's UI layer draws
+    /// with the world, under the viewmodel). The DOM draws the slot frames, keys and counts over the same
+    /// rectangles. An icon is rebuilt when its slot's item changes.
+    /// </summary>
+    private void AddHudIcons(RunSession session, List<AppearanceFact> facts, HashSet<ulong> live)
+    {
+        Kit.Inventory.InventoryStore inventory = session.Player.Inventory;
+        int shown = session.InventoryOpen ? inventory.Capacity : inventory.HotbarSize;
+        for (int index = 0; index < shown; index++)
+        {
+            HudRect slot = index < inventory.HotbarSize
+                ? HudLayout.HotbarSlot(index, inventory.HotbarSize)
+                : HudLayout.BackpackSlot(index - inventory.HotbarSize, inventory.HotbarSize);
+            AddSlotBacking(index, slot, facts, live);
+            if (inventory.Slot(index) is not Kit.Inventory.ItemInstance item
+                || _rules.Item(item.ArchetypeId)?.SpriteId is not string spriteId
+                || _sprites.SpriteFor(spriteId) is not DelveSprite sprite)
+            {
+                continue;
+            }
+
+            ulong objectId = HudIconObjectBase + (ulong)index;
+            if (_hudIconItems.TryGetValue(objectId, out string? was) && was != spriteId
+                && _actorAppearances.Remove(objectId, out Appearance? stale))
+            {
+                _retiredAppearances.Add(stale);
+            }
+
+            _hudIconItems[objectId] = spriteId;
+            live.Add(objectId);
+            Appearance appearance = RequireAppearance(objectId, () => _engine.Graphics.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(
+                sprite.Atlas,
+                (uint)sprite.Definition.Frame,
+                new Vector2(0.5f, 0.5f),
+                Vector2.One,
+                BillboardMode.None,
+                SpriteSizeMode.World,
+                HudIconRenderOrder,
+                SpriteDepthPolicy.DepthTestOff,
+                new Color(1f, 1f, 1f, 1f),
+                DelveSpriteAssets.CutoutMaterial(new DelveSpriteLighting(), null))));
+            Place(objectId, appearance, HudLayout.Icon(slot), SpriteViewportFit.Contain);
+            facts.Add(new AppearanceFact(objectId, false, 0, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), appearance, true, RenderLayer.Viewmodel));
+        }
+    }
+
+    /// <summary>
+    /// A slot's dark backing, drawn by the Engine just under its icon: the DOM
+    /// frame above the canvas must stay clear or it would hide the icon.
+    /// </summary>
+    private void AddSlotBacking(int index, HudRect slot, List<AppearanceFact> facts, HashSet<ulong> live)
+    {
+        if (_flashAtlas is null)
+        {
+            return;
+        }
+
+        ulong objectId = HudBackingObjectBase + (ulong)index;
+        live.Add(objectId);
+        Appearance backing = RequireAppearance(objectId, () => _engine.Graphics.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(
+            _flashAtlas,
+            0,
+            new Vector2(0.5f, 0.5f),
+            Vector2.One,
+            BillboardMode.None,
+            SpriteSizeMode.World,
+            HudIconRenderOrder - 1,
+            SpriteDepthPolicy.DepthTestOff,
+            SlotBackingColor,
+            // Opaque, so it shares the icons' cutout pass and its render order puts it under them.
+            DelveSpriteAssets.CutoutMaterial(new DelveSpriteLighting(), null))));
+        Place(objectId, backing, slot, SpriteViewportFit.Stretch);
+        facts.Add(new AppearanceFact(objectId, false, 0, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), backing, true, RenderLayer.Viewmodel));
+    }
+
+    /// <summary>Place a HUD sprite in its rectangle, only when the sprite or the rectangle changed.</summary>
+    private void Place(ulong objectId, Appearance appearance, HudRect rect, SpriteViewportFit fit)
+    {
+        // A placement belongs to one appearance; a rebuilt sprite is placed afresh.
+        if (_hudIconRects.TryGetValue(objectId, out (Appearance Appearance, HudRect Rect) placed)
+            && placed.Appearance == appearance && placed.Rect == rect)
+        {
+            return;
+        }
+
+        _engine.Graphics.SetSpriteViewport(new SpriteViewportUpdateRequest(
+            appearance,
+            true,
+            new Vector2(rect.X, rect.Y),
+            new Vector2(rect.Width, rect.Height),
+            new Vector2(0.5f, 0.5f),
+            fit));
+        _hudIconRects[objectId] = (appearance, rect);
     }
 
     private Appearance RequireAppearance(ulong objectId, Func<Appearance> create) =>
