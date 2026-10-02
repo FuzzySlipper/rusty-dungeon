@@ -49,6 +49,9 @@ public sealed class DelverCatalog : IRulesCatalog
                     : null,
                 ChasesTarget = monster.ChasesTarget,
                 KeepsDistance = monster.KeepsDistance,
+                PainChance = monster.PainChance,
+                HurtTicks = monster.HurtTicks,
+                AttackKnockback = monster.AttackKnockback,
             },
             StringComparer.Ordinal);
         _items = pack.Items.ToDictionary(
@@ -65,6 +68,7 @@ public sealed class DelverCatalog : IRulesCatalog
                 item.RandDamage)
             {
                 DamageType = ParseDamageType(item.DamageType),
+                Knockback = item.Knockback,
                 Range = item.Range,
                 Charges = item.Charges,
                 AutoFireTicks = item.AutoFireTicks,

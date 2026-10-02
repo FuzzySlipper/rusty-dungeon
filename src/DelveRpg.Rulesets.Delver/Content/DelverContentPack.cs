@@ -54,6 +54,15 @@ public sealed class DelverMonsterDefinition
     /// <summary>Backs away from a close player (donor keepDistance).</summary>
     public bool KeepsDistance { get; init; }
 
+    /// <summary>Base flinch chance on a hit (donor painChance).</summary>
+    public float PainChance { get; set; } = 0.75f;
+
+    /// <summary>Ticks a flinch holds it still: its donor hurt animation's length; 0 for none.</summary>
+    public int HurtTicks { get; set; } = 22;
+
+    /// <summary>Shove its landed blow gives the player (donor DamageAction knockback).</summary>
+    public float AttackKnockback { get; set; } = 0.05f;
+
     public int DetectRange { get; set; } = 8;
 
     public int MinDungeonLevel { get; set; } = 1;
@@ -117,6 +126,9 @@ public sealed class DelverItemDefinition
 
     /// <summary>Physical, Magic, Fire, Ice, Lightning, Poison, Paralyze.</summary>
     public string DamageType { get; set; } = "Physical";
+
+    /// <summary>How hard a full-power blow or shot shoves (donor knockback).</summary>
+    public float Knockback { get; init; }
 
     /// <summary>A bow's range (donor Bow.range).</summary>
     public int Range { get; init; }

@@ -188,6 +188,45 @@ monsters come back at the same level), and movement speed and detect range
 stay authored (the donor's `speed` is an acceleration in a different
 movement model).
 
+**Hit feedback — approximate.** A blow that lands does more than change
+numbers.
+- **Knockback.** It replaces the monster's velocity with the push times
+  `min(knockback × 1.1, 0.6)` and stuns it for `ceil(5 × that)` ticks
+  ([donor] `entities/Monster.java:939-952`). A melee push is the facing times
+  the donor weapon's default 0.5 reach, the donor's `facing × usedist`
+  ([donor] `items/Sword.java:95-100`); a projectile pushes with its own
+  velocity. The knockback is the weapon's (dagger 0.1, short sword 0.2, mace
+  0.4, bow 0.2, wand 0.01 — [data] `items.dat`) times the attack power.
+  Knocked-back monsters slide under the donor's floor friction, keeping 80%
+  per tick ([donor] `entities/Entity.java:465-493`), and stop at walls.
+- **Pain.** A pain roll of `painChance + damage / maxHp × 0.5`, always on a
+  killing blow, flinches the monster through its hurt animation. Meanwhile
+  it cannot move, and a blow it was winding up is spoiled
+  ([donor] `Monster.java:417-436`, :729-732). `painChance` and the flinch
+  length are the donor monsters' (`painChance`, hurt animation speed, in
+  [data] `monsters.dat`); the wraith, the donor GHOST, has no hurt animation
+  and never flinches.
+- **Death.** At zero hit points a monster staggers through its hurt cells
+  for the donor's 22-tick `deathDelay` (:213, :464-468), unhittable and
+  inactive. Then it falls: experience, loot and any arrows it caught drop,
+  and a corpse plays its death cells once and stays on the floor, like the
+  donor's `Corpse` ([donor] `entities/Corpse.java`). Corpses are not saved
+  and vanish when the floor is left.
+- **The player.** A monster's landed melee blow sets the player's velocity
+  away from it at the monster's `attackKnockback` (the donor DamageAction's
+  0.05; the kobold, the donor GOBLIN, hits at 0.15 —
+  [donor] `Monster.java:1245-1250`). Any damage flashes the view red for 20
+  ticks, fading linearly ([donor] `game/Game.java:849-854`,
+  `gfx/GlRenderer.java:584-586`, `DelverGameMode.java:186-191`). The flash
+  peaks at 0.6 red instead of the donor's full red. It is an emissive,
+  alpha-blended quad in the Engine's viewmodel layer whose material alpha is
+  updated as it fades.
+
+**Approximate:**
+- Knockback ignores monster weight and the stat knockback bonus.
+- A monster's body fits by its centre tile ±0.3, not a collision box.
+- A corpse inherits no velocity.
+
 ## Monster AI
 
 Idle until the player is detected (range + line of sight — a closed door

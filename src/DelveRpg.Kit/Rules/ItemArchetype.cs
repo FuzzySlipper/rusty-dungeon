@@ -34,6 +34,9 @@ public sealed record ItemArchetype(
     string SpriteId,
     int RandDamage = 0)
 {
+    /// <summary>How hard a full-power blow or shot shoves its target (donor knockback).</summary>
+    public float Knockback { get; init; }
+
     /// <summary>What a weapon's blows or bolts are made of.</summary>
     public DamageType DamageType { get; init; } = DamageType.Physical;
 

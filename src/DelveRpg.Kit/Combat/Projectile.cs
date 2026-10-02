@@ -46,6 +46,9 @@ public sealed class Projectile
 
     public DamageType DamageType { get; init; }
 
+    /// <summary>Scales the projectile's own velocity into the shove it gives on a hit.</summary>
+    public float Knockback { get; init; }
+
     public string SpriteId { get; init; } = "";
 
     /// <summary>The item an arrow becomes again where it lands; null for a bolt.</summary>

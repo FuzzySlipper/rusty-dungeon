@@ -199,6 +199,7 @@ public sealed partial class RunSession
         }
 
         Player.Body.AttackCooldownRemaining = Math.Max(0, Player.Body.AttackCooldownRemaining - 1);
+        Player.HurtFlashRemaining = Math.Max(0, Player.HurtFlashRemaining - 1);
 
         TickMovement(input);
         TickCombat(input);
@@ -323,6 +324,11 @@ public sealed partial class RunSession
         float separation = _tuning.ActorSeparationTiles;
         foreach (MonsterState monster in _monsters)
         {
+            if (monster.IsDying)
+            {
+                continue;
+            }
+
             float after = DistanceSquared(monster.Body.X, monster.Body.Y, toX, toY);
             if (after < separation * separation
                 && after < DistanceSquared(monster.Body.X, monster.Body.Y, fromX, fromY))
@@ -425,6 +431,7 @@ public sealed partial class RunSession
         _monsters.Clear();
         _groundItems.Clear();
         _projectiles.Clear();
+        _corpses.Clear();
         Player.Body.X = generated.StartX + 0.5f;
         Player.Body.Y = generated.StartY + 0.5f;
         _velocityX = 0f;

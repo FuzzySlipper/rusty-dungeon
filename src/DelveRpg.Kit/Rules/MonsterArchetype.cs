@@ -25,6 +25,15 @@ public sealed record MonsterArchetype(
 
     /// <summary>A monster that backs away from a player closer than three tiles.</summary>
     public bool KeepsDistance { get; init; }
+
+    /// <summary>Base chance a hit makes it flinch (donor painChance).</summary>
+    public float PainChance { get; init; } = 0.75f;
+
+    /// <summary>How long a flinch holds it still: its hurt animation's length, 0 for none.</summary>
+    public int HurtTicks { get; init; } = 22;
+
+    /// <summary>How hard its landed melee blow shoves the player, in tiles per tick.</summary>
+    public float AttackKnockback { get; init; } = 0.05f;
 }
 
 /// <summary>

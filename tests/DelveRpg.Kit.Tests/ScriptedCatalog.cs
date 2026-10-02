@@ -15,7 +15,10 @@ public sealed class ScriptedCatalog : IRulesCatalog
     {
         _monsters["test.monster.rat"] = new MonsterArchetype(
             "test.monster.rat", "rat", new StatBlock(2, 1, 5, 5, 0, 2), 6, 2, 40, 1, 8, "monster.rat");
-        _items["test.item.sword"] = new ItemArchetype("test.item.sword", "sword", ItemKind.Weapon, 4, 30, 0, 5, "item.sword");
+        _items["test.item.sword"] = new ItemArchetype("test.item.sword", "sword", ItemKind.Weapon, 4, 30, 0, 5, "item.sword")
+        {
+            Knockback = 0.4f,
+        };
         _items["test.item.potion"] = new ItemArchetype("test.item.potion", "potion", ItemKind.Potion, 0, 0, 10, 3, "item.potion");
         _items["test.item.gold"] = new ItemArchetype("test.item.gold", "gold", ItemKind.Gold, 0, 0, 0, 25, "item.gold");
         _items["test.item.orb"] = new ItemArchetype("test.item.orb", "the orb", ItemKind.QuestOrb, 0, 0, 0, 0, "item.orb");

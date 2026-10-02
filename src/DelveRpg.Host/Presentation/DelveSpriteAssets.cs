@@ -90,6 +90,14 @@ public sealed class DelveSpriteDefinition
 
     [JsonPropertyName("attack")]
     public DelveSpriteAnimation? Attack { get; init; }
+
+    /// <summary>The flinch after a pain roll, also played through the death stagger.</summary>
+    [JsonPropertyName("hurt")]
+    public DelveSpriteAnimation? Hurt { get; init; }
+
+    /// <summary>The fall, played once by the corpse and held on its last cell.</summary>
+    [JsonPropertyName("die")]
+    public DelveSpriteAnimation? Die { get; init; }
 }
 
 /// <summary>
@@ -106,6 +114,15 @@ public sealed class DelveSpriteAnimation
 
     [JsonPropertyName("speed")]
     public int Speed { get; set; } = 30;
+
+    /// <summary>The cell shown <paramref name="ticks"/> into the sequence, played once and held on the last cell.</summary>
+    public int FrameOnce(long ticks)
+    {
+        int count = Math.Max(1, End + 1 - Start);
+        int speed = Math.Max(1, Speed);
+        long position = Math.Clamp(ticks, 0, speed - 1);
+        return Start + (int)(position * count / speed);
+    }
 
     /// <summary>The cell shown <paramref name="ticks"/> into the sequence; loops.</summary>
     public int FrameAt(long ticks)

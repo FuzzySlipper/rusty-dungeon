@@ -60,6 +60,41 @@ public sealed class DelveSpriteAssetsTests
     }
 
     [Fact]
+    public void A_flinch_or_death_stagger_shows_the_hurt_cells_over_everything()
+    {
+        var definition = new DelveSpriteDefinition
+        {
+            Frame = 0,
+            Walk = new DelveSpriteAnimation { Start = 0, End = 3, Speed = 30 },
+            Attack = new DelveSpriteAnimation { Start = 4, End = 10, Speed = 30 },
+            Hurt = new DelveSpriteAnimation { Start = 11, End = 14, Speed = 22 },
+        };
+        var body = new ActorState(7, ActorKind.Monster, 1.5f, 1.5f, 8, new StatBlock(2, 1, 5, 5, 0, 2));
+        var monster = new MonsterState(body, new MonsterArchetype(
+            "m", "m", body.Stats, 8, 2, 40, 1, 7, "monster.m") { HurtTicks = 22 });
+        monster.BrainState = MonsterBrainState.Chasing;
+        body.AttackCooldownRemaining = 40;
+
+        monster.HurtTicksRemaining = 22; // the flinch just began
+        Assert.Equal(11u, DelveSceneRenderer.MonsterFrame(definition, monster, 15));
+
+        // Dying past the end of the hurt cells holds the last one.
+        monster.HurtTicksRemaining = 0;
+        monster.DyingTicksRemaining = 3;
+        Assert.Equal(14u, DelveSceneRenderer.MonsterFrame(definition, monster, 15));
+    }
+
+    [Fact]
+    public void A_play_once_animation_holds_its_last_cell()
+    {
+        var die = new DelveSpriteAnimation { Start = 15, End = 17, Speed = 30 };
+        Assert.Equal(15, die.FrameOnce(0));
+        Assert.Equal(16, die.FrameOnce(10));
+        Assert.Equal(17, die.FrameOnce(29));
+        Assert.Equal(17, die.FrameOnce(5000));
+    }
+
+    [Fact]
     public void The_held_weapon_rests_low_right_rises_on_charge_and_sweeps_on_the_blow()
     {
         DelveSceneRenderer.HeldPose rest = DelveSceneRenderer.HeldWeaponPose(0f, 0f);

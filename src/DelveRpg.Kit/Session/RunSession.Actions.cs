@@ -72,19 +72,30 @@ public sealed partial class RunSession
         }
 
         // Bare hands hit for a point; the donor has no unarmed swing at all.
-        AttackOutcome outcome = CombatResolver.ResolveWeaponHit(
-            _random, Player.Body, target.Body, weapon?.Power ?? 1, weapon?.RandDamage ?? 0, attackPower);
-        ShowMessage($"You hit the {target.Archetype.DisplayName} for {outcome.Damage}.");
-        target.BrainState = MonsterBrainState.Chasing;
-        if (outcome.TargetKilled)
-        {
-            KillMonster(target);
-        }
+        int damage = CombatResolver.WeaponDamage(
+            _random, weapon?.Power ?? 1, weapon?.RandDamage ?? 0, Player.Body.Stats.Attack, attackPower);
+
+        // The donor shoves along the facing times the distance the blow
+        // landed at, at most the weapon's reach ([donor] items/Sword.java:95-100).
+        float facingX = MathF.Sin(Player.Body.Facing);
+        float facingY = -MathF.Cos(Player.Body.Facing);
+        HitMonster(
+            target,
+            damage,
+            weapon?.DamageType ?? DamageType.Physical,
+            facingX * WeaponPushReach,
+            facingY * WeaponPushReach,
+            attackPower * (weapon?.Knockback ?? 0f));
+        ShowMessage($"You hit the {target.Archetype.DisplayName} for {damage}.");
     }
+
+    /// <summary>The donor weapon's default reach, the shove a swing's knockback scales.</summary>
+    private const float WeaponPushReach = 0.5f;
 
     private void KillMonster(MonsterState monster)
     {
         _monsters.Remove(monster);
+        _corpses.Add(new Corpse(_nextActorId++, monster.Archetype.SpriteId, monster.Body.X, monster.Body.Y, ElapsedTicks));
         // The donor awards 3 + its zero-based level field, which initLevel sets
         // to the spawn level minus one ([donor] DelverGameMode.java:123).
         int experience = CombatResolver.ExperienceForKill(monster.Level - 1);
@@ -108,6 +119,11 @@ public sealed partial class RunSession
         float bestDistance = reach;
         foreach (MonsterState monster in _monsters)
         {
+            if (monster.IsDying)
+            {
+                continue;
+            }
+
             float dx = monster.Body.X - body.X;
             float dy = monster.Body.Y - body.Y;
             float distance = MathF.Sqrt((dx * dx) + (dy * dy));
@@ -320,11 +336,16 @@ public sealed partial class RunSession
 
     private void TickMonsters()
     {
-        foreach (MonsterState monster in _monsters)
+        foreach (MonsterState monster in _monsters.ToArray())
         {
             ActorState body = monster.Body;
             body.AttackCooldownRemaining = Math.Max(0, body.AttackCooldownRemaining - 1);
             monster.RangedCooldownRemaining = Math.Max(0, monster.RangedCooldownRemaining - 1);
+            if (!TickMonsterBody(monster))
+            {
+                continue;
+            }
+
             EffectSet effects = body.Effects;
             float speedMultiplier = effects.SpeedMultiplier();
             if (effects.IsParalyzed)
@@ -339,8 +360,16 @@ public sealed partial class RunSession
                 && seesPlayer)
             {
                 int armorClass = CombatResolver.ArmorClass(Player.Body.Stats.Defense, GearArmorClass());
+                int hpBefore = Player.Body.Hp;
                 AttackOutcome outcome = CombatResolver.ResolveMelee(
                     _random, body, Player.Body, monster.Archetype.AttackPower, armorClass, _tuning);
+                if (outcome.Damage > 0)
+                {
+                    Player.Body.Hp = hpBefore;
+                    HurtPlayer(outcome.Damage);
+                    ShovePlayer(body, monster.Archetype.AttackKnockback);
+                }
+
                 body.AttackCooldownRemaining = monster.Archetype.AttackCooldownTicks;
                 if (outcome.Dodged)
                 {
@@ -366,6 +395,12 @@ public sealed partial class RunSession
             }
 
             MonsterBrainState before = monster.BrainState;
+            if (monster.HurtTicksRemaining > 0)
+            {
+                // A flinching monster stands where the blow left it.
+                continue;
+            }
+
             MonsterBrain.Tick(monster, Level, Player, _tuning, speedMultiplier);
             if (before == MonsterBrainState.Idle && monster.BrainState == MonsterBrainState.Chasing)
             {
@@ -381,7 +416,7 @@ public sealed partial class RunSession
         int playerDamage = Player.Body.Effects.Tick(Player.Body.Hp);
         if (playerDamage > 0)
         {
-            Player.Body.Hp = Math.Max(0, Player.Body.Hp - playerDamage);
+            HurtPlayer(playerDamage);
             ShowMessage($"You suffer {playerDamage} damage.");
         }
 
@@ -391,9 +426,10 @@ public sealed partial class RunSession
             if (damage > 0)
             {
                 monster.Body.Hp = Math.Max(0, monster.Body.Hp - damage);
-                if (!monster.Body.Alive)
+                if (!monster.Body.Alive && monster.DyingTicksRemaining == 0)
                 {
-                    KillMonster(monster);
+                    monster.HurtTicksRemaining = monster.Archetype.HurtTicks;
+                    monster.DyingTicksRemaining = DeathDelayTicks;
                 }
             }
         }

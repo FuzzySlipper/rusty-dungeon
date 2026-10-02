@@ -85,6 +85,9 @@ public sealed class PlayerState
     /// <summary>Weapon wind-up progress in ticks.</summary>
     public int AttackCharge { get; set; }
 
+    /// <summary>Ticks left on the red hurt flash; set whenever the player takes damage.</summary>
+    public int HurtFlashRemaining { get; set; }
+
     /// <summary>Which hotbar slot the wielded weapon lives in; −1 when bare-handed.</summary>
     public int WieldedSlot { get; set; } = -1;
 }
@@ -114,6 +117,31 @@ public sealed class MonsterState
     public IReadOnlyList<(int X, int Y)> Path { get; set; } = Array.Empty<(int X, int Y)>();
 
     public int PathIndex { get; set; }
+
+    /// <summary>Knockback velocity in tiles per tick; it slides off under floor friction.</summary>
+    public float VelocityX { get; set; }
+
+    public float VelocityY { get; set; }
+
+    /// <summary>Ticks the monster stands stunned by a blow's knockback.</summary>
+    public int StunTicksRemaining { get; set; }
+
+    /// <summary>Ticks left in the hurt flinch after a pain roll; it cannot move meanwhile.</summary>
+    public int HurtTicksRemaining { get; set; }
+
+    /// <summary>Ticks left in the death stagger; above zero the monster is dying and does nothing.</summary>
+    public int DyingTicksRemaining { get; set; }
+
+    public bool IsDying => DyingTicksRemaining > 0 || !Body.Alive;
+
+    /// <summary>Ticks until a blow being wound up lands; zero when not attacking.</summary>
+    public int AttackWindupRemaining { get; set; }
+
+    /// <summary>Ticks since the current or last melee attack began; the attack animation reads it.</summary>
+    public int AttackElapsedTicks { get; set; } = int.MaxValue;
+
+    /// <summary>True once the player has hurt it: it then notices the player on sight at any range.</summary>
+    public bool WasHit { get; set; }
 
     /// <summary>Ticks until this monster may cast its ranged bolt again.</summary>
     public int RangedCooldownRemaining { get; set; }

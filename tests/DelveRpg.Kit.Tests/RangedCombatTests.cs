@@ -21,11 +21,12 @@ public sealed class RangedCombatTests
     /// A one-tile-wide east–west hall (floor x 1..12 on row 1) with the player
     /// at its west end facing east, holding the given slots.
     /// </summary>
-    private static RunSession Hall(
+    internal static RunSession Hall(
         IRandomSource random,
         IReadOnlyList<SnapshotSlot> slots,
         string? weaponId,
-        IReadOnlyList<SnapshotMonster>? monsters = null)
+        IReadOnlyList<SnapshotMonster>? monsters = null,
+        float playerX = 1.5f)
     {
         var tiles = new byte[HallWidth * 3];
         Array.Fill(tiles, (byte)TileKind.Wall);
@@ -46,7 +47,7 @@ public sealed class RangedCombatTests
         RunSnapshot snapshot = fresh.Capture() with
         {
             Floor = floor,
-            PlayerX = 1.5f,
+            PlayerX = playerX,
             PlayerY = 1.5f,
             Facing = MathF.PI / 2f,
             PitchDegrees = 0f,
@@ -60,7 +61,7 @@ public sealed class RangedCombatTests
         return new RunSession(new ScriptedCatalog(), new GameTuning(), Plan, snapshot, MetaProgression.Fresh, random);
     }
 
-    private static void HoldThenRelease(RunSession session, int heldTicks)
+    internal static void HoldThenRelease(RunSession session, int heldTicks)
     {
         for (int i = 0; i < heldTicks; i++)
         {
@@ -70,7 +71,7 @@ public sealed class RangedCombatTests
         session.Tick(RunInput.Idle);
     }
 
-    private static void Idle(RunSession session, int ticks)
+    internal static void Idle(RunSession session, int ticks)
     {
         for (int i = 0; i < ticks; i++)
         {
@@ -129,7 +130,7 @@ public sealed class RangedCombatTests
             [new SnapshotMonster("test.monster.rat", 6.5f, 1.5f, 5, 0f)]);
 
         HoldThenRelease(session, 36);
-        Idle(session, 8);
+        Idle(session, 8 + RunSession.DeathDelayTicks);
 
         Assert.Empty(session.Monsters);
         GroundItem dropped = Assert.Single(session.GroundItems);

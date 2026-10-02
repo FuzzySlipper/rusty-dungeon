@@ -34,6 +34,14 @@ public sealed class DelveSceneRenderer : IDisposable
     private const ulong TorchLightId = 4_000_000_001;
     private const ulong BoltLightBase = 4_200_000_000;
     private const ulong ProjectileObjectBase = 6_000_000_000;
+    private const ulong CorpseObjectBase = 7_000_000_000;
+    private const ulong FlashObjectId = 3_000_000_001;
+
+    /// <summary>
+    /// Strongest red the flash reaches. The donor starts at full red; held
+    /// at 0.6 so a hit never blanks the view.
+    /// </summary>
+    private const float HurtFlashPeak = 0.6f;
 
     private readonly IEngineContext _engine;
     private readonly Camera _camera;
@@ -42,6 +50,10 @@ public sealed class DelveSceneRenderer : IDisposable
     private Light? _handLight;
     private readonly List<Light> _wallTorchLights = new();
     private readonly Dictionary<long, Light> _boltLights = new();
+    private readonly Material _flashMaterial;
+    private readonly MeshResource _flashMesh;
+    private readonly Appearance _flashAppearance;
+    private float _flashAlpha = HurtFlashPeak;
     private IReadOnlyList<WallTorch> _wallTorches = Array.Empty<WallTorch>();
     private readonly Material _material;
     private readonly DelveArtAssets _art;
@@ -108,6 +120,10 @@ public sealed class DelveSceneRenderer : IDisposable
                 LightShadowIntent.Disabled)));
 
         _torch = engine.Graphics.CreateLight(TorchRequest(Vector3.Zero));
+
+        _flashMaterial = engine.Graphics.CreateMaterial(FlashMaterial(_flashAlpha));
+        _flashMesh = CreateFlashMesh();
+        _flashAppearance = engine.Graphics.CreateMeshAppearance(_flashMesh);
 
         engine.CameraView.SetBackgroundColor(new SetBackgroundColorRequest(new Color(0.02f, 0.02f, 0.05f, 1f)));
     }
@@ -231,9 +247,11 @@ public sealed class DelveSceneRenderer : IDisposable
                 RenderLayer.Scene));
         }
 
+        AddCorpses(session, facts, live);
         AddProjectiles(session, facts, live);
         AddWallTorches(session.ElapsedTicks, facts, live);
         AddHeldWeapon(session, tuning, facts, live);
+        AddHurtFlash(session, facts, live);
 
         foreach (ulong stale in _actorAppearances.Keys.Where(id => !live.Contains(id)).ToList())
         {
@@ -471,6 +489,96 @@ public sealed class DelveSceneRenderer : IDisposable
         }
     }
 
+    /// <summary>
+    /// The fallen: each corpse plays its monster's death cells once and lies on
+    /// the last, like the donor's Corpse entity ([donor] entities/Corpse.java).
+    /// A monster without death cells (the wraith) leaves nothing to draw.
+    /// </summary>
+    private void AddCorpses(RunSession session, List<AppearanceFact> facts, HashSet<ulong> live)
+    {
+        foreach (Corpse corpse in session.Corpses)
+        {
+            if (_sprites.SpriteFor(corpse.SpriteId) is not DelveSprite sprite || sprite.Definition.Die is not DelveSpriteAnimation die)
+            {
+                continue;
+            }
+
+            ulong objectId = CorpseObjectBase + (ulong)corpse.Id;
+            live.Add(objectId);
+            Appearance appearance = RequireAppearance(objectId, () => CreateWorldSprite(sprite));
+            ShowFrame(objectId, appearance, sprite, (uint)die.FrameOnce(session.ElapsedTicks - corpse.FellAtTick));
+            facts.Add(new AppearanceFact(
+                objectId,
+                false,
+                0,
+                new Transform(new Vector3(corpse.X, 0f, corpse.Y), Quaternion.Identity, Vector3.One),
+                appearance,
+                true,
+                RenderLayer.Scene));
+        }
+    }
+
+    /// <summary>
+    /// The donor's hurt flash ([donor] game/Game.java:849-854,
+    /// gfx/GlRenderer.java:584-586): red over the whole view, fading out
+    /// linearly over its 20 ticks. Drawn as an emissive, alpha-blended quad
+    /// right in front of the viewmodel camera; its alpha follows the fade
+    /// through a material update, and it leaves the scene when spent.
+    /// </summary>
+    private void AddHurtFlash(RunSession session, List<AppearanceFact> facts, HashSet<ulong> live)
+    {
+        float alpha = HurtFlashPeak * session.Player.HurtFlashRemaining / RunSession.HurtFlashTicks;
+        if (alpha <= 0f)
+        {
+            return;
+        }
+
+        if (MathF.Abs(alpha - _flashAlpha) > 0.001f)
+        {
+            _engine.Graphics.UpdateMaterial(new MaterialUpdateRequest(_flashMaterial, FlashMaterial(alpha)));
+            _flashAlpha = alpha;
+        }
+
+        live.Add(FlashObjectId);
+        facts.Add(new AppearanceFact(
+            FlashObjectId,
+            false,
+            0,
+            new Transform(new Vector3(0f, 0f, -0.1f), Quaternion.Identity, Vector3.One),
+            _flashAppearance,
+            true,
+            RenderLayer.Viewmodel));
+    }
+
+    private static MaterialRequest FlashMaterial(float alpha) => new(
+        new Color(1f, 0f, 0f, alpha),
+        default,
+        1f,
+        new Color(1f, 1f, 1f, 1f),
+        new Vector3(1f, 0f, 0f),
+        1f,
+        true,
+        MaterialAlphaMode.Blend,
+        0.5f);
+
+    /// <summary>A quad far larger than the viewmodel camera's view at its distance, facing the camera.</summary>
+    private MeshResource CreateFlashMesh()
+    {
+        Vector3[] positions = [new(-1f, -1f, 0f), new(1f, -1f, 0f), new(1f, 1f, 0f), new(-1f, 1f, 0f)];
+        Vector3[] normals = [Vector3.UnitZ, Vector3.UnitZ, Vector3.UnitZ, Vector3.UnitZ];
+        Vector2[] uvs = [new(0f, 1f), new(1f, 1f), new(1f, 0f), new(0f, 0f)];
+        Color[] colors = [new(1f, 1f, 1f, 1f), new(1f, 1f, 1f, 1f), new(1f, 1f, 1f, 1f), new(1f, 1f, 1f, 1f)];
+        uint[] indices = [0, 1, 2, 0, 2, 3];
+        return _engine.Graphics.CreateMeshResource(new MeshResourceCreateRequest(
+            positions,
+            normals,
+            uvs,
+            colors,
+            indices,
+            new[] { new MeshGroup(0, 0, 6) },
+            new[] { new MeshMaterialBinding(0, _flashMaterial) }));
+    }
+
     /// <summary>The donor's damage-type colours ([donor] game/Colors.java).</summary>
     public static Vector3 DamageColor(DamageType damageType) => damageType switch
     {
@@ -622,12 +730,20 @@ public sealed class DelveSceneRenderer : IDisposable
     }
 
     /// <summary>
-    /// The donor's frame choice, attack over walk ([donor] entities/Monster.java):
-    /// the attack cells play out right after a blow, the walk cycle loops while
-    /// the monster is on the move, and an idle monster rests on its first cell.
+    /// The donor's frame choice, hurt over attack over walk
+    /// ([donor] entities/Monster.java:873-878): a flinch or the death stagger
+    /// plays the hurt cells (held on the last through a long stagger), the
+    /// attack cells play out right after a blow, the walk cycle loops while the
+    /// monster is on the move, and an idle monster rests on its first cell.
     /// </summary>
     public static uint MonsterFrame(DelveSpriteDefinition definition, MonsterState monster, long elapsedTicks)
     {
+        if (definition.Hurt is DelveSpriteAnimation hurt && (monster.HurtTicksRemaining > 0 || monster.IsDying))
+        {
+            int flinched = monster.Archetype.HurtTicks - monster.HurtTicksRemaining;
+            return (uint)hurt.FrameOnce(flinched);
+        }
+
         int cooldown = monster.Archetype.AttackCooldownTicks;
         int sinceBlow = cooldown - monster.Body.AttackCooldownRemaining;
         if (definition.Attack is DelveSpriteAnimation attack
@@ -736,6 +852,9 @@ public sealed class DelveSceneRenderer : IDisposable
 
         _boltLights.Clear();
 
+        TryDispose(_flashAppearance.Dispose, failures);
+        TryDispose(_flashMesh.Dispose, failures);
+        TryDispose(_flashMaterial.Dispose, failures);
         TryDispose(_torch.Dispose, failures);
         TryDispose(_ambient.Dispose, failures);
         TryDispose(() => _engine.CameraView.ClearActiveCamera(new ClearActiveCameraRequest(0)), failures);

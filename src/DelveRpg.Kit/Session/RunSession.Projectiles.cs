@@ -49,6 +49,7 @@ public sealed partial class RunSession
 
         string ammoId = Player.Inventory.Slot(ammoSlot)!.Value.ArchetypeId;
         ItemArchetype ammo = _rules.Item(ammoId)!;
+        float knockback = bow.Knockback * attackPower;
         Player.Inventory.TryConsumeOne(ammoSlot);
         int damage = Math.Max(1, CombatResolver.WeaponDamage(
             _random, bow.Power, bow.RandDamage, Player.Body.Stats.Attack, attackPower));
@@ -59,7 +60,8 @@ public sealed partial class RunSession
             damage,
             bow.DamageType,
             ammo.ProjectileSpriteId.Length > 0 ? ammo.ProjectileSpriteId : ammo.SpriteId,
-            ammoId);
+            ammoId,
+            knockback);
     }
 
     /// <summary>
@@ -91,7 +93,8 @@ public sealed partial class RunSession
             Math.Max(1, damage),
             wand.DamageType,
             wand.ProjectileSpriteId,
-            ammoItemId: null);
+            ammoItemId: null,
+            wand.Knockback);
     }
 
     private void LaunchFromPlayer(
@@ -101,7 +104,8 @@ public sealed partial class RunSession
         int damage,
         DamageType damageType,
         string spriteId,
-        string? ammoItemId)
+        string? ammoItemId,
+        float knockback)
     {
         ActorState body = Player.Body;
         float yaw = body.Facing;
@@ -139,6 +143,7 @@ public sealed partial class RunSession
             DamageType = damageType,
             SpriteId = spriteId,
             AmmoItemId = ammoItemId,
+            Knockback = knockback,
         });
     }
 
@@ -262,7 +267,7 @@ public sealed partial class RunSession
                 return false;
             }
 
-            player.Hp = Math.Max(0, player.Hp - projectile.Damage);
+            HurtPlayer(projectile.Damage);
             ElementalEffects.ApplyOnHit(projectile.DamageType, player.Effects, _random);
             ShowMessage($"A bolt hits you for {projectile.Damage}.");
             return true;
@@ -270,15 +275,26 @@ public sealed partial class RunSession
 
         foreach (MonsterState monster in _monsters)
         {
+            if (monster.IsDying)
+            {
+                continue;
+            }
+
             float reach = MonsterRadius + ProjectileRadius;
             if (DistanceSquared(projectile.X, projectile.Y, monster.Body.X, monster.Body.Y) > reach * reach)
             {
                 continue;
             }
 
-            monster.Body.Hp = Math.Max(0, monster.Body.Hp - projectile.Damage);
-            ElementalEffects.ApplyOnHit(projectile.DamageType, monster.Body.Effects, _random);
-            monster.BrainState = MonsterBrainState.Chasing;
+            // The donor shoves with the projectile's own velocity
+            // ([donor] projectiles/Projectile.java:201-213 hit(xa, ya, ...)).
+            HitMonster(
+                monster,
+                projectile.Damage,
+                projectile.DamageType,
+                projectile.VelocityX,
+                projectile.VelocityY,
+                projectile.Knockback);
             ShowMessage($"You hit the {monster.Archetype.DisplayName} for {projectile.Damage}.");
 
             // An arrow that strikes home is carried until the monster falls
@@ -286,11 +302,6 @@ public sealed partial class RunSession
             if (projectile.AmmoItemId is string ammoId)
             {
                 monster.Carried.Add(new ItemInstance(ammoId, 1));
-            }
-
-            if (!monster.Body.Alive)
-            {
-                KillMonster(monster);
             }
 
             return true;
