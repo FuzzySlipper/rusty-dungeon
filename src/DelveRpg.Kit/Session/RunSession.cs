@@ -222,6 +222,7 @@ public sealed partial class RunSession
         TickStealth();
         TickMonsters();
         TickProjectiles();
+        TickFeatures();
         TickEffects();
         TickEscapeArc();
         TickFog();
@@ -305,7 +306,7 @@ public sealed partial class RunSession
     {
         ActorState body = Player.Body;
         float newX = body.X + deltaX;
-        if (IsFree(newX, body.Y) && !CrowdsMonster(body.X, body.Y, newX, body.Y))
+        if (IsFree(newX, body.Y) && !CrowdsMonster(body.X, body.Y, newX, body.Y) && !CrowdsPot(body.X, body.Y, newX, body.Y))
         {
             body.X = newX;
         }
@@ -315,7 +316,7 @@ public sealed partial class RunSession
         }
 
         float newY = body.Y + deltaY;
-        if (IsFree(body.X, newY) && !CrowdsMonster(body.X, body.Y, body.X, newY))
+        if (IsFree(body.X, newY) && !CrowdsMonster(body.X, body.Y, body.X, newY) && !CrowdsPot(body.X, body.Y, body.X, newY))
         {
             body.Y = newY;
         }
@@ -450,6 +451,7 @@ public sealed partial class RunSession
         Level = generated.Level;
         Fog = new FogMap(Level.Width, Level.Height);
         Torches = TorchPlacement.Place(Level);
+        LoadFeatures(generated.Features);
         _monsters.Clear();
         _groundItems.Clear();
         _projectiles.Clear();
@@ -471,6 +473,11 @@ public sealed partial class RunSession
         foreach (ItemSpawn spawn in generated.Items.Concat(generated.BonusLoot))
         {
             AddGroundItem(spawn.ArchetypeId, spawn.X, spawn.Y);
+        }
+
+        if (generated.KeySpot is (int keyX, int keyY) && _rules.KeyItemId is string keyId)
+        {
+            AddGroundItem(keyId, keyX, keyY);
         }
 
         if (runIndex == _plan.FloorCount - 1)

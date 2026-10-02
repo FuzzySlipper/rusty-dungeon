@@ -40,7 +40,14 @@ public sealed record GeneratedLevel(
     IReadOnlyList<MonsterSpawn> Monsters,
     IReadOnlyList<ItemSpawn> Items,
     IReadOnlyList<ItemSpawn> BonusLoot,
-    RoomBounds EntranceRoom);
+    RoomBounds EntranceRoom)
+{
+    /// <summary>Traps, triggers and pots (<see cref="FeaturePlacement"/>).</summary>
+    public FloorFeatures Features { get; init; } = FloorFeatures.None;
+
+    /// <summary>Where the vault's key lies, when the floor has a locked vault.</summary>
+    public (int X, int Y)? KeySpot { get; init; }
+}
 
 /// <summary>
 /// Room-and-corridor floor generation. The donor grows prefab chunks through a
@@ -69,7 +76,7 @@ public static class DungeonGenerator
 
         for (int attempt = 0; attempt < config.MaxGenerationAttempts; attempt++)
         {
-            GeneratedLevel? candidate = TryGenerate(random, config, floor, eligibleMonsterIds, eligibleItemIds);
+            GeneratedLevel? candidate = TryGenerate(random, config, tuning, floor, eligibleMonsterIds, eligibleItemIds);
             if (candidate is not null)
             {
                 return candidate;
@@ -83,6 +90,7 @@ public static class DungeonGenerator
     private static GeneratedLevel? TryGenerate(
         IRandomSource random,
         GenerationConfig config,
+        GameTuning tuning,
         FloorSpec floor,
         IReadOnlyList<string> eligibleMonsterIds,
         IReadOnlyList<string> eligibleItemIds)
@@ -151,6 +159,24 @@ public static class DungeonGenerator
             }
         }
 
+        var entrance = new RoomBounds(entranceX, entranceY, entranceWidth, entranceHeight);
+        (FloorFeatures features, Vault? vault) = FeaturePlacement.Place(
+            random,
+            level,
+            rooms.Select(room => new RoomBounds(room.X, room.Y, room.Width, room.Height)).ToList(),
+            entrance,
+            (startX, startY),
+            (stairsX, stairsY),
+            tuning);
+        if (vault is not null && eligibleItemIds.Count > 0)
+        {
+            // A vault holds two finds for the key it cost.
+            foreach ((int x, int y) in TakeShuffled(random, vault.Inside.ToList(), 2))
+            {
+                bonusLoot.Add(new ItemSpawn(eligibleItemIds[random.Next(0, eligibleItemIds.Count)], x, y));
+            }
+        }
+
         return new GeneratedLevel(
             level,
             startX,
@@ -160,7 +186,11 @@ public static class DungeonGenerator
             monsters,
             items,
             bonusLoot,
-            new RoomBounds(entranceX, entranceY, entranceWidth, entranceHeight));
+            entrance)
+        {
+            Features = features,
+            KeySpot = vault?.Key,
+        };
     }
 
     private static List<(int X, int Y, int Width, int Height)> PlaceRooms(IRandomSource random, GenerationConfig config)

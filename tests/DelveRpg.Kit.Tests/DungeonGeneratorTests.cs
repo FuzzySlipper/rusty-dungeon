@@ -149,8 +149,8 @@ public sealed class DungeonGeneratorTests
     }
 
     /// <summary>
-    /// Navigation distance: any actor can open a closed door, so doors count
-    /// as reachable ground here.
+    /// Navigation distance: any actor can open a closed door, and a locked
+    /// one opens with the floor's key, so doors count as reachable ground here.
     /// </summary>
     private static int BfsDistance(GeneratedLevel generated, int fromX, int fromY, int toX, int toY)
     {
@@ -167,7 +167,93 @@ public sealed class DungeonGeneratorTests
 
             foreach ((int nextX, int nextY) in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
             {
-                if (generated.Level.IsNavigable(nextX, nextY) && seen.Add((nextX, nextY)))
+                bool passable = generated.Level.IsNavigable(nextX, nextY)
+                    || (generated.Level.InBounds(nextX, nextY) && generated.Level.At(nextX, nextY).Kind == TileKind.DoorLocked);
+                if (passable && seen.Add((nextX, nextY)))
+                {
+                    queue.Enqueue((nextX, nextY, distance + 1));
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    [Fact]
+    public void A_vault_locks_a_side_room_whose_key_lies_on_the_open_side_and_the_stairs_stay_open()
+    {
+        int vaults = 0;
+        for (int seed = 1; seed <= 24; seed++)
+        {
+            GeneratedLevel generated = DungeonGenerator.Generate(
+                new SplitMixRandom(SplitMixRandom.FloorSeed((ulong)seed, 0)), Config, Tuning with { VaultChance = 1f }, Floor, ["m1"], ["i1"]);
+            DungeonLevel level = generated.Level;
+            int locked = 0;
+            for (int y = 0; y < level.Height; y++)
+            {
+                for (int x = 0; x < level.Width; x++)
+                {
+                    locked += level.At(x, y).Kind == TileKind.DoorLocked ? 1 : 0;
+                }
+            }
+
+            // Without the key: the stairs are reachable, and so is the key.
+            Assert.True(OpenDistance(level, generated.StartX, generated.StartY, generated.StairsX, generated.StairsY) >= 0, $"seed {seed}");
+            if (generated.KeySpot is not (int keyX, int keyY))
+            {
+                Assert.Equal(0, locked);
+                continue;
+            }
+
+            vaults++;
+            Assert.Equal(1, locked);
+            Assert.True(OpenDistance(level, generated.StartX, generated.StartY, keyX, keyY) >= 6, $"seed {seed}: key too close or locked away");
+        }
+
+        Assert.True(vaults > 0, "no floor in 24 seeds had a door that could lock a side room");
+    }
+
+    [Fact]
+    public void Traps_keep_clear_of_the_start_and_the_stairs_and_plates_name_an_answering_effect()
+    {
+        GeneratedLevel generated = DungeonGenerator.Generate(
+            new SplitMixRandom(SplitMixRandom.FloorSeed(5UL, 0)), Config, Tuning with { TrapChance = 0.2f, PotChance = 0.3f }, Floor, ["m1"], ["i1"]);
+        FloorFeatures features = generated.Features;
+
+        Assert.NotEmpty(features.Spikes);
+        Assert.NotEmpty(features.Pots);
+        var trapTiles = features.Spikes.Select(spikes => (spikes.TileX, spikes.TileY))
+            .Concat(features.Triggers.Where(trigger => trigger.IsPlate).Select(trigger => (trigger.TileX, trigger.TileY)));
+        foreach ((int x, int y) in trapTiles)
+        {
+            Assert.True(Math.Max(Math.Abs(x - generated.StartX), Math.Abs(y - generated.StartY)) > 6);
+            Assert.True(Math.Max(Math.Abs(x - generated.StairsX), Math.Abs(y - generated.StairsY)) > 6);
+            Assert.Equal(TileKind.Floor, generated.Level.At(x, y).Kind);
+        }
+
+        foreach (TouchTrigger trigger in features.Triggers)
+        {
+            Assert.Contains(features.Effects, effect => effect.TriggerId == trigger.TargetId);
+        }
+    }
+
+    /// <summary>Steps without passing a locked door; −1 when unreachable.</summary>
+    private static int OpenDistance(DungeonLevel level, int fromX, int fromY, int toX, int toY)
+    {
+        var seen = new HashSet<(int X, int Y)> { (fromX, fromY) };
+        var queue = new Queue<(int X, int Y, int Distance)>();
+        queue.Enqueue((fromX, fromY, 0));
+        while (queue.Count > 0)
+        {
+            (int x, int y, int distance) = queue.Dequeue();
+            if (x == toX && y == toY)
+            {
+                return distance;
+            }
+
+            foreach ((int nextX, int nextY) in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
+            {
+                if (level.IsNavigable(nextX, nextY) && seen.Add((nextX, nextY)))
                 {
                     queue.Enqueue((nextX, nextY, distance + 1));
                 }

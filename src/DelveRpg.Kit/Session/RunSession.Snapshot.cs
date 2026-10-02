@@ -58,7 +58,11 @@ public sealed record RunSnapshot(
     IReadOnlyList<SnapshotMonster> Monsters,
     IReadOnlyList<SnapshotGroundItem> GroundItems,
     IReadOnlyList<string> LevelUpOffers,
-    int LevelUpCursor);
+    int LevelUpCursor)
+{
+    /// <summary>The floor's traps, triggers and pots; null in saves from before they existed.</summary>
+    public IReadOnlyList<SnapshotFeature>? Features { get; init; }
+}
 
 public sealed partial class RunSession
 {
@@ -129,7 +133,10 @@ public sealed partial class RunSession
             GroundItems: _groundItems.Select(item => new SnapshotGroundItem(
                 item.Item.ArchetypeId, item.Item.Count, item.X, item.Y, item.Item.Charges)).ToList(),
             LevelUpOffers: LevelUpOffers.ToList(),
-            LevelUpCursor: LevelUpCursor);
+            LevelUpCursor: LevelUpCursor)
+        {
+            Features = CaptureFeatures(),
+        };
     }
 
     private (int StartX, int StartY, int StairsX, int StairsY) FindMarkers()
@@ -217,6 +224,7 @@ public sealed partial class RunSession
         Level = level;
         Fog = new FogMap(level.Width, level.Height);
         Torches = TorchPlacement.Place(level);
+        LoadFeatures(RestoreFeatures(snapshot.Features));
         for (int y = 0; y < floor.Height; y++)
         {
             for (int x = 0; x < floor.Width; x++)

@@ -97,6 +97,7 @@ public sealed partial class RunSession
         return Level.At(tileX, tileY).Kind switch
         {
             TileKind.DoorClosed => "E — open door",
+            TileKind.DoorLocked => Player.Keys > 0 ? "E — unlock door (uses a key)" : "Locked — it needs a key",
             TileKind.StairsDown => "E — descend",
             TileKind.StairsUp => "E — climb up",
             _ => string.Empty,
@@ -150,7 +151,7 @@ public sealed partial class RunSession
                 {
                     TileKind.StairsDown => '>',
                     TileKind.StairsUp => '<',
-                    TileKind.DoorClosed or TileKind.DoorOpen => '+',
+                    TileKind.DoorClosed or TileKind.DoorOpen or TileKind.DoorLocked => '+',
                     TileKind.Water => '~',
                     _ => Level.At(x, y).BlocksMovement ? '#' : '.',
                 };

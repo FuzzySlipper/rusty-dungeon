@@ -3,6 +3,7 @@ using System.Text.Json;
 using DelveRpg.Kit.Actors;
 using DelveRpg.Kit.Rules;
 using DelveRpg.Kit.Session;
+using DelveRpg.Kit.World;
 using Rusty.Engine.Debugging;
 
 namespace DelveRpg.Host.Playtest;
@@ -201,6 +202,36 @@ public sealed class DelvePlaytest
         }
 
         w.WriteEndArray();
+        w.WriteNumber("keys", session.Player.Keys);
+        w.WriteStartArray("features");
+        foreach (SpikeTrap spikes in session.Spikes.Where(t => Distance(body, t.TileX + 0.5f, t.TileY + 0.5f) <= NearbyTiles))
+        {
+            WriteFeature(w, body, "spikes", spikes.TileX + 0.5f, spikes.TileY + 0.5f, spikes.Phase.ToString());
+        }
+
+        foreach (TouchTrigger plate in session.Triggers.Where(t => t.IsPlate && Distance(body, t.TileX + 0.5f, t.TileY + 0.5f) <= NearbyTiles))
+        {
+            WriteFeature(w, body, "pressure-plate", plate.TileX + 0.5f, plate.TileY + 0.5f, plate.Pressed ? "pressed" : "up");
+        }
+
+        foreach (Pot pot in session.Pots.Where(p => Distance(body, p.X, p.Y) <= NearbyTiles))
+        {
+            WriteFeature(w, body, "pot", pot.X, pot.Y, pot.Kind.ToString());
+        }
+
+        for (int y = Math.Max(0, body.TileY - 12); y <= Math.Min(session.Level.Height - 1, body.TileY + 12); y++)
+        {
+            for (int x = Math.Max(0, body.TileX - 12); x <= Math.Min(session.Level.Width - 1, body.TileX + 12); x++)
+            {
+                if (session.Level.At(x, y).Kind == TileKind.DoorLocked)
+                {
+                    WriteFeature(w, body, "locked-door", x + 0.5f, y + 0.5f, "locked");
+                }
+            }
+        }
+
+        w.WriteEndArray();
+        w.WriteString("featureNote", "Hidden tripwires are not listed (a player would not see them).");
         w.WriteNumber("projectiles", session.Projectiles.Count);
         w.WriteNumber("corpses", session.Corpses.Count);
         w.WriteStartArray("messages");
@@ -212,6 +243,18 @@ public sealed class DelvePlaytest
         w.WriteEndArray();
         w.WriteString("bearingMeaning", "relative to the player's facing: 0 ahead, positive to the right");
         w.WriteString("attackSemantics", "Holding charges; the release swings, shoots or zaps. A swing's blow lands partway through it (about 10-20 ticks), so advance a little after an attack action to see the hit. Monsters wind up before their blows (windingUp); stepping back dodges.");
+    }
+
+    private static void WriteFeature(Utf8JsonWriter w, ActorState body, string kind, float x, float y, string state)
+    {
+        w.WriteStartObject();
+        w.WriteString("kind", kind);
+        w.WriteString("state", state);
+        w.WriteNumber("tileX", (int)MathF.Floor(x));
+        w.WriteNumber("tileY", (int)MathF.Floor(y));
+        w.WriteNumber("distance", Math.Round(Distance(body, x, y), 2));
+        w.WriteNumber("bearingDegrees", Math.Round(Bearing(body, x, y), 1));
+        w.WriteEndObject();
     }
 
     private static float Distance(ActorState body, float x, float y) =>

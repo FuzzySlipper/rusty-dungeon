@@ -111,6 +111,7 @@ PYEOF
   if [[ -f "$OUT/extracted/$atlas" ]]; then
     # The Engine admits RGB/RGBA PNGs; donor sheets saved palette-mode
     # (armor.png) are expanded to RGBA, keeping their transparency.
+    mkdir -p "$(dirname "$ART_STAGE/$atlas")"
     python3 - "$OUT/extracted/$atlas" "$ART_STAGE/$atlas" <<'PYEOF'
 import shutil, sys
 try:

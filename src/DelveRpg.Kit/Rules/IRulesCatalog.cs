@@ -28,4 +28,7 @@ public interface IRulesCatalog
 
     /// <summary>The item id whose pickup starts the escape arc.</summary>
     string ObjectiveItemId { get; }
+
+    /// <summary>The key a locked vault's key spot holds; null when the catalog has no key.</summary>
+    string? KeyItemId => null;
 }

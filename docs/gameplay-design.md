@@ -405,13 +405,82 @@ ticks at half speed, and paralysis lasts 500. **Approximate** — five kinds
 instead of the donor's full set; no duration-scaled stacking rules beyond
 refresh-with-max-magnitude.
 
-## Spells, doors, keys, traps
+## Doors, keys, traps, pots and triggers
 
-**Deferred.** Doors open without keys in this slice; keys are collectible but
-locked doors ([donor] `entities/Door.java` `isLocked/takesKey`) and the spike
-traps, breakables, and trigger chains ([donor] `entities/triggers/`) are not
-placed yet. Wand bolts are in (see Combat); the other spells — scrolls,
-beams, splash, teleport ([donor] `entities/spells/*`) — are **deferred**.
+**Locked doors and keys — approximate (a product vault).** A locked door
+takes one key, opens and stays open, and says "The door is locked" without
+a key ([donor] `entities/Door.java:67-71, 212-236` `isLocked`/`takesKey`;
+keys are a plain count, [donor] `entities/Player.java:99, 1814-1816`). The
+donor's generated floors never lock a door: its generator has no lock or key
+markers. So the vault is this product's.
+- On `vaultChance` of floors (0.6), one door is locked: one whose closing
+  leaves the stairs reachable and cuts off a side room of at least six
+  tiles.
+- The room gets two extra finds.
+- The key lies on the open side, at least six steps from the start and
+  outside the entrance room. Every floor stays completable without opening
+  it.
+- Monsters cannot path through a locked door.
+
+**Traps — the donor's intended rule.** Each open floor tile rolls
+`trapChance` (1.2%) and stays more than 6 tiles (Chebyshev) from the start
+and the stairs ([donor] `gamemode/delver/DelverGameMode.java:505-588`
+`generateTraps`). That donor function never places a trap, because its
+eligibility array is never set; this applies the rule it was written to
+apply. Half the traps are spikes and half are pressure plates, the Dungeon
+section's `["PressureTrap", "ProximitySpikes"]` ([data]
+`generator/Dungeon/section.dat`).
+- **Spikes** follow the donor's ProximitySpikes ([donor]
+  `entities/Spikes.java`; [data] `entities.dat` ProximitySpikes). A body
+  moving onto the tile springs them. They rise over 10 ticks and strike every
+  body on the tile once for 2 at full extension. They stay up 20 ticks, sink,
+  and rearm after 80. They are drawn as an authored bed of steel pyramids
+  rising out of the floor (the donor's `spikes.obj` mesh is not imported)
+  and hidden when flush.
+- **Pressure plates** set off a random trap where they lie, the donor's
+  PressureTrap → TriggeredTrap `random` ([donor]
+  `entities/triggers/TriggeredTrap.java:35-46`): a fire burst for
+  `6 + dungeon level / 2`, a poison burst for 2, or a teleport elsewhere on
+  the floor. Any body presses a plate, which sinks while pressed.
+- **Wall bolts.** `wallBoltRoomChance` (0.1) of rooms hide a tripwire. When
+  the player crosses it, a wall 3–7 tiles away in line shoots a plain magic
+  missile (2 + roll(0..2) magic, speed 0.17), then rests 200 ticks — the
+  donor's Magic Missile Trap prefab ([data] `entities.dat:6146`, a
+  PLAYER_TOUCHED trigger feeding an EntitySpawner). Room builders place it
+  far more rarely in the donor.
+
+**Triggers — approximate.** A touch trigger fires an id, and every trap
+effect with that id answers. This is the donor's chain, `level.trigger(id)`
+([donor] `entities/triggers/Trigger.java:222-226`, `game/Level.java:3073-3086`),
+kept to the two chains generated floors use: plate → trap and tripwire →
+wall bolt. A trigger fires once per step onto it and then waits out its
+reset. Hand-authored chains (buttons, doors that trigger, messages) are left
+out.
+
+**Pots — faithful in rule.** The donor's three dungeon pots stand against
+room walls on `potChance` (3%) of the tiles there ([data] `entities.dat`
+Pot_0/Pot_1/Pot_Exploding, `dungeon_rooms.dat` pot wall prefab; sprites
+from `textures/Dungeon/sprites.png` cells 4–6). They are solid. Any damage
+counts: a swing, a projectile or a burst ([donor] `entities/Breakable.java:152`).
+- The sturdy pot takes 2 points; the fragile and exploding ones take 1.
+- A broken plain pot holds a surprise half the time and no loot ([data]
+  `surpriseSpawnChance` 0.5, `lootSpawnChance` 0). The donor draws the
+  surprise from its theme's bombs and monster spawners ([data]
+  `generator/Dungeon/info.dat` surprises). Here it is, at even odds, a
+  monster for the floor or a bomb that goes off after 40 ticks (6 fire
+  within 1.5 tiles).
+- The exploding pot bursts with no damage and shoves what stands within 3
+  tiles, as its Explosion does (`impulseDistance` 3).
+
+**Approximate:**
+- Trap and burst reach is a radius of 1 tile.
+- Spikes give no knockback.
+- Crates and barrels, which are meshes in the donor, wait on decorations
+  (task 9079).
+- Spike timers are not saved; the traps, triggers and pots are.
+
+Wand bolts are in (see Combat). The other spells — scrolls, beams, splash,
+teleport ([donor] `entities/spells/*`) — are **deferred**.
 
 ## The objective and the escape arc
 

@@ -9,14 +9,17 @@ public enum TileKind : byte
     StairsDown,
     StairsUp,
     Water,
+
+    /// <summary>A door that only a key opens (the donor's isLocked + takesKey door).</summary>
+    DoorLocked,
 }
 
 /// <summary>One grid cell. The tile kind owns movement and sight blocking.</summary>
 public readonly record struct Tile(TileKind Kind)
 {
-    public bool BlocksMovement => Kind is TileKind.Wall or TileKind.DoorClosed;
+    public bool BlocksMovement => Kind is TileKind.Wall or TileKind.DoorClosed or TileKind.DoorLocked;
 
-    public bool BlocksSight => Kind is TileKind.Wall or TileKind.DoorClosed;
+    public bool BlocksSight => Kind is TileKind.Wall or TileKind.DoorClosed or TileKind.DoorLocked;
 
     public bool IsWalkable => !BlocksMovement;
 
@@ -24,6 +27,7 @@ public readonly record struct Tile(TileKind Kind)
     public static readonly Tile Floor = new(TileKind.Floor);
     public static readonly Tile DoorClosed = new(TileKind.DoorClosed);
     public static readonly Tile DoorOpen = new(TileKind.DoorOpen);
+    public static readonly Tile DoorLocked = new(TileKind.DoorLocked);
     public static readonly Tile StairsDown = new(TileKind.StairsDown);
     public static readonly Tile StairsUp = new(TileKind.StairsUp);
     public static readonly Tile Water = new(TileKind.Water);

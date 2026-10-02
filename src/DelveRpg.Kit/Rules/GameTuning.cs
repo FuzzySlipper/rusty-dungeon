@@ -61,6 +61,18 @@ public sealed record GameTuning
     /// </summary>
     public float NoticeLightTiles { get; init; } = 15f;
 
+    /// <summary>Chance a floor gets a locked vault, when one of its doors can wall off a side room.</summary>
+    public float VaultChance { get; init; } = 0.6f;
+
+    /// <summary>Chance per open floor tile of a trap ([donor] DelverGameMode.java generateTraps: 0.012).</summary>
+    public float TrapChance { get; init; } = 0.012f;
+
+    /// <summary>Chance a room hides a wall-bolt tripwire.</summary>
+    public float WallBoltRoomChance { get; init; } = 0.1f;
+
+    /// <summary>Chance per floor tile against a room wall of a pot.</summary>
+    public float PotChance { get; init; } = 0.03f;
+
     /// <summary>Radius, in tiles, of the remembered map window around the player.</summary>
     public int SeenRadius { get; init; } = 5;
 

@@ -35,6 +35,10 @@ public sealed class DelverCatalogAndTuningTests
         Assert.Equal(0.5f, Composition.Tuning.EyeHeight);
         Assert.Equal(3f, Composition.Tuning.NoticeDarkTiles);
         Assert.Equal(15f, Composition.Tuning.NoticeLightTiles);
+        Assert.Equal(0.6f, Composition.Tuning.VaultChance);
+        Assert.Equal(0.012f, Composition.Tuning.TrapChance);
+        Assert.Equal(0.1f, Composition.Tuning.WallBoltRoomChance);
+        Assert.Equal(0.03f, Composition.Tuning.PotChance);
     }
 
     [Fact]

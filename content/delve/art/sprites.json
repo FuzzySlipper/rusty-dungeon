@@ -13,7 +13,8 @@
     "armor.png": { "columns": 8, "rows": 5, "normals": "armor.normals.png" },
     "wands.png": { "columns": 8, "rows": 4, "normals": "wands.normals.png" },
     "sprites.png": { "columns": 4, "rows": 11 },
-    "particles.png": { "columns": 8, "rows": 12 }
+    "particles.png": { "columns": 8, "rows": 12 },
+    "textures/Dungeon/sprites.png": { "columns": 4, "rows": 10, "normals": "textures/Dungeon/sprites.normals.png" }
   },
   "sprites": {
     "monster.rat": { "atlas": "entities_cave.png", "frame": 0, "size": 1.0, "walk": { "start": 0, "end": 3, "speed": 30 }, "attack": { "start": 4, "end": 10, "speed": 65 }, "hurt": { "start": 11, "end": 14, "speed": 22 }, "die": { "start": 15, "end": 17, "speed": 30 } },
@@ -42,6 +43,10 @@
     "item.arrow": { "atlas": "items.png", "frame": 73, "size": 0.5 },
     "projectile.spark": { "atlas": "particles.png", "frame": 52, "size": 0.3, "fullbright": true, "loop": { "start": 52, "end": 55, "speed": 8 } },
     "projectile.eyebolt": { "atlas": "particles.png", "frame": 88, "size": 0.45, "fullbright": true, "loop": { "start": 88, "end": 95, "speed": 15 } },
+    "feature.pot.sturdy": { "atlas": "textures/Dungeon/sprites.png", "frame": 4, "size": 0.6 },
+    "feature.pot.fragile": { "atlas": "textures/Dungeon/sprites.png", "frame": 5, "size": 0.6 },
+    "feature.pot.exploding": { "atlas": "textures/Dungeon/sprites.png", "frame": 6, "size": 0.6 },
+    "effect.burst": { "atlas": "particles.png", "frame": 88, "size": 1.2, "fullbright": true, "loop": { "start": 88, "end": 95, "speed": 30 } },
     "decor.torch": { "atlas": "sprites.png", "frame": 32, "size": 0.6, "fullbright": true, "loop": { "start": 32, "end": 39, "speed": 30 } }
   }
 }

@@ -133,6 +133,8 @@ public sealed class DelverCatalog : IRulesCatalog
 
     public string ObjectiveItemId => "delve.item.orb";
 
+    public string? KeyItemId => _items.Values.FirstOrDefault(item => item.Kind == ItemKind.Key)?.Id;
+
     public bool IsStackable(string id) =>
         _items.TryGetValue(id, out ItemArchetype? archetype)
         && archetype.Kind is ItemKind.Gold or ItemKind.Key or ItemKind.Potion or ItemKind.Food or ItemKind.Ammo;

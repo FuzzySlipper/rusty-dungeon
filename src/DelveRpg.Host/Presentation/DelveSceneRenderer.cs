@@ -35,6 +35,11 @@ public sealed class DelveSceneRenderer : IDisposable
     private const ulong BoltLightBase = 4_200_000_000;
     private const ulong ProjectileObjectBase = 6_000_000_000;
     private const ulong CorpseObjectBase = 7_000_000_000;
+    private const ulong PotObjectBase = 8_000_000_000;
+    private const ulong SpikeObjectBase = 8_100_000_000;
+    private const ulong PlateObjectBase = 8_200_000_000;
+    private const ulong BurstObjectBase = 8_300_000_000;
+    private const ulong BurstLightBase = 4_300_000_000;
     private const ulong FlashObjectId = 3_000_000_001;
     private const string FlashTexturePath = "delve/art/white.png";
     private const int FlashLevels = 5;
@@ -52,6 +57,9 @@ public sealed class DelveSceneRenderer : IDisposable
     private Light? _handLight;
     private readonly List<Light> _wallTorchLights = new();
     private readonly Dictionary<long, Light> _boltLights = new();
+    private readonly Dictionary<long, Light> _burstLights = new();
+    private MeshResource? _spikeMesh;
+    private Material? _spikeMaterial;
     private readonly List<Appearance> _flashLevels = new();
     private RenderResource? _flashTexture;
     private SpriteAtlas? _flashAtlas;
@@ -249,6 +257,7 @@ public sealed class DelveSceneRenderer : IDisposable
         }
 
         AddCorpses(session, facts, live);
+        AddFeatures(session, facts, live);
         AddProjectiles(session, facts, live);
         AddWallTorches(session.ElapsedTicks, facts, live);
         AddHeldWeapon(session, tuning, facts, live);
@@ -345,6 +354,12 @@ public sealed class DelveSceneRenderer : IDisposable
 
         _wallTorchLights.Clear();
         DisposeBoltLights();
+        foreach (Light light in _burstLights.Values)
+        {
+            light.Dispose();
+        }
+
+        _burstLights.Clear();
         _wallTorches = torches;
         for (int i = 0; i < _wallTorches.Count; i++)
         {
@@ -494,6 +509,108 @@ public sealed class DelveSceneRenderer : IDisposable
         {
             _boltLights[spent].Dispose();
             _boltLights.Remove(spent);
+        }
+    }
+
+    /// <summary>
+    /// Floor features: pots as their donor sprites; spike beds as authored
+    /// steel pyramids that rise out of the floor with the trap's extension
+    /// and vanish when flush, as the donor hides retracted spikes; pressure
+    /// plates as low slabs that sink when pressed; bursts as a fullbright
+    /// flash tinted by damage type with a fading light. Hidden tripwires and
+    /// wall-bolt emitters draw nothing.
+    /// </summary>
+    private void AddFeatures(RunSession session, List<AppearanceFact> facts, HashSet<ulong> live)
+    {
+        foreach (Pot pot in session.Pots)
+        {
+            string spriteId = pot.Kind switch
+            {
+                PotKind.Sturdy => "feature.pot.sturdy",
+                PotKind.Fragile => "feature.pot.fragile",
+                _ => "feature.pot.exploding",
+            };
+            ulong objectId = PotObjectBase + (ulong)pot.Id;
+            if (_sprites.SpriteFor(spriteId) is DelveSprite sprite)
+            {
+                live.Add(objectId);
+                Appearance appearance = RequireAppearance(objectId, () => CreateWorldSprite(sprite));
+                facts.Add(new AppearanceFact(objectId, false, 0,
+                    new Transform(new Vector3(pot.X, 0f, pot.Y), Quaternion.Identity, Vector3.One),
+                    appearance, true, RenderLayer.Scene));
+            }
+        }
+
+        foreach (SpikeTrap spikes in session.Spikes)
+        {
+            float extension = spikes.Extension;
+            if (extension <= 0f)
+            {
+                continue;
+            }
+
+            ulong objectId = SpikeObjectBase + (ulong)spikes.Id;
+            live.Add(objectId);
+            _spikeMaterial ??= _engine.Graphics.CreateMaterial(new MaterialRequest(
+                new Color(0.38f, 0.39f, 0.42f, 1f), default, 0.35f, new Color(1f, 1f, 1f, 1f), Vector3.Zero, 0f, false));
+            _spikeMesh ??= _engine.Graphics.CreateMeshResource(FeatureMeshes.Spikes(_spikeMaterial));
+            Appearance appearance = RequireAppearance(objectId, () => _engine.Graphics.CreateMeshAppearance(_spikeMesh));
+            facts.Add(new AppearanceFact(objectId, false, 0,
+                new Transform(
+                    new Vector3(spikes.TileX + 0.5f, -FeatureMeshes.SpikeHeight * (1f - extension), spikes.TileY + 0.5f),
+                    Quaternion.Identity,
+                    Vector3.One),
+                appearance, true, RenderLayer.Scene));
+        }
+
+        foreach (TouchTrigger plate in session.Triggers.Where(trigger => trigger.IsPlate))
+        {
+            ulong objectId = PlateObjectBase + (ulong)plate.Id;
+            live.Add(objectId);
+            Appearance appearance = RequireAppearance(objectId, () => _engine.Graphics.CreatePrimitive(new PrimitiveAppearanceRequest(
+                PrimitiveGeometry.Cube, false, new Color(0.42f, 0.36f, 0.26f, 1f))));
+            facts.Add(new AppearanceFact(objectId, false, 0,
+                new Transform(
+                    new Vector3(plate.TileX + 0.5f, plate.Pressed ? -0.01f : 0.015f, plate.TileY + 0.5f),
+                    Quaternion.Identity,
+                    new Vector3(0.7f, 0.04f, 0.7f)),
+                appearance, true, RenderLayer.Scene));
+        }
+
+        var burning = new HashSet<long>();
+        foreach (Burst burst in session.Bursts)
+        {
+            long age = session.ElapsedTicks - burst.AtTick;
+            float fade = Math.Clamp(1f - (age / 30f), 0f, 1f);
+            Vector3 colour = DamageColor(burst.DamageType);
+            Vector3 centre = new(burst.X, 0.4f, burst.Y);
+            burning.Add(burst.Id);
+            LightRequest request = PointLight(BurstLightBase + (ulong)burst.Id, centre, colour, BurstLightIntensity * fade, BurstLightRange);
+            if (_burstLights.TryGetValue(burst.Id, out Light? light))
+            {
+                _engine.Graphics.UpdateLight(new LightUpdateRequest(light, request));
+            }
+            else
+            {
+                _burstLights[burst.Id] = _engine.Graphics.CreateLight(request);
+            }
+
+            if (_sprites.SpriteFor("effect.burst") is DelveSprite sprite && sprite.Definition.Loop is DelveSpriteAnimation loop)
+            {
+                ulong objectId = BurstObjectBase + (ulong)burst.Id;
+                live.Add(objectId);
+                Appearance appearance = RequireAppearance(objectId, () => CreateWorldSprite(sprite, new Color(colour.X, colour.Y, colour.Z, 1f)));
+                ShowFrame(objectId, appearance, sprite, (uint)loop.FrameOnce(age));
+                facts.Add(new AppearanceFact(objectId, false, 0,
+                    new Transform(centre - new Vector3(0f, sprite.Definition.Size / 2f, 0f), Quaternion.Identity, Vector3.One),
+                    appearance, true, RenderLayer.Scene));
+            }
+        }
+
+        foreach (long spent in _burstLights.Keys.Where(id => !burning.Contains(id)).ToList())
+        {
+            _burstLights[spent].Dispose();
+            _burstLights.Remove(spent);
         }
     }
 
@@ -708,6 +825,8 @@ public sealed class DelveSceneRenderer : IDisposable
     private const float HandLightIntensity = 1.5f;
     private const float BoltLightIntensity = 4f;
     private const float BoltLightRange = 2.5f;
+    private const float BurstLightIntensity = 10f;
+    private const float BurstLightRange = 3f;
 
     private Appearance CreateWorldSprite(DelveSprite sprite, Color? tint = null) =>
         _engine.Graphics.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(
@@ -856,7 +975,12 @@ public sealed class DelveSceneRenderer : IDisposable
         }
 
         _boltLights.Clear();
+        foreach (Light light in _burstLights.Values)
+        {
+            TryDispose(light.Dispose, failures);
+        }
 
+        _burstLights.Clear();
         foreach (Appearance level in _flashLevels)
         {
             TryDispose(level.Dispose, failures);
@@ -871,6 +995,16 @@ public sealed class DelveSceneRenderer : IDisposable
         {
             TryDispose(_flashTexture.Dispose, failures);
         }
+        if (_spikeMesh is not null)
+        {
+            TryDispose(_spikeMesh.Dispose, failures);
+        }
+
+        if (_spikeMaterial is not null)
+        {
+            TryDispose(_spikeMaterial.Dispose, failures);
+        }
+
         TryDispose(_torch.Dispose, failures);
         TryDispose(_ambient.Dispose, failures);
         TryDispose(() => _engine.CameraView.ClearActiveCamera(new ClearActiveCameraRequest(0)), failures);

@@ -14,6 +14,10 @@
   "actorSeparationTiles": 0.75,
   "noticeDarkTiles": 3,
   "noticeLightTiles": 15,
+  "vaultChance": 0.6,
+  "trapChance": 0.012,
+  "wallBoltRoomChance": 0.1,
+  "potChance": 0.03,
   "seenRadius": 5,
   "startingGold": 40,
   "eyeHeight": 0.5

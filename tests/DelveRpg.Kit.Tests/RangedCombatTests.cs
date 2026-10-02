@@ -27,13 +27,21 @@ public sealed class RangedCombatTests
         string? weaponId,
         IReadOnlyList<SnapshotMonster>? monsters = null,
         float playerX = 1.5f,
-        GameTuning? tuning = null)
+        GameTuning? tuning = null,
+        IReadOnlyList<SnapshotFeature>? features = null,
+        int lockedDoorX = 0,
+        int keys = 0)
     {
         var tiles = new byte[HallWidth * 3];
         Array.Fill(tiles, (byte)TileKind.Wall);
         for (int x = 1; x < HallWidth - 1; x++)
         {
             tiles[HallWidth + x] = (byte)TileKind.Floor;
+        }
+
+        if (lockedDoorX > 0)
+        {
+            tiles[HallWidth + lockedDoorX] = (byte)TileKind.DoorLocked;
         }
 
         var explored = new byte[tiles.Length];
@@ -57,6 +65,8 @@ public sealed class RangedCombatTests
             WeaponItemId = weaponId,
             Monsters = monsters ?? [],
             GroundItems = [],
+            Keys = keys,
+            Features = features ?? [],
         };
 
         return new RunSession(new ScriptedCatalog(), tuning ?? new GameTuning(), Plan, snapshot, MetaProgression.Fresh, random);

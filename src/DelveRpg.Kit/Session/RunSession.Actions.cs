@@ -135,6 +135,15 @@ public sealed partial class RunSession
     private void SwingWeapon(ItemArchetype? weapon, float attackPower)
     {
         MonsterState? target = NearestTargetInReach(ReachTiles);
+        Pot? pot = NearestPotInReach(ReachTiles);
+        if (pot is not null
+            && (target is null || Distance(Player.Body.X, Player.Body.Y, pot.X, pot.Y) < Distance(Player.Body, target.Body)))
+        {
+            DamagePot(pot, Math.Max(1, CombatResolver.WeaponDamage(
+                _random, weapon?.Power ?? 0, weapon?.RandDamage ?? 0, Player.Body.Stats.Attack, attackPower)));
+            return;
+        }
+
         if (target is null)
         {
             ShowMessage("Your swing finds only air.");
@@ -240,6 +249,19 @@ public sealed partial class RunSession
             case TileKind.DoorClosed:
                 Level.TryOpenDoor(tileX, tileY);
                 ShowMessage("You open the door.");
+                return;
+            case TileKind.DoorLocked:
+                // A locked door takes one key and stays open
+                // ([donor] entities/Door.java:212-236).
+                if (Player.Keys <= 0)
+                {
+                    ShowMessage("The door is locked.");
+                    return;
+                }
+
+                Player.Keys--;
+                Level.Set(tileX, tileY, Tile.DoorOpen);
+                ShowMessage("You unlock the door.");
                 return;
             case TileKind.StairsDown:
                 if (RunIndex + 1 >= _plan.FloorCount)
@@ -613,6 +635,8 @@ public sealed partial class RunSession
     }
 
     private void ShowMessage(string text) => _messages.Add(new RunMessage(text, MessageDurationTicks));
+
+    private static float Distance(float ax, float ay, float bx, float by) => MathF.Sqrt(DistanceSquared(ax, ay, bx, by));
 
     private static float Distance(ActorState left, ActorState right)
     {

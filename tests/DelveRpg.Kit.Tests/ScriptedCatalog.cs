@@ -21,6 +21,7 @@ public sealed class ScriptedCatalog : IRulesCatalog
         };
         _items["test.item.potion"] = new ItemArchetype("test.item.potion", "potion", ItemKind.Potion, 0, 0, 10, 3, "item.potion");
         _items["test.item.gold"] = new ItemArchetype("test.item.gold", "gold", ItemKind.Gold, 0, 0, 0, 25, "item.gold");
+        _items["test.item.key"] = new ItemArchetype("test.item.key", "key", ItemKind.Key, 0, 0, 0, 0, "item.key");
         _items["test.item.orb"] = new ItemArchetype("test.item.orb", "the orb", ItemKind.QuestOrb, 0, 0, 0, 0, "item.orb");
         _items["test.item.dagger"] = new ItemArchetype("test.item.dagger", "dagger", ItemKind.Weapon, 2, 40, 0, 5, "item.dagger", 1)
         {
@@ -90,6 +91,8 @@ public sealed class ScriptedCatalog : IRulesCatalog
     public string? RollLootId(IRandomSource random, int itemLevel) => "test.item.potion";
 
     public string ObjectiveItemId => "test.item.orb";
+
+    public string? KeyItemId => "test.item.key";
 
     public bool IsStackable(string id) =>
         Item(id)?.Kind is ItemKind.Gold or ItemKind.Key or ItemKind.Potion or ItemKind.Food or ItemKind.Ammo;

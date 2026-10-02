@@ -110,7 +110,7 @@ public static class LevelMesh
                 bool match = role switch
                 {
                     "wall" => tile.Kind == TileKind.Wall && TouchesOpen(level, x, y),
-                    "door" => tile.Kind == TileKind.DoorClosed && TouchesOpen(level, x, y),
+                    "door" => tile.Kind is TileKind.DoorClosed or TileKind.DoorLocked && TouchesOpen(level, x, y),
                     "floor" => !tile.BlocksMovement && tile.Kind != TileKind.Water,
                     "water" => tile.Kind == TileKind.Water,
                     "ceiling" => !tile.BlocksMovement,
@@ -142,6 +142,7 @@ public static class LevelMesh
     private static Color WallColor(Tile tile, float r, float g, float b) => tile.Kind switch
     {
         TileKind.DoorClosed => Clamped(r * 1.4f, g * 1.1f, b * 0.6f),
+        TileKind.DoorLocked => Clamped(r * 0.9f, g * 0.75f, b * 0.6f),
         _ => Clamped(r * 0.62f, g * 0.62f, b * 0.66f),
     };
 

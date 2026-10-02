@@ -241,7 +241,7 @@ public sealed partial class RunSession
             projectile.X = nextX;
             projectile.Y = nextY;
             projectile.Z = nextZ;
-            if (StrikeBody(projectile))
+            if (StrikeBody(projectile) || StrikePot(projectile))
             {
                 return true;
             }

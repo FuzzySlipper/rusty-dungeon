@@ -72,6 +72,14 @@ public sealed class DelverTuningDefinition
 
     public float NoticeLightTiles { get; set; } = 15f;
 
+    public float VaultChance { get; set; } = 0.6f;
+
+    public float TrapChance { get; set; } = 0.012f;
+
+    public float WallBoltRoomChance { get; set; } = 0.1f;
+
+    public float PotChance { get; set; } = 0.03f;
+
     public int SeenRadius { get; set; } = 5;
 
     public int StartingGold { get; set; } = 40;
@@ -95,6 +103,10 @@ public sealed class DelverTuningDefinition
         ActorSeparationTiles = ActorSeparationTiles,
         NoticeDarkTiles = NoticeDarkTiles,
         NoticeLightTiles = NoticeLightTiles,
+        VaultChance = VaultChance,
+        TrapChance = TrapChance,
+        WallBoltRoomChance = WallBoltRoomChance,
+        PotChance = PotChance,
         SeenRadius = SeenRadius,
         StartingGold = StartingGold,
         EyeHeight = EyeHeight,

@@ -69,6 +69,7 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
             playtest.InspectAction,
             DelvePlaytest.Actions,
             playtest.Look));
+        registrar.Register(new DelveGridDebugModule(() => _session));
     }
 
     public void Start()
