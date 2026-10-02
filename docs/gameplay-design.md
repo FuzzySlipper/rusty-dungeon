@@ -238,12 +238,34 @@ rig, standing in for the donor's level ambient. **Deliberate divergence:** no
 per-theme ceiling painters (the Sewer theme's cells 10/11 live in an atlas
 this slice does not stage) and no sky tiles.
 
-**Torch.** The player carries a warm point light at eye height, the
-donor's player light ([donor] `entities/Player.java:173-176` `torchColor`
-(1, 0.8, 0.4), `torchRange` 3, `updatePlayerLight`). **Approximate:** range 4
-at intensity 1.0 under the Engine's falloff, tuned by eye; no flicker, and
-the Engine's default rig still lights the level from above (the donor bakes
-light maps instead).
+**Lighting.** The dungeon is lit by point lights, like the donor's light
+maps fall to near-dark away from torches. The Engine's neutral world and
+viewmodel rigs are disabled in `DelveRpg.Host.csproj`; what remains is the
+product's own: a faint cool ambient (0.06), the player's torch, wall
+torches, and a hand light on the held weapon.
+- The player carries a warm point light at eye height, the donor's player
+  light ([donor] `entities/Player.java:173-176` `torchColor` (1, 0.8, 0.4),
+  `torchRange` 3, `updatePlayerLight`): range 3.5, intensity 8.
+- Wall torches are the donor's `Torch` ([data] `data/entities.dat` "Torch",
+  [donor] `entities/Torch.java`): a fullbright flame sprite looping
+  `sprites.png` cells 32–39 over 30 ticks and a point light of colour
+  (1, 0.8, 0.2), range 4, intensity 8. The donor places them from room
+  template markers ([donor] `generator/GenInfo.java` `Markers.torch`,
+  `RoomGenerator.java:299-302`); our generated rooms have none, so
+  `TorchPlacement` hangs them on walls from the tile grid — floor tiles
+  against a wall in a hashed order, at least 6 tiles apart, at most 48 —
+  the same grid always getting the same torches.
+- The held weapon is lit by a warm light parented to it, so it rides in the
+  camera-local viewmodel layer (the donor tints the held item by the light
+  where the player stands). The Engine requires a light's parent in the
+  published scene, so the hand light is made after the weapon's first
+  publish and released before a publish without it.
+**Approximate:** intensities and ranges are tuned by eye for the Engine's
+`1/distance` falloff with a range window; no flicker, no flame particles, no
+baked light maps. Verified in play that the product's settings hold: with
+every product light at zero the world renders black apart from the fullbright
+torch sprites, and disabling the viewmodel rig blacks the weapon until the
+hand light lights it.
 
 **Sprites.** Monsters and ground items are Y-locked Engine billboard sprites
 over donor sheet cells; the held weapon is a sprite in the Engine's

@@ -27,12 +27,18 @@ public sealed class DelveSceneRenderer : IDisposable
     private const ulong ItemObjectBase = 2_000_000;
     private const ulong WeaponObjectId = 3_000_000_000;
     private const ulong AmbientLightId = 4_000_000_000;
+    private const ulong WallTorchLightBase = 4_100_000_000;
+    private const ulong HandLightId = 4_000_000_002;
+    private const ulong WallTorchObjectBase = 5_000_000_000;
     private const ulong TorchLightId = 4_000_000_001;
 
     private readonly IEngineContext _engine;
     private readonly Camera _camera;
     private readonly Light _ambient;
     private readonly Light _torch;
+    private Light? _handLight;
+    private readonly List<Light> _wallTorchLights = new();
+    private IReadOnlyList<WallTorch> _wallTorches = Array.Empty<WallTorch>();
     private readonly Material _material;
     private readonly DelveArtAssets _art;
     private readonly DelveSpriteAssets _sprites;
@@ -75,17 +81,18 @@ public sealed class DelveSceneRenderer : IDisposable
             new CameraViewport(0, 0, 1, 1)));
         engine.CameraView.SetActiveCamera(_camera);
 
-        // The donor lights a level with an ambient term under its torch light
-        // maps; without one the default rig, which lights from above, leaves
-        // every downward face (the ceiling) black.
+        // The Engine's neutral world rig is disabled (DelveRpg.Host.csproj):
+        // the dungeon is lit by point lights over this faint, cool ambient,
+        // which only keeps unlit corners from going pure black — the donor's
+        // light maps fall to near-dark away from torches.
         _ambient = engine.Graphics.CreateLight(new LightRequest(
             AmbientLightId,
             false,
             0,
             new LightDescriptor(
                 LightKind.Ambient,
-                new Vector3(0.85f, 0.85f, 0.95f),
-                0.9f,
+                new Vector3(0.55f, 0.6f, 0.8f),
+                AmbientIntensity,
                 true,
                 Vector3.Zero,
                 -Vector3.UnitY,
@@ -97,6 +104,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 LightShadowIntent.Disabled)));
 
         _torch = engine.Graphics.CreateLight(TorchRequest(Vector3.Zero));
+
         engine.CameraView.SetBackgroundColor(new SetBackgroundColorRequest(new Color(0.02f, 0.02f, 0.05f, 1f)));
     }
 
@@ -219,6 +227,7 @@ public sealed class DelveSceneRenderer : IDisposable
                 RenderLayer.Scene));
         }
 
+        AddWallTorches(session.ElapsedTicks, facts, live);
         AddHeldWeapon(session, tuning, facts, live);
 
         foreach (ulong stale in _actorAppearances.Keys.Where(id => !live.Contains(id)).ToList())
@@ -228,7 +237,19 @@ public sealed class DelveSceneRenderer : IDisposable
             _spriteFrames.Remove(stale);
         }
 
+        // The hand light hangs off the weapon object, which must be in the
+        // published scene before the light is made and while it lives.
+        if (_handLight is not null && !live.Contains(WeaponObjectId))
+        {
+            _handLight.Dispose();
+            _handLight = null;
+        }
+
         _engine.Graphics.PublishSnapshot(facts.ToArray());
+        if (_handLight is null && live.Contains(WeaponObjectId))
+        {
+            _handLight = _engine.Graphics.CreateLight(HandLightRequest());
+        }
 
         // A retained appearance must leave the published snapshot before
         // disposal; the publish above is the first that excludes these.
@@ -282,6 +303,23 @@ public sealed class DelveSceneRenderer : IDisposable
 
         _actorAppearances.Clear();
         _spriteFrames.Clear();
+
+        foreach (Light light in _wallTorchLights)
+        {
+            light.Dispose();
+        }
+
+        _wallTorchLights.Clear();
+        _wallTorches = TorchPlacement.Place(level);
+        for (int i = 0; i < _wallTorches.Count; i++)
+        {
+            _wallTorchLights.Add(_engine.Graphics.CreateLight(PointLight(
+                WallTorchLightBase + (ulong)i,
+                _wallTorches[i].LightPosition,
+                WallTorchColor,
+                WallTorchIntensity,
+                WallTorchRange)));
+        }
 
         LevelMesh.LevelGeometry geometry = LevelMesh.Build(level, theme, _art.RectFor);
         var bindings = new List<MeshMaterialBinding>();
@@ -357,30 +395,94 @@ public sealed class DelveSceneRenderer : IDisposable
     }
 
     /// <summary>
+    /// Wall torches: a fullbright looping flame sprite and a point light each
+    /// ([donor] entities/Torch.java: sprite atlas cells 32-39 over 30 ticks,
+    /// lightColor (1, 0.8, 0.2), range 3.2). Without the torch sprite the
+    /// lights still burn.
+    /// </summary>
+    private void AddWallTorches(long elapsedTicks, List<AppearanceFact> facts, HashSet<ulong> live)
+    {
+        if (_sprites.SpriteFor(WallTorchSpriteId) is not DelveSprite sprite || sprite.Definition.Loop is not DelveSpriteAnimation loop)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _wallTorches.Count; i++)
+        {
+            ulong objectId = WallTorchObjectBase + (ulong)i;
+            live.Add(objectId);
+            Appearance appearance = RequireAppearance(objectId, () => CreateWorldSprite(sprite));
+            ShowFrame(objectId, appearance, sprite, (uint)loop.FrameAt(elapsedTicks + (i * 7)));
+            facts.Add(new AppearanceFact(
+                objectId,
+                false,
+                0,
+                new Transform(_wallTorches[i].SpritePosition, Quaternion.Identity, Vector3.One),
+                appearance,
+                true,
+                RenderLayer.Scene));
+        }
+    }
+
+    /// <summary>
     /// The player's torch: a warm point light carried at eye height, the
     /// donor's player light ([donor] entities/Player.java:173-176 torchColor
     /// (1, 0.8, 0.4) and torchRange 3, updatePlayerLight).
     /// </summary>
-    private static LightRequest TorchRequest(Vector3 position) => new(
-        TorchLightId,
-        false,
-        0,
+    private static LightRequest TorchRequest(Vector3 position) =>
+        PointLight(TorchLightId, position, new Vector3(1f, 0.8f, 0.4f), TorchIntensity, TorchRange);
+
+    /// <summary>
+    /// The viewmodel rig is disabled too (DelveRpg.Host.csproj): the held
+    /// weapon is lit by the torch in the hand, a light parented to the weapon
+    /// so it rides in the camera-local viewmodel layer, as the donor tints the
+    /// held item by the light where the player stands.
+    /// </summary>
+    private static LightRequest HandLightRequest() => new(
+        HandLightId,
+        true,
+        WeaponObjectId,
         new LightDescriptor(
             LightKind.Point,
             new Vector3(1f, 0.8f, 0.4f),
-            TorchIntensity,
+            HandLightIntensity,
             true,
-            position,
+            new Vector3(-0.35f, 0.35f, 0.45f),
             -Vector3.UnitY,
             true,
-            TorchRange,
-            1f,
+            3f,
+            LightDecay,
             0f,
             0f,
             LightShadowIntent.Disabled));
 
-    private const float TorchIntensity = 1.0f;
-    private const float TorchRange = 4f;
+    private static LightRequest PointLight(ulong id, Vector3 position, Vector3 color, float intensity, float range) => new(
+        id,
+        false,
+        0,
+        new LightDescriptor(
+            LightKind.Point,
+            color,
+            intensity,
+            true,
+            position,
+            -Vector3.UnitY,
+            true,
+            range,
+            LightDecay,
+            0f,
+            0f,
+            LightShadowIntent.Disabled));
+
+    private const string WallTorchSpriteId = "decor.torch";
+    private const float AmbientIntensity = 0.06f;
+    private const float TorchIntensity = 8f;
+    private const float TorchRange = 3.5f;
+    private static readonly Vector3 WallTorchColor = new(1f, 0.8f, 0.2f);
+    private const float WallTorchIntensity = 8f;
+    private const float WallTorchRange = 4f;
+    private const float LightDecay = 1f;
+    private const float HandLightIntensity = 1.5f;
 
     /// <summary>Camera-local weapon pose; the viewmodel camera looks down -Z.</summary>
     public readonly record struct HeldPose(Vector3 Position, float RollDegrees);
@@ -488,6 +590,13 @@ public sealed class DelveSceneRenderer : IDisposable
         _disposed = true;
         List<Exception> failures = new();
 
+        // The hand light goes before its parent weapon leaves the scene.
+        if (_handLight is not null)
+        {
+            TryDispose(_handLight.Dispose, failures);
+            _handLight = null;
+        }
+
         // A retained appearance must leave the published snapshot before
         // disposal; publish the empty scene first.
         TryDispose(
@@ -522,6 +631,13 @@ public sealed class DelveSceneRenderer : IDisposable
         {
             TryDispose(_levelMesh.Dispose, failures);
         }
+
+        foreach (Light light in _wallTorchLights)
+        {
+            TryDispose(light.Dispose, failures);
+        }
+
+        _wallTorchLights.Clear();
 
         TryDispose(_torch.Dispose, failures);
         TryDispose(_ambient.Dispose, failures);

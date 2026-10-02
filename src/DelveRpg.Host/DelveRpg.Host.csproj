@@ -29,6 +29,11 @@
     <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
     <!-- First-person play needs the captured cursor for mouse-look. -->
     <RustyEngineProductInputCursorMode>pointer-lock</RustyEngineProductInputCursorMode>
+    <!-- The dungeon is lit by its own point lights (the player's torch, wall
+         torches) over a low ambient, like the donor's light maps; the Engine's
+         neutral rigs would flood it. The held weapon has its own hand light. -->
+    <RustyEngineProductDefaultWorldLights>disabled</RustyEngineProductDefaultWorldLights>
+    <RustyEngineProductDefaultViewmodelLights>disabled</RustyEngineProductDefaultViewmodelLights>
   </PropertyGroup>
 
   <ItemGroup>

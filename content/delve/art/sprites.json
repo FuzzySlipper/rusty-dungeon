@@ -11,7 +11,8 @@
     "items.png": { "columns": 8, "rows": 20, "normals": "items.normals.png" },
     "melee.png": { "columns": 8, "rows": 4, "normals": "melee.normals.png" },
     "armor.png": { "columns": 8, "rows": 5, "normals": "armor.normals.png" },
-    "wands.png": { "columns": 8, "rows": 4, "normals": "wands.normals.png" }
+    "wands.png": { "columns": 8, "rows": 4, "normals": "wands.normals.png" },
+    "sprites.png": { "columns": 4, "rows": 11 }
   },
   "sprites": {
     "monster.rat": { "atlas": "entities_cave.png", "frame": 0, "size": 1.0, "walk": { "start": 0, "end": 3, "speed": 30 }, "attack": { "start": 4, "end": 10, "speed": 65 } },
@@ -34,8 +35,9 @@
     "item.gold": { "atlas": "items.png", "frame": 89, "size": 0.5 },
     "item.key": { "atlas": "items.png", "frame": 0, "size": 0.5 },
     "item.armor.leather": { "atlas": "armor.png", "frame": 8, "size": 0.5 },
-    "item.armor.chain": { "atlas": "armor.png", "frame": 10, "size": 0.5 },
+    "item.armor.chain": { "atlas": "armor.png", "frame": 11, "size": 0.5 },
     "item.helmet": { "atlas": "armor.png", "frame": 1, "size": 0.5 },
-    "item.orb": { "atlas": "items.png", "frame": 59, "size": 0.5 }
+    "item.orb": { "atlas": "items.png", "frame": 59, "size": 0.5 },
+    "decor.torch": { "atlas": "sprites.png", "frame": 32, "size": 0.6, "fullbright": true, "loop": { "start": 32, "end": 39, "speed": 30 } }
   }
 }

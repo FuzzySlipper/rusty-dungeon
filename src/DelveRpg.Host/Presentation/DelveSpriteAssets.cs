@@ -77,6 +77,14 @@ public sealed class DelveSpriteDefinition
     [JsonPropertyName("heldRoll")]
     public float HeldRoll { get; init; }
 
+    /// <summary>Drawn at full brightness whatever the lights (donor fullbrite).</summary>
+    [JsonPropertyName("fullbright")]
+    public bool Fullbright { get; init; }
+
+    /// <summary>A decoration's endless animation (a torch's flame).</summary>
+    [JsonPropertyName("loop")]
+    public DelveSpriteAnimation? Loop { get; init; }
+
     [JsonPropertyName("walk")]
     public DelveSpriteAnimation? Walk { get; init; }
 
@@ -220,7 +228,10 @@ public sealed class DelveSpriteAssets : IDisposable
                 && manifest.Atlases.TryGetValue(definition.Atlas, out DelveArtAtlas? sheet)
                 && InSheet(sheet, definition))
             {
-                assets._sprites[id] = new DelveSprite(atlas, definition, materials[definition.Atlas]);
+                SpriteMaterialDescriptor material = definition.Fullbright
+                    ? CutoutMaterial(new DelveSpriteLighting(), null)
+                    : materials[definition.Atlas];
+                assets._sprites[id] = new DelveSprite(atlas, definition, material);
             }
         }
 
@@ -285,7 +296,8 @@ public sealed class DelveSpriteAssets : IDisposable
         bool Fits(int cell) => cell >= 0 && cell < cells;
         return Fits(definition.Frame)
             && (definition.Walk is null || (Fits(definition.Walk.Start) && Fits(definition.Walk.End)))
-            && (definition.Attack is null || (Fits(definition.Attack.Start) && Fits(definition.Attack.End)));
+            && (definition.Attack is null || (Fits(definition.Attack.Start) && Fits(definition.Attack.End)))
+            && (definition.Loop is null || (Fits(definition.Loop.Start) && Fits(definition.Loop.End)));
     }
 
     /// <summary>
