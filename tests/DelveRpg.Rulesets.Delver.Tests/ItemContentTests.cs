@@ -24,7 +24,7 @@ public sealed class ItemContentTests
     [Fact]
     public void Uniques_drop_only_as_uniques_and_carry_their_fixed_mods()
     {
-        Assert.Equal(5, Catalog.UniqueItemIds.Count);
+        Assert.Equal(7, Catalog.UniqueItemIds.Count); // five weapons, the bag and the belt pouch
         for (int level = 1; level <= 16; level++)
         {
             Assert.DoesNotContain(Catalog.ItemsForFloor(level), id => Catalog.UniqueItemIds.Contains(id));

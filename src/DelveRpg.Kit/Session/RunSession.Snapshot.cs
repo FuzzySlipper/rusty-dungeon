@@ -91,6 +91,11 @@ public sealed record RunSnapshot(
 
     public int ArmorSlot { get; init; } = -1;
 
+    /// <summary>Slot counts including bags used this run; zero in older saves.</summary>
+    public int HotbarSize { get; init; }
+
+    public int BackpackSize { get; init; }
+
     public int HelmetSlot { get; init; } = -1;
 
     /// <summary>Uniques already found this run.</summary>
@@ -189,6 +194,8 @@ public sealed partial class RunSession
         {
             Features = CaptureFeatures(),
             ArmorSlot = Player.ArmorSlot,
+            HotbarSize = Player.Inventory.HotbarSize,
+            BackpackSize = Player.Inventory.BackpackSize,
             HelmetSlot = Player.HelmetSlot,
             SpawnedUniques = _spawnedUniques.ToList(),
             KnownPotions = _knownPotions.Select(effect => effect.ToString()).ToList(),
@@ -232,7 +239,7 @@ public sealed partial class RunSession
                 snapshot.PlayerY,
                 snapshot.MaxHp,
                 snapshot.Stats),
-            new InventoryStore(Meta.HotbarSize, Meta.BackpackSize))
+            new InventoryStore(Math.Max(Meta.HotbarSize, snapshot.HotbarSize), Math.Max(Meta.BackpackSize, snapshot.BackpackSize)))
         {
             Gold = snapshot.Gold,
             Keys = snapshot.Keys,

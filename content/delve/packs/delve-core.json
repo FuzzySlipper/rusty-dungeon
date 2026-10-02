@@ -440,6 +440,28 @@
       "maxItemLevel": 8
     },
     {
+      "id": "delve.item.bag-expansion",
+      "displayName": "Bag Expansion",
+      "kind": "BagUpgrade",
+      "sprite": "item.bag",
+      "bag": "backpack",
+      "unique": true,
+      "value": 40,
+      "minItemLevel": 1,
+      "maxItemLevel": 16
+    },
+    {
+      "id": "delve.item.belt-pouch",
+      "displayName": "Belt Pouch",
+      "kind": "BagUpgrade",
+      "sprite": "item.bag",
+      "bag": "hotbar",
+      "unique": true,
+      "value": 40,
+      "minItemLevel": 1,
+      "maxItemLevel": 16
+    },
+    {
       "id": "delve.item.bread",
       "displayName": "bread",
       "kind": "Food",

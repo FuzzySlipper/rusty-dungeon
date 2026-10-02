@@ -85,6 +85,7 @@ public sealed class DelverCatalog : IRulesCatalog
                 MaxItemLevel = item.MaxItemLevel,
                 Durability = item.Durability,
                 Unique = item.Unique,
+                GrowsHotbar = string.Equals(item.Bag, "hotbar", StringComparison.OrdinalIgnoreCase),
                 BaseMods = item.BaseMods is DelverEnchantment fixedMods ? ToModification(fixedMods) : null,
                 Range = item.Range,
                 Charges = item.Charges,

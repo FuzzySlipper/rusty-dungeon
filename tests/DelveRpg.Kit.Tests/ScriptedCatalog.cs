@@ -28,6 +28,8 @@ public sealed class ScriptedCatalog : IRulesCatalog
             _items[$"test.item.potion.{colour}"] = new ItemArchetype($"test.item.potion.{colour}", $"{colour} potion", ItemKind.Potion, 0, 0, 0, 25, "item.potion");
         }
 
+        _items["test.item.bag"] = new ItemArchetype("test.item.bag", "Bag Expansion", ItemKind.BagUpgrade, 0, 0, 0, 40, "item.bag") { Unique = true };
+        _items["test.item.belt"] = new ItemArchetype("test.item.belt", "Belt Pouch", ItemKind.BagUpgrade, 0, 0, 0, 40, "item.bag") { Unique = true, GrowsHotbar = true };
         _items["test.item.key"] = new ItemArchetype("test.item.key", "key", ItemKind.Key, 0, 0, 0, 0, "item.key");
         _items["test.item.orb"] = new ItemArchetype("test.item.orb", "the orb", ItemKind.QuestOrb, 0, 0, 0, 0, "item.orb");
         _items["test.item.dagger"] = new ItemArchetype("test.item.dagger", "dagger", ItemKind.Weapon, 2, 40, 0, 5, "item.dagger", 1)

@@ -160,3 +160,30 @@ test('dispose removes the panel and unsubscribes', () => {
   assert.equal(ctx.listeners.length, 0);
   assert.equal(root.querySelector('.delve-hud'), null);
 });
+
+test('renderHud shows the camp menu with the purse, the cursor and dear offers', () => {
+  const { dom, root } = setup();
+  renderHud(dom.window.document, root, {
+    phase: 'camp',
+    camp: {
+      gold: 45, wins: 1, deaths: 3, hotbarSize: 6, backpackSize: 19,
+      offers: [
+        { label: 'Descend into the dungeon', cost: 0, affordable: true },
+        { label: 'Soulbound bag expansion (+1 backpack slot)', cost: 52, affordable: false },
+        { label: 'hunting bow', cost: 25, affordable: true },
+      ],
+      cursor: 2,
+      stash: ['short sword'],
+      message: 'You buy the short sword; it will go down with you.',
+    },
+  });
+  assert.match(root.textContent, /45 gold/);
+  const offers = root.querySelectorAll('.delve-camp-offer');
+  assert.equal(offers.length, 3);
+  assert.ok(offers[2].className.includes('delve-offer-cursor'));
+  assert.ok(offers[1].className.includes('delve-camp-offer-dear'));
+  assert.match(offers[1].textContent, /52 gold/);
+  assert.match(root.textContent, /Going down with you: short sword/);
+  assert.match(root.textContent, /Enter to buy or descend/);
+});
+

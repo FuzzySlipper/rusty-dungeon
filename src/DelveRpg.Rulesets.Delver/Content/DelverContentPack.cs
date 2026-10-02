@@ -212,6 +212,9 @@ public sealed class DelverItemDefinition
     /// <summary>Uses before its condition drops a step (donor durability, 25 by default).</summary>
     public int Durability { get; set; } = 25;
 
+    /// <summary>For a BagUpgrade: "hotbar" grows the hotbar, anything else the backpack.</summary>
+    public string Bag { get; set; } = "backpack";
+
     /// <summary>A unique: found once a run from monster loot, never enchanted.</summary>
     public bool Unique { get; init; }
 

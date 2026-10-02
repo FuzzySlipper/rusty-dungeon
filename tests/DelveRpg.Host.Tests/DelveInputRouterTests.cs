@@ -130,6 +130,12 @@ public sealed class DelveInputRouterTests
         var router = new DelveInputRouter();
         router.Route(new[] { Digital("hotbar.3", InputEdge.Pressed, 1f) });
         Assert.Equal(3, router.TakeTickInput().HotbarPressed);
+
+        // Belt expansions reach ten slots; the tenth is the 0 key.
+        router.Route(new[] { Digital("hotbar.9", InputEdge.Pressed, 1f) });
+        Assert.Equal(9, router.TakeTickInput().HotbarPressed);
+        router.Route(new[] { Digital("hotbar.0", InputEdge.Pressed, 1f) });
+        Assert.Equal(10, router.TakeTickInput().HotbarPressed);
     }
 
     [Fact]

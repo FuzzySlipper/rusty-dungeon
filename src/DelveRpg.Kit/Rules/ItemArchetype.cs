@@ -15,6 +15,9 @@ public enum ItemKind
     Armor,
     Helmet,
     QuestOrb,
+
+    /// <summary>Used up for one more inventory slot this run ([donor] entities/items/BagUpgrade.java).</summary>
+    BagUpgrade,
 }
 
 /// <summary>
@@ -83,6 +86,9 @@ public sealed record ItemArchetype(
 
     /// <summary>A unique's fixed mods, always known ([data] items.dat baseMods).</summary>
     public ItemModification? BaseMods { get; init; }
+
+    /// <summary>A bag upgrade that grows the hotbar rather than the backpack (the donor's Belt Pouch).</summary>
+    public bool GrowsHotbar { get; init; }
 
     /// <summary>How many a fresh find holds (a bundle of arrows); 1 for most items.</summary>
     public int StackSize { get; init; } = 1;

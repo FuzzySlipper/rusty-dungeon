@@ -108,13 +108,28 @@ public sealed class DelverRulesetTests
     }
 
     [Fact]
-    public void A_fresh_session_starts_on_the_first_floor_with_starting_gold()
+    public void A_fresh_session_starts_on_the_first_floor_with_the_banked_purse()
     {
-        RunSession session = Ruleset().CreateSession(
-            77UL, Kit.Progression.MetaProgression.Fresh, new Kit.Random.SplitMixRandom(1UL));
+        DelverRuleset ruleset = Ruleset();
+        RunSession session = ruleset.CreateSession(77UL, ruleset.NewPlayer(), new Kit.Random.SplitMixRandom(1UL));
         Assert.Equal(0, session.RunIndex);
         Assert.Equal(RunPhase.Playing, session.Phase);
-        Assert.Equal(40, session.Player.Gold);
+        Assert.Equal(40, session.Player.Gold); // a new player's 40 (donor Progression.gold)
+
+        RunSession richer = ruleset.CreateSession(
+            77UL, Kit.Progression.MetaProgression.Fresh with { Gold = 312 }, new Kit.Random.SplitMixRandom(1UL));
+        Assert.Equal(312, richer.Player.Gold);
+    }
+
+    [Fact]
+    public void Gear_bought_in_camp_goes_down_with_the_next_run()
+    {
+        var meta = Kit.Progression.MetaProgression.Fresh with { Stash = [new Kit.Progression.StashedItem("delve.item.short-sword", 7)] };
+        RunSession session = Ruleset().CreateSession(77UL, meta, new Kit.Random.SplitMixRandom(1UL));
+
+        int slot = session.Player.Inventory.Find("delve.item.short-sword");
+        Assert.True(slot >= 0);
+        Assert.Equal(7, session.Player.Inventory.Slot(slot)!.Value.ItemLevel);
     }
 
     [Fact]

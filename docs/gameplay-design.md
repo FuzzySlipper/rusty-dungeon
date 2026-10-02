@@ -376,8 +376,16 @@ wand and food; ours is the rusty dagger, leather armor, the red potion (its
 effect is drawn per run, see below), the wand of sparks and bread, all in
 normal condition and unenchanted. There is no pants slot, and the wand is not
 drawn at random. Loot rolls use weighted tables over a per-item level window
-([donor] `helpers/LootListHelper.java` level buckets). Bags and shops are
-**deferred** (task 9076).
+([donor] `helpers/LootListHelper.java` level buckets). In-dungeon shops are
+**skipped**: the donor's stand only on hand-made transition floors.
+
+**Bags — faithful.** The donor's Bag Expansion and Belt Pouch are uniques
+from monster loot ([data] `items.dat:577-583`). Using one gives one more
+backpack slot, or one more hotbar slot, for this run, up to the donor's caps
+of 36 and 10 ([donor] `entities/items/BagUpgrade.java:35-63`,
+`entities/Player.java:262-286`). A new hotbar slot goes after the last, and
+equipment held in backpack slots moves along with it. The 7, 8, 9 and 0
+keys reach hotbar slots seven to ten.
 
 **Condition and wear — faithful.**
 - **Condition.** Every weapon or armor find rolls the donor's condition:
@@ -466,8 +474,34 @@ stats ([donor] `overlays/LevelUpOverlay.java:204`);
 `maxHp = (int)(END*(END/3f)) + 4` then `+= (level-1)*0.5f`
 ([donor] `overlays/LevelUpOverlay.java:178-180`, kept with its float
 semantics). Meta progression (gold, wins/deaths, hotbar/backpack upgrades)
-survives runs like the donor's `Progression`. **Deferred:** spending gold on
-upgrades between runs (the counters exist; the shop does not).
+survives runs like the donor's `Progression`.
+
+**Gold is one purse — faithful.** A new player banks 40 ([donor]
+`game/Progression.java:10`). A run starts carrying the whole purse and puts
+back whatever it ends with, won or lost; death costs nothing ([donor]
+`game/Game.java:405-413, 918`, `GameOverScreen.java:175-183`,
+`WinScreen.java:103-105`).
+
+**The camp — approximate.** Between the title and the descent is a camp
+menu where the purse is spent.
+- **Soulbound expansions** add slots to every later run:
+  - the bag expansion adds a backpack slot for `30 + 22n²`;
+  - the belt expansion adds a hotbar slot for `60 + 60n²`, where n is how
+    many were bought;
+  - both stop at the caps of 36 and 10 ([donor]
+    `entities/triggers/TriggeredShop.java:154-166`).
+
+  Slots grow one at a time as in the donor; the backpack starts at the
+  donor's 18 and the hotbar at six (the donor's five).
+- **The stock** is restocked each visit in the shape of the donor's camp
+  shop ([donor] `TriggeredShop.java:105-112`): two ranged weapons, a melee
+  weapon, an armor piece, a wand and a potion, at item level 7 and normal
+  condition, priced at their value. Bought gear goes down with the next run.
+
+**Approximate:**
+- The donor's camp is a walkable level, with shopkeeper NPCs and dialogue.
+- Its soulbound expansions are sold by a merchant on a transition floor.
+- This port folds both into one menu.
 
 ## Status effects
 

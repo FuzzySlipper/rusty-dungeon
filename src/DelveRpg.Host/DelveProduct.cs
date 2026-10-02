@@ -24,6 +24,7 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
     private const uint MaxCatchUpSteps = 4;
     private const string PhaseTitle = "title";
     private const string PhaseRun = "run";
+    private const string PhaseCamp = "camp";
 
     private readonly IEngineContext _engine;
     private readonly DelverRuleset _ruleset;
@@ -37,6 +38,9 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
     private ulong _savedLevelRevision;
     private string _hostPhase = PhaseTitle;
     private bool _shutdown;
+    private IReadOnlyList<string> _campStock = Array.Empty<string>();
+    private int _campCursor;
+    private string _campMessage = "";
     private readonly Func<string, string?> _readText;
 
     public DelveProduct(ProductCreateContext context)
@@ -79,7 +83,7 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        MetaProgression meta = _saves.LoadMeta();
+        MetaProgression meta = LoadMeta();
         RunSnapshot? saved = _saves.LoadRun();
         if (saved is not null)
         {
@@ -130,11 +134,17 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
 
     private void Step(RunInput input)
     {
+        if (_hostPhase == PhaseCamp)
+        {
+            StepCamp(input);
+            return;
+        }
+
         if (_session is null || _hostPhase == PhaseTitle)
         {
             if (input.MenuConfirm)
             {
-                StartNewRun();
+                EnterCamp();
             }
 
             return;
@@ -159,12 +169,101 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
         }
     }
 
+    /// <summary>
+    /// The camp between runs: a fresh stock each visit (the donor's camp shop
+    /// restocks per visit), the soulbound expansions, and the way down.
+    /// </summary>
+    private void EnterCamp()
+    {
+        long draw = _engine.Random.DrawKeyed(new KeyedRngRequest(
+            0xD00D_F00D_D1CE_0002UL, "camp-stock", $"camp:{_runSeedCounter}", long.MinValue, long.MaxValue)).Value;
+        _campStock = Camp.RollStock(new Kit.Random.SplitMixRandom((ulong)draw), _ruleset.Catalog);
+        _campCursor = 0;
+        _campMessage = "";
+        _hostPhase = PhaseCamp;
+    }
+
+    private void StepCamp(RunInput input)
+    {
+        MetaProgression meta = LoadMeta();
+        IReadOnlyList<CampOffer> offers = Camp.Offers(meta, _campStock, _ruleset.Catalog);
+        if (input.MenuUp)
+        {
+            _campCursor = Math.Max(0, _campCursor - 1);
+        }
+
+        if (input.MenuDown)
+        {
+            _campCursor = Math.Min(offers.Count - 1, _campCursor + 1);
+        }
+
+        if (input.MenuCancel)
+        {
+            _hostPhase = PhaseTitle;
+            return;
+        }
+
+        if (!input.MenuConfirm)
+        {
+            return;
+        }
+
+        CampOffer offer = offers[Math.Clamp(_campCursor, 0, offers.Count - 1)];
+        if (offer.Kind == CampOfferKind.Descend)
+        {
+            StartNewRun();
+            return;
+        }
+
+        if (Camp.Buy(meta, offer) is not MetaProgression bought)
+        {
+            _campMessage = $"You cannot afford the {offer.Label}.";
+            return;
+        }
+
+        _saves.SaveMeta(bought);
+        if (offer.Kind == CampOfferKind.Item)
+        {
+            // A stock item is sold once.
+            var stock = _campStock.ToList();
+            stock.Remove(offer.ItemId!);
+            _campStock = stock;
+        }
+
+        _campMessage = offer.Kind == CampOfferKind.Item
+            ? $"You buy the {offer.Label}; it will go down with you."
+            : "A warm feeling touches your soul.";
+        _campCursor = Math.Min(_campCursor, Camp.Offers(bought, _campStock, _ruleset.Catalog).Count - 1);
+    }
+
+    private CampFacts BuildCampFacts()
+    {
+        MetaProgression meta = LoadMeta();
+        IReadOnlyList<CampOffer> offers = Camp.Offers(meta, _campStock, _ruleset.Catalog);
+        return new CampFacts(
+            meta.Gold,
+            meta.Wins,
+            meta.Deaths,
+            meta.HotbarSize,
+            meta.BackpackSize,
+            offers.Select(offer => new CampOfferFacts(offer.Label, offer.Cost, offer.Kind == CampOfferKind.Descend || offer.Cost <= meta.Gold)).ToList(),
+            Math.Clamp(_campCursor, 0, offers.Count - 1),
+            (meta.Stash ?? []).Select(stashed => _ruleset.Catalog.Item(stashed.ItemId)?.DisplayName ?? stashed.ItemId).ToList(),
+            _campMessage);
+    }
+
+    private MetaProgression LoadMeta() => _saves.LoadMeta(_ruleset.NewPlayer());
+
     private void StartNewRun()
     {
         long draw = _engine.Random.DrawKeyed(new KeyedRngRequest(
             0xD00D_F00D_D1CE_0001UL, "run-seeds", $"run:{_runSeedCounter++}", long.MinValue, long.MaxValue)).Value;
         ulong runSeed = (ulong)draw;
-        _session = _ruleset.CreateSession(runSeed, _saves.LoadMeta(), DrawSource(runSeed));
+        MetaProgression meta = LoadMeta();
+        _session = _ruleset.CreateSession(runSeed, meta, DrawSource(runSeed));
+
+        // The stash went down with the run.
+        _saves.SaveMeta(meta with { Stash = [] });
         _savedLevelRevision = _session.LevelRevision;
         _hostPhase = PhaseRun;
         _saves.SaveRun(_session.Capture());
@@ -174,11 +273,12 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
     {
         if (_session is not null)
         {
-            MetaProgression meta = _saves.LoadMeta();
+            MetaProgression meta = LoadMeta();
             bool won = _session.Phase == Kit.Session.RunPhase.Won;
+            // Whatever the run ends with goes back in the purse, death or not.
             meta = won
-                ? meta with { Wins = meta.Wins + 1, Gold = meta.Gold + _session.Player.Gold }
-                : meta with { Deaths = meta.Deaths + 1, Gold = meta.Gold + _session.Player.Gold };
+                ? meta with { Wins = meta.Wins + 1, Gold = _session.Player.Gold }
+                : meta with { Deaths = meta.Deaths + 1, Gold = _session.Player.Gold };
             _saves.SaveMeta(meta);
         }
 
@@ -239,8 +339,9 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
 
     private void PublishHud()
     {
-        HudFacts? facts = _session?.BuildHudFacts();
-        string phase = _session is null ? PhaseTitle : _session.Phase switch
+        HudFacts? facts = _hostPhase == PhaseCamp ? null : _session?.BuildHudFacts();
+        CampFacts? camp = _hostPhase == PhaseCamp ? BuildCampFacts() : null;
+        string phase = _hostPhase == PhaseCamp ? PhaseCamp : _session is null ? PhaseTitle : _session.Phase switch
         {
             Kit.Session.RunPhase.Dead => "dead",
             Kit.Session.RunPhase.Won => "won",
@@ -250,6 +351,6 @@ public sealed class DelveProduct : IEngineProduct, IDebugCommandModuleSource
         _engine.Ui.PublishProjection(new UiProjection(
             _uiStream,
             ++_uiSequence,
-            DelveHudProjection.Build(phase, facts)));
+            DelveHudProjection.Build(phase, facts, camp)));
     }
 }

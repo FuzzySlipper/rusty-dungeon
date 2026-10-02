@@ -13,9 +13,13 @@ public static class DelveHudProjection
     public const string StreamId = "delve.hud";
     public const string Contract = "delve.ui.snapshot.v1";
 
-    public static UiValue Build(string hostPhase, HudFacts? facts)
+    public static UiValue Build(string hostPhase, HudFacts? facts, CampFacts? camp = null)
     {
-        UiDocument document = facts is null
+        UiDocument document = camp is not null
+            ? UiDocument.Object(
+                ("phase", new UiDocument.Str(hostPhase)),
+                ("camp", CampDocument(camp)))
+            : facts is null
             ? UiDocument.Object(
                 ("phase", new UiDocument.Str(hostPhase)))
             : UiDocument.Object(
@@ -58,6 +62,21 @@ public static class DelveHudProjection
         return UiDocumentEncoder.Encode(document);
     }
 
+    private static UiDocument CampDocument(CampFacts camp) =>
+        UiDocument.Object(
+            ("gold", new UiDocument.Num(camp.Gold)),
+            ("wins", new UiDocument.Num(camp.Wins)),
+            ("deaths", new UiDocument.Num(camp.Deaths)),
+            ("hotbarSize", new UiDocument.Num(camp.HotbarSize)),
+            ("backpackSize", new UiDocument.Num(camp.BackpackSize)),
+            ("offers", UiDocument.Array(camp.Offers.Select(offer => (UiDocument)UiDocument.Object(
+                ("label", new UiDocument.Str(offer.Label)),
+                ("cost", new UiDocument.Num(offer.Cost)),
+                ("affordable", new UiDocument.Flag(offer.Affordable)))).ToArray())),
+            ("cursor", new UiDocument.Num(camp.Cursor)),
+            ("stash", UiDocument.Array(camp.Stash.Select(name => (UiDocument)new UiDocument.Str(name)).ToArray())),
+            ("message", new UiDocument.Str(camp.Message)));
+
     private static UiDocument SlotDocument(HudSlot slot) =>
         UiDocument.Object(
             ("index", new UiDocument.Num(slot.Index)),
@@ -68,3 +87,17 @@ public static class DelveHudProjection
             ("wielded", new UiDocument.Flag(slot.Wielded)),
             ("charges", new UiDocument.Num(slot.Charges)));
 }
+
+/// <summary>The camp menu between runs: the purse, the record, the offers and the cursor.</summary>
+public sealed record CampFacts(
+    int Gold,
+    int Wins,
+    int Deaths,
+    int HotbarSize,
+    int BackpackSize,
+    IReadOnlyList<CampOfferFacts> Offers,
+    int Cursor,
+    IReadOnlyList<string> Stash,
+    string Message);
+
+public sealed record CampOfferFacts(string Label, int Cost, bool Affordable);

@@ -364,9 +364,59 @@ public sealed partial class RunSession
                 ShowMessage($"You wear the {ItemName(item)}.");
                 IdentifyOnEquip(slot);
                 return;
+            case ItemKind.BagUpgrade:
+                UseBag(slot, archetype);
+                return;
             default:
                 ShowMessage($"You cannot use the {archetype.DisplayName} here.");
                 return;
+        }
+    }
+
+    /// <summary>
+    /// A bag upgrade is used up for one more slot this run: a belt pouch
+    /// grows the hotbar, a bag the backpack, up to the donor's caps
+    /// ([donor] entities/items/BagUpgrade.java:35-63; Player.java:262-280).
+    /// </summary>
+    private void UseBag(int slot, ItemArchetype bag)
+    {
+        InventoryStore inventory = Player.Inventory;
+        if (bag.GrowsHotbar ? inventory.HotbarSize >= Camp.MaxHotbar : inventory.BackpackSize >= Camp.MaxBackpack)
+        {
+            ShowMessage(bag.GrowsHotbar ? "Your belt cannot hold more." : "Your bag cannot grow larger.");
+            return;
+        }
+
+        inventory.TryConsumeOne(slot);
+        if (!bag.GrowsHotbar)
+        {
+            inventory.GrowBackpack();
+            ShowMessage("Your bag size increased!");
+            return;
+        }
+
+        inventory.GrowHotbar(out int insertedAt);
+        Player.WieldedSlot = Shifted(Player.WieldedSlot, insertedAt);
+        Player.ArmorSlot = Shifted(Player.ArmorSlot, insertedAt);
+        Player.HelmetSlot = Shifted(Player.HelmetSlot, insertedAt);
+        ShowMessage("Your belt size increased!");
+    }
+
+    private static int Shifted(int slot, int insertedAt) => slot >= insertedAt ? slot + 1 : slot;
+
+    /// <summary>Hand over the gear bought in camp, plain and at the stock's level.</summary>
+    public void GiveStash(IReadOnlyList<StashedItem>? stash)
+    {
+        foreach (StashedItem stashed in stash ?? [])
+        {
+            if (_rules.Item(stashed.ItemId) is ItemArchetype archetype)
+            {
+                var item = new ItemInstance(archetype.Id, Math.Max(1, archetype.StackSize), archetype.Charges) { ItemLevel = stashed.ItemLevel };
+                if (!Player.Inventory.TryAdd(item, _rules.IsStackable(archetype.Id)))
+                {
+                    DropItem(item, Player.Body.TileX, Player.Body.TileY);
+                }
+            }
         }
     }
 

@@ -58,6 +58,10 @@
     <RustyEngineProductInputIntent Include="hotbar.4" Value="digital" />
     <RustyEngineProductInputIntent Include="hotbar.5" Value="digital" />
     <RustyEngineProductInputIntent Include="hotbar.6" Value="digital" />
+    <RustyEngineProductInputIntent Include="hotbar.7" Value="digital" />
+    <RustyEngineProductInputIntent Include="hotbar.8" Value="digital" />
+    <RustyEngineProductInputIntent Include="hotbar.9" Value="digital" />
+    <RustyEngineProductInputIntent Include="hotbar.0" Value="digital" />
     <RustyEngineProductInputIntent Include="inventory" Value="digital" />
     <RustyEngineProductInputIntent Include="map" Value="digital" />
     <RustyEngineProductInputIntent Include="menu.confirm" Value="digital" />
@@ -82,6 +86,10 @@
     <RustyEngineProductInputMapping Include="hotbar.4.digit-4" Intent="hotbar.4" Trigger="key:digit-4:pressed" />
     <RustyEngineProductInputMapping Include="hotbar.5.digit-5" Intent="hotbar.5" Trigger="key:digit-5:pressed" />
     <RustyEngineProductInputMapping Include="hotbar.6.digit-6" Intent="hotbar.6" Trigger="key:digit-6:pressed" />
+    <RustyEngineProductInputMapping Include="hotbar.7.digit-7" Intent="hotbar.7" Trigger="key:digit-7:pressed" />
+    <RustyEngineProductInputMapping Include="hotbar.8.digit-8" Intent="hotbar.8" Trigger="key:digit-8:pressed" />
+    <RustyEngineProductInputMapping Include="hotbar.9.digit-9" Intent="hotbar.9" Trigger="key:digit-9:pressed" />
+    <RustyEngineProductInputMapping Include="hotbar.0.digit-0" Intent="hotbar.0" Trigger="key:digit-0:pressed" />
     <RustyEngineProductInputMapping Include="inventory.key-i" Intent="inventory" Trigger="key:key-i:pressed" />
     <RustyEngineProductInputMapping Include="map.key-m" Intent="map" Trigger="key:key-m:pressed" />
     <RustyEngineProductInputMapping Include="menu.confirm.enter" Intent="menu.confirm" Trigger="key:enter:pressed" />

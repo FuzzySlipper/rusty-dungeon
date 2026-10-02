@@ -169,7 +169,14 @@ public sealed class DelveInputRouter
             return 0;
         }
 
-        return intent[^1] - (byte)'0';
+        // Slots 1-9 are their digit; the tenth is digit 0, as on a keyboard row.
+        int digit = intent[^1] - (byte)'0';
+        if (digit is < 0 or > 9)
+        {
+            return 0;
+        }
+
+        return digit == 0 ? 10 : digit;
     }
 
     private static bool Matches(ProductInputEvent input, ReadOnlySpan<byte> intent) =>

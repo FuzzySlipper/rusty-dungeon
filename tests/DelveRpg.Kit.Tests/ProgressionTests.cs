@@ -70,6 +70,6 @@ public sealed class ProgressionTests
         Assert.Equal(18, fresh.BackpackSize);
         MetaProgression upgraded = fresh with { HotbarUpgrades = 2, InventoryUpgrades = 1 };
         Assert.Equal(8, upgraded.HotbarSize);
-        Assert.Equal(24, upgraded.BackpackSize);
+        Assert.Equal(19, upgraded.BackpackSize); // one slot per bag expansion, as in the donor
     }
 }

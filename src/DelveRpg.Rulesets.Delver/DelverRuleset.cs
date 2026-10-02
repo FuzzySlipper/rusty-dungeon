@@ -79,8 +79,11 @@ public sealed class DelverRuleset
     {
         RunPlan plan = BuildRunPlan(runSeed);
         var session = new RunSession(_catalog, Tuning, plan, runSeed, meta, runtimeDraws);
-        ApplyStartingGold(session);
+
+        // The run carries the banked purse ([donor] game/Game.java:405-413).
+        session.Player.Gold = meta.Gold;
         session.GiveStartingKit(_composition.Pack.StartingKit);
+        session.GiveStash(meta.Stash);
         return session;
     }
 
@@ -102,11 +105,9 @@ public sealed class DelverRuleset
         return new RunSession(_catalog, Tuning, plan, snapshot, meta, runtimeDraws);
     }
 
-    private void ApplyStartingGold(RunSession session)
-    {
-        if (session.Player.Gold == 0)
-        {
-            session.Player.Gold = Tuning.StartingGold;
-        }
-    }
+    /// <summary>
+    /// The record a brand-new player starts from: the donor's new save holds
+    /// 40 gold ([donor] game/Progression.java:10), the tuning's startingGold.
+    /// </summary>
+    public MetaProgression NewPlayer() => MetaProgression.Fresh with { Gold = Tuning.StartingGold };
 }

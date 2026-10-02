@@ -22,6 +22,18 @@ interface HudSlot {
   readonly charges?: number;
 }
 
+interface CampFacts {
+  readonly gold: number;
+  readonly wins: number;
+  readonly deaths: number;
+  readonly hotbarSize: number;
+  readonly backpackSize: number;
+  readonly offers: readonly { readonly label: string; readonly cost: number; readonly affordable: boolean }[];
+  readonly cursor: number;
+  readonly stash: readonly string[];
+  readonly message: string;
+}
+
 interface MinimapFacts {
   readonly size: number;
   readonly cells: string;
@@ -52,6 +64,7 @@ interface HudSnapshot {
   readonly hotbar?: readonly HudSlot[];
   readonly stats?: Record<string, number>;
   readonly levelUp?: { readonly offers: readonly string[]; readonly cursor: number };
+  readonly camp?: CampFacts;
   readonly minimap?: MinimapFacts;
 }
 
@@ -159,6 +172,10 @@ export function renderHud(doc: Document, root: HTMLElement, snapshot: HudSnapsho
     root.append(renderMinimap(doc, snapshot.minimap));
   }
 
+  if (snapshot.camp !== undefined) {
+    root.append(renderCamp(doc, snapshot.camp));
+  }
+
   if (snapshot.levelUp !== undefined && snapshot.levelUp.offers.length > 0) {
     const chooser = el(doc, 'section', 'delve-levelup');
     chooser.append(el(doc, 'h2', undefined, 'Choose your fate'));
@@ -172,10 +189,35 @@ export function renderHud(doc: Document, root: HTMLElement, snapshot: HudSnapsho
   }
 }
 
+function renderCamp(doc: Document, camp: CampFacts): HTMLElement {
+  const section = el(doc, 'section', 'delve-camp');
+  section.append(el(doc, 'h2', undefined, 'Camp'));
+  section.append(el(doc, 'p', 'delve-camp-purse', `${camp.gold} gold · ${camp.wins} escapes · ${camp.deaths} deaths`));
+  section.append(el(doc, 'p', 'delve-camp-slots', `Belt ${camp.hotbarSize} slots · pack ${camp.backpackSize} slots`));
+  const list = el(doc, 'ul', 'delve-camp-offers');
+  camp.offers.forEach((offer, index) => {
+    const classes = ['delve-camp-offer'];
+    if (index === camp.cursor) classes.push('delve-offer-cursor');
+    if (!offer.affordable) classes.push('delve-camp-offer-dear');
+    const label = offer.cost > 0 ? `${offer.label} — ${offer.cost} gold` : offer.label;
+    list.append(el(doc, 'li', classes.join(' '), label));
+  });
+  section.append(list);
+  if (camp.stash.length > 0) {
+    section.append(el(doc, 'p', 'delve-camp-stash', `Going down with you: ${camp.stash.join(', ')}`));
+  }
+  if (camp.message.length > 0) {
+    section.append(el(doc, 'p', 'delve-camp-message', camp.message));
+  }
+  return section;
+}
+
 function describePhase(snapshot: HudSnapshot): string {
   switch (snapshot.phase) {
     case 'title':
-      return 'Press Enter to descend.';
+      return 'Press Enter to go to camp.';
+    case 'camp':
+      return 'Camp: W/S to choose, Enter to buy or descend, Esc for the title.';
     case 'dead':
       return 'You have died. Press Enter to return to the title.';
     case 'won':

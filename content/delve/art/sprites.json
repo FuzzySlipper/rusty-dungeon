@@ -51,6 +51,7 @@
     "item.armor.chain": { "atlas": "armor.png", "frame": 11, "size": 0.5 },
     "item.helmet": { "atlas": "armor.png", "frame": 1, "size": 0.5 },
     "item.orb": { "atlas": "items.png", "frame": 59, "size": 0.5 },
+    "item.bag": { "atlas": "items.png", "frame": 58, "size": 0.5 },
     "item.arrow": { "atlas": "items.png", "frame": 73, "size": 0.5 },
     "projectile.spark": { "atlas": "particles.png", "frame": 52, "size": 0.3, "fullbright": true, "loop": { "start": 52, "end": 55, "speed": 8 } },
     "projectile.eyebolt": { "atlas": "particles.png", "frame": 88, "size": 0.45, "fullbright": true, "loop": { "start": 88, "end": 95, "speed": 15 } },

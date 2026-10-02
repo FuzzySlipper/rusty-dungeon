@@ -25,10 +25,17 @@ water, `<`/`>` stairs, `@` the player's tile.
 
 The inventory and map views (the donor's modal inventory and fullscreen map)
 are pending UI slices; `inventoryOpen` and `mapOpen` are already projected so
-those slices need no contract change. Keyboard hotbar intents cover the six
-base slots (`hotbar.1`–`hotbar.6`); meta-upgraded slots beyond six have no
-key path yet, and upgrades are not spendable in this slice
-(docs/gameplay-design.md).
+those slices need no contract change. Keyboard hotbar intents cover every
+slot a belt can reach: `hotbar.1`–`hotbar.9` on the digit keys and
+`hotbar.0` (the 0 key) for the tenth.
+
+Between runs the projection is `phase: "camp"` with a `camp` object:
+`gold`, `wins`, `deaths`, `hotbarSize`, `backpackSize`, `offers` (each a
+`label`, `cost` and `affordable`), `cursor`, `stash` (names of gear bought
+for the next run) and `message`. The companion lists the offers with the
+cursor and marks those the purse cannot cover; `menu.up`/`menu.down` move
+the cursor, `menu.confirm` buys or descends, and `menu.cancel` returns to
+the title.
 
 Controls claim only declared digital intents — `menu.confirm`,
 `menu.cancel`, `menu.up`, `menu.down` — the same names the staged product

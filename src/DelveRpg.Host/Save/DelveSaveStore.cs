@@ -40,10 +40,11 @@ public sealed class DelveSaveStore : IDisposable
 
     public void DeleteRun() => _runs.Delete(RunKey, PersistenceRevisionGuard.Any, 0);
 
-    public MetaProgression LoadMeta()
+    /// <summary>The saved record, or <paramref name="newPlayer"/> when there is none yet.</summary>
+    public MetaProgression LoadMeta(MetaProgression newPlayer)
     {
         ProductStateLoad<MetaProgression> loaded = _meta.Load(MetaKey);
-        return loaded.Present && loaded.State is not null ? loaded.State : MetaProgression.Fresh;
+        return loaded.Present && loaded.State is not null ? loaded.State : newPlayer;
     }
 
     public void SaveMeta(MetaProgression meta) =>

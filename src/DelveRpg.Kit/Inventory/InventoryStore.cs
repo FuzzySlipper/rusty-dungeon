@@ -33,7 +33,7 @@ public readonly record struct ItemInstance(string ArchetypeId, int Count, int Ch
 /// </summary>
 public sealed class InventoryStore
 {
-    private readonly ItemInstance?[] _slots;
+    private ItemInstance?[] _slots;
 
     public InventoryStore(int hotbarSize, int backpackSize)
     {
@@ -44,9 +44,9 @@ public sealed class InventoryStore
         _slots = new ItemInstance?[hotbarSize + backpackSize];
     }
 
-    public int HotbarSize { get; }
+    public int HotbarSize { get; private set; }
 
-    public int BackpackSize { get; }
+    public int BackpackSize { get; private set; }
 
     public int Capacity => _slots.Length;
 
@@ -111,6 +111,28 @@ public sealed class InventoryStore
 
         _slots[index] = item.Count <= 1 ? null : item with { Count = item.Count - 1 };
         return true;
+    }
+
+    /// <summary>One more backpack slot, at the end ([donor] entities/items/BagUpgrade.java).</summary>
+    public void GrowBackpack()
+    {
+        Array.Resize(ref _slots, _slots.Length + 1);
+        BackpackSize++;
+    }
+
+    /// <summary>
+    /// One more hotbar slot, inserted after the last; every backpack slot
+    /// moves up one, so callers holding slot indices at or past
+    /// <paramref name="insertedAt"/> must move them too.
+    /// </summary>
+    public void GrowHotbar(out int insertedAt)
+    {
+        insertedAt = HotbarSize;
+        var grown = new ItemInstance?[_slots.Length + 1];
+        Array.Copy(_slots, 0, grown, 0, insertedAt);
+        Array.Copy(_slots, insertedAt, grown, insertedAt + 1, _slots.Length - insertedAt);
+        _slots = grown;
+        HotbarSize++;
     }
 
     /// <summary>Spend one of a wand's charges; false when the slot holds none.</summary>
