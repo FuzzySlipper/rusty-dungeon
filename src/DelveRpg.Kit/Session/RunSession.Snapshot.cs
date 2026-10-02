@@ -40,6 +40,14 @@ public sealed record SnapshotGroundItem(string ArchetypeId, int Count, int X, in
     public int ItemLevel { get; init; }
 }
 
+/// <summary>One floor as it stands or was left: grid, monsters, items and features.</summary>
+public sealed record SnapshotFloorState(
+    int RunIndex,
+    SnapshotFloor Floor,
+    IReadOnlyList<SnapshotMonster> Monsters,
+    IReadOnlyList<SnapshotGroundItem> GroundItems,
+    IReadOnlyList<SnapshotFeature>? Features);
+
 /// <summary>Serializable shape of one floor at a save boundary.</summary>
 public sealed record SnapshotFloor(
     int Width,
@@ -86,6 +94,9 @@ public sealed record RunSnapshot(
     IReadOnlyList<string> LevelUpOffers,
     int LevelUpCursor)
 {
+    /// <summary>Floors visited before and left, as they were left; null in older saves.</summary>
+    public IReadOnlyList<SnapshotFloorState>? VisitedFloors { get; init; }
+
     /// <summary>The floor's traps, triggers and pots; null in saves from before they existed.</summary>
     public IReadOnlyList<SnapshotFeature>? Features { get; init; }
 
@@ -110,19 +121,7 @@ public sealed partial class RunSession
     /// <summary>Capture the run at a save boundary.</summary>
     public RunSnapshot Capture()
     {
-        var tiles = new byte[Level.Width * Level.Height];
-        var explored = new byte[Level.Width * Level.Height];
-        for (int y = 0; y < Level.Height; y++)
-        {
-            for (int x = 0; x < Level.Width; x++)
-            {
-                tiles[(y * Level.Width) + x] = (byte)Level.At(x, y).Kind;
-                explored[(y * Level.Width) + x] = Fog.IsExplored(x, y) ? (byte)1 : (byte)0;
-            }
-        }
-
-        (int startX, int startY, int stairsX, int stairsY) = FindMarkers();
-
+        SnapshotFloorState here = CaptureFloorState();
         var slots = new SnapshotSlot[Player.Inventory.Capacity];
         for (int i = 0; i < slots.Length; i++)
         {
@@ -161,25 +160,49 @@ public sealed partial class RunSession
             ArmorItemId: Player.Equipment.ArmorItemId,
             HelmetItemId: Player.Equipment.HelmetItemId,
             Slots: slots,
-            Floor: new SnapshotFloor(
-                Level.Width,
-                Level.Height,
-                Level.DifficultyLevel,
-                Level.Theme,
-                tiles,
-                explored,
-                startX,
-                startY,
-                stairsX,
-                stairsY),
-            Monsters: _monsters.Select(monster => new SnapshotMonster(
+            Floor: here.Floor,
+            Monsters: here.Monsters,
+            GroundItems: here.GroundItems,
+            LevelUpOffers: LevelUpOffers.ToList(),
+            LevelUpCursor: LevelUpCursor)
+        {
+            Features = here.Features,
+            VisitedFloors = _visitedFloors.Values.OrderBy(floor => floor.RunIndex).ToList(),
+            ArmorSlot = Player.ArmorSlot,
+            HotbarSize = Player.Inventory.HotbarSize,
+            BackpackSize = Player.Inventory.BackpackSize,
+            HelmetSlot = Player.HelmetSlot,
+            SpawnedUniques = _spawnedUniques.ToList(),
+            KnownPotions = _knownPotions.Select(effect => effect.ToString()).ToList(),
+        };
+    }
+
+    /// <summary>The current floor as it stands: grid, explored map, monsters, items and features.</summary>
+    private SnapshotFloorState CaptureFloorState()
+    {
+        var tiles = new byte[Level.Width * Level.Height];
+        var explored = new byte[Level.Width * Level.Height];
+        for (int y = 0; y < Level.Height; y++)
+        {
+            for (int x = 0; x < Level.Width; x++)
+            {
+                tiles[(y * Level.Width) + x] = (byte)Level.At(x, y).Kind;
+                explored[(y * Level.Width) + x] = Fog.IsExplored(x, y) ? (byte)1 : (byte)0;
+            }
+        }
+
+        (int startX, int startY, int stairsX, int stairsY) = FindMarkers();
+        return new SnapshotFloorState(
+            RunIndex,
+            new SnapshotFloor(Level.Width, Level.Height, Level.DifficultyLevel, Level.Theme, tiles, explored, startX, startY, stairsX, stairsY),
+            _monsters.Where(monster => !monster.IsDying).Select(monster => new SnapshotMonster(
                 monster.Archetype.Id,
                 monster.Body.X,
                 monster.Body.Y,
                 monster.Body.Hp,
                 monster.Body.Facing,
                 monster.Level)).ToList(),
-            GroundItems: _groundItems.Select(item => new SnapshotGroundItem(
+            _groundItems.Select(item => new SnapshotGroundItem(
                 item.Item.ArchetypeId, item.Item.Count, item.X, item.Y, item.Item.Charges)
             {
                 Condition = (int)item.Item.Condition,
@@ -189,17 +212,7 @@ public sealed partial class RunSession
                 Wear = item.Item.Wear,
                 ItemLevel = item.Item.ItemLevel,
             }).ToList(),
-            LevelUpOffers: LevelUpOffers.ToList(),
-            LevelUpCursor: LevelUpCursor)
-        {
-            Features = CaptureFeatures(),
-            ArmorSlot = Player.ArmorSlot,
-            HotbarSize = Player.Inventory.HotbarSize,
-            BackpackSize = Player.Inventory.BackpackSize,
-            HelmetSlot = Player.HelmetSlot,
-            SpawnedUniques = _spawnedUniques.ToList(),
-            KnownPotions = _knownPotions.Select(effect => effect.ToString()).ToList(),
-        };
+            CaptureFeatures());
     }
 
     private (int StartX, int StartY, int StairsX, int StairsY) FindMarkers()
@@ -300,8 +313,27 @@ public sealed partial class RunSession
 
     private void RestoreFloor(RunSnapshot snapshot)
     {
-        SnapshotFloor floor = snapshot.Floor;
         RunIndex = snapshot.RunIndex;
+        LoadFloorState(new SnapshotFloorState(snapshot.RunIndex, snapshot.Floor, snapshot.Monsters, snapshot.GroundItems, snapshot.Features));
+        foreach (SnapshotFloorState visited in snapshot.VisitedFloors ?? [])
+        {
+            if (visited.RunIndex != snapshot.RunIndex && visited.RunIndex >= 0 && visited.RunIndex < _plan.FloorCount)
+            {
+                _visitedFloors[visited.RunIndex] = visited;
+            }
+        }
+
+        EscapePressureTicks = snapshot.EscapePressureTicks;
+        LevelUpOffers = (snapshot.LevelUpOffers ?? (IReadOnlyList<string>)[]).ToList();
+        LevelUpCursor = Math.Clamp(snapshot.LevelUpCursor, 0, Math.Max(0, LevelUpOffers.Count - 1));
+        Phase = snapshot.Phase;
+        _escapeSpawnRemaining = _tuning.EscapeSpawnCadenceStartTicks;
+        _levelRevision++;
+    }
+    /// <summary>Put one captured floor in play: its grid, explored map, features, monsters and items.</summary>
+    private void LoadFloorState(SnapshotFloorState state)
+    {
+        SnapshotFloor floor = state.Floor;
         var level = new DungeonLevel(floor.Width, floor.Height, floor.DungeonLevel, floor.Theme);
         for (int y = 0; y < floor.Height; y++)
         {
@@ -314,7 +346,7 @@ public sealed partial class RunSession
         Level = level;
         Fog = new FogMap(level.Width, level.Height);
         Torches = TorchPlacement.Place(level);
-        LoadFeatures(RestoreFeatures(snapshot.Features));
+        LoadFeatures(RestoreFeatures(state.Features));
         for (int y = 0; y < floor.Height; y++)
         {
             for (int x = 0; x < floor.Width; x++)
@@ -328,7 +360,7 @@ public sealed partial class RunSession
 
         _monsters.Clear();
         _groundItems.Clear();
-        foreach (SnapshotMonster monster in snapshot.Monsters)
+        foreach (SnapshotMonster monster in state.Monsters)
         {
             // A snapshot may name a monster the current catalog no longer
             // carries; skip it instead of writing its facts onto another one.
@@ -346,7 +378,7 @@ public sealed partial class RunSession
             restored.Body.Facing = monster.Facing;
         }
 
-        foreach (SnapshotGroundItem item in snapshot.GroundItems)
+        foreach (SnapshotGroundItem item in state.GroundItems)
         {
             if (_rules.Item(item.ArchetypeId) is not ItemArchetype)
             {
@@ -359,12 +391,8 @@ public sealed partial class RunSession
                 item.X,
                 item.Y));
         }
-
-        EscapePressureTicks = snapshot.EscapePressureTicks;
-        LevelUpOffers = (snapshot.LevelUpOffers ?? (IReadOnlyList<string>)[]).ToList();
-        LevelUpCursor = Math.Clamp(snapshot.LevelUpCursor, 0, Math.Max(0, LevelUpOffers.Count - 1));
-        Phase = snapshot.Phase;
-        _escapeSpawnRemaining = _tuning.EscapeSpawnCadenceStartTicks;
-        _levelRevision++;
+        _projectiles.Clear();
+        _corpses.Clear();
     }
+
 }

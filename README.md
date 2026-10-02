@@ -48,8 +48,6 @@ Recorded divergences from the donor (never to be "corrected" silently):
   modeled.
 - Projectiles fly over the Kit's tile grid with simplified collision (no
   knockback, splash or deflection); see docs/gameplay-design.md §Combat.
-- Ascended floors regenerate from the run seed instead of being restored from
-  snapshots; only the current floor is snapshotted at save boundaries.
 - Ripped art and audio are never committed. With the operator's donor files
   staged (gitignored), tiles, ceilings, monsters, items and the held weapon
   use donor sheet cells named by authored manifests; without them the game

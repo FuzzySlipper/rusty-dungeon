@@ -446,6 +446,57 @@ public sealed partial class RunSession
     }
 
     /// <summary>Build (or rebuild) the floor at one run index and place the run on it.</summary>
+    /// <summary>
+    /// Floors left behind, as they were left: the donor saves every level it
+    /// leaves and loads it again on return ([donor] game/Game.java changeLevel,
+    /// level saves), so the dead stay dead, taken loot stays taken and opened
+    /// doors stay open.
+    /// </summary>
+    private readonly Dictionary<int, SnapshotFloorState> _visitedFloors = new();
+
+    /// <summary>
+    /// Move to another floor of the run. The floor being left is remembered;
+    /// a floor visited before comes back as it was left, a new one is
+    /// generated. Climbing up arrives at the floor's way down, descending
+    /// at its way up.
+    /// </summary>
+    private void TravelTo(int runIndex)
+    {
+        bool climbing = runIndex < RunIndex;
+        _visitedFloors[RunIndex] = CaptureFloorState();
+        if (!_visitedFloors.Remove(runIndex, out SnapshotFloorState? visited))
+        {
+            EnterFloor(runIndex);
+        }
+        else
+        {
+            RunIndex = runIndex;
+            LoadFloorState(visited);
+            _escapeSpawnRemaining = _tuning.EscapeSpawnCadenceStartTicks;
+            _levelRevision++;
+            ArriveAt(visited.Floor.StartX, visited.Floor.StartY);
+            ShowMessage($"{CurrentFloor.SectionName} — dungeon level {CurrentFloor.DungeonLevel}, as you left it.");
+        }
+
+        if (climbing && FindMarkers() is var (_, _, stairsX, stairsY))
+        {
+            ArriveAt(stairsX, stairsY);
+        }
+    }
+
+    /// <summary>Stand the player on a tile, at rest.</summary>
+    private void ArriveAt(int tileX, int tileY)
+    {
+        Player.Body.X = tileX + 0.5f;
+        Player.Body.Y = tileY + 0.5f;
+        _velocityX = 0f;
+        _velocityY = 0f;
+        _lastPlayerTileX = int.MinValue;
+        _lastPlayerTileY = int.MinValue;
+        _lastCollectTileX = tileX;
+        _lastCollectTileY = tileY;
+    }
+
     private void EnterFloor(int runIndex)
     {
         RunIndex = runIndex;

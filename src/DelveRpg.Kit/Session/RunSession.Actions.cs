@@ -278,7 +278,7 @@ public sealed partial class RunSession
                     return;
                 }
 
-                EnterFloor(RunIndex + 1);
+                TravelTo(RunIndex + 1);
                 return;
             case TileKind.StairsUp:
                 TryFinishRun();
@@ -298,7 +298,7 @@ public sealed partial class RunSession
     {
         if (RunIndex > 0)
         {
-            EnterFloor(RunIndex - 1);
+            TravelTo(RunIndex - 1);
             return;
         }
 

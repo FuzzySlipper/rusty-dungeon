@@ -617,9 +617,23 @@ facts plus the current floor grid, monsters, items, and a pending level-up
 offer. Death and victory delete the run save; only meta progression survives
 ([donor] `gamemode/delver/DelverGameMode.java` `deleteRunSave`). A save whose
 run index no longer fits the rebuilt plan, or that records a finished run, is
-discarded on resume. **Deliberate divergence:** ascended floors regenerate
-from the run seed instead of loading floor snapshots (only the current floor
-is stored), and the save boundary strips transient combat state — status
+discarded on resume.
+
+**Floors stay as left — faithful.** A floor left behind is remembered and
+comes back as it was left, as the donor saves each level it leaves and loads
+it on return ([donor] `game/Game.java` `changeLevel`, level saves):
+- the grid, so opened doors and unlocked vaults stay open;
+- the explored map;
+- the living monsters, with their hit points;
+- the ground items;
+- the traps, triggers and pots.
+
+Climbing arrives at the floor's stairs down and descending at its stairs up
+(before this, a climb landed at the floor's start). Remembered floors save
+with the run. **Approximate:** corpses do not persist, and a monster comes
+back where it stood but forgets what it was doing.
+
+**Deliberate divergence:** the save boundary strips transient combat state — status
 effect timers, attack charge and cooldowns, velocities, the pursuit timer,
 projectiles in flight and arrows lodged in monsters —
 like the donor's `preSaveCleanup` ([donor] `game/Game.java` `save`); hit
