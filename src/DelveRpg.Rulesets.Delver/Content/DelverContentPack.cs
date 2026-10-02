@@ -60,6 +60,18 @@ public sealed class DelverMonsterDefinition
     /// <summary>Ticks a flinch holds it still: its donor hurt animation's length; 0 for none.</summary>
     public int HurtTicks { get; set; } = 22;
 
+    /// <summary>Ticks from attack start to the donor damage frame; 0 hits at once.</summary>
+    public int AttackWindupTicks { get; init; }
+
+    /// <summary>Donor attackStartDistance.</summary>
+    public float AttackStartDistance { get; set; } = 0.6f;
+
+    /// <summary>Donor ImpulseAction lunge speed, tiles per tick; 0 for none.</summary>
+    public float LungeSpeed { get; init; }
+
+    /// <summary>Ticks into the attack the lunge comes.</summary>
+    public int LungeAtTicks { get; init; }
+
     /// <summary>Shove its landed blow gives the player (donor DamageAction knockback).</summary>
     public float AttackKnockback { get; set; } = 0.05f;
 

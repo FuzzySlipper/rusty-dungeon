@@ -355,31 +355,10 @@ public sealed partial class RunSession
 
             float distance = Distance(body, Player.Body);
             bool seesPlayer = LineOfSight.CanSee(Level, body.TileX, body.TileY, Player.Body.TileX, Player.Body.TileY);
-            if (distance < 1.2f
-                && body.AttackCooldownRemaining == 0
-                && seesPlayer)
+            if (TickMeleeAttack(monster, distance, seesPlayer))
             {
-                int armorClass = CombatResolver.ArmorClass(Player.Body.Stats.Defense, GearArmorClass());
-                int hpBefore = Player.Body.Hp;
-                AttackOutcome outcome = CombatResolver.ResolveMelee(
-                    _random, body, Player.Body, monster.Archetype.AttackPower, armorClass, _tuning);
-                if (outcome.Damage > 0)
-                {
-                    Player.Body.Hp = hpBefore;
-                    HurtPlayer(outcome.Damage);
-                    ShovePlayer(body, monster.Archetype.AttackKnockback);
-                }
-
-                body.AttackCooldownRemaining = monster.Archetype.AttackCooldownTicks;
-                if (outcome.Dodged)
-                {
-                    ShowMessage($"The {monster.Archetype.DisplayName} misses you.");
-                }
-                else
-                {
-                    ShowMessage($"The {monster.Archetype.DisplayName} hits you for {outcome.Damage}.");
-                }
-
+                // Winding up: the monster stands and swings
+                // ([donor] Monster.java:735-750 postAttackMoveWaitTimer).
                 continue;
             }
 

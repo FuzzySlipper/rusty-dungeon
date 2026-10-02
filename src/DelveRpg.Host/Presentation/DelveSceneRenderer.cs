@@ -36,6 +36,8 @@ public sealed class DelveSceneRenderer : IDisposable
     private const ulong ProjectileObjectBase = 6_000_000_000;
     private const ulong CorpseObjectBase = 7_000_000_000;
     private const ulong FlashObjectId = 3_000_000_001;
+    private const string FlashTexturePath = "delve/art/white.png";
+    private const int FlashLevels = 5;
 
     /// <summary>
     /// Strongest red the flash reaches. The donor starts at full red; held
@@ -50,10 +52,9 @@ public sealed class DelveSceneRenderer : IDisposable
     private Light? _handLight;
     private readonly List<Light> _wallTorchLights = new();
     private readonly Dictionary<long, Light> _boltLights = new();
-    private readonly Material _flashMaterial;
-    private readonly MeshResource _flashMesh;
-    private readonly Appearance _flashAppearance;
-    private float _flashAlpha = HurtFlashPeak;
+    private readonly List<Appearance> _flashLevels = new();
+    private RenderResource? _flashTexture;
+    private SpriteAtlas? _flashAtlas;
     private IReadOnlyList<WallTorch> _wallTorches = Array.Empty<WallTorch>();
     private readonly Material _material;
     private readonly DelveArtAssets _art;
@@ -121,9 +122,7 @@ public sealed class DelveSceneRenderer : IDisposable
 
         _torch = engine.Graphics.CreateLight(TorchRequest(Vector3.Zero));
 
-        _flashMaterial = engine.Graphics.CreateMaterial(FlashMaterial(_flashAlpha));
-        _flashMesh = CreateFlashMesh();
-        _flashAppearance = engine.Graphics.CreateMeshAppearance(_flashMesh);
+        CreateFlashLevels(contentExists);
 
         engine.CameraView.SetBackgroundColor(new SetBackgroundColorRequest(new Color(0.02f, 0.02f, 0.05f, 1f)));
     }
@@ -521,62 +520,77 @@ public sealed class DelveSceneRenderer : IDisposable
     /// <summary>
     /// The donor's hurt flash ([donor] game/Game.java:849-854,
     /// gfx/GlRenderer.java:584-586): red over the whole view, fading out
-    /// linearly over its 20 ticks. Drawn as an emissive, alpha-blended quad
-    /// right in front of the viewmodel camera; its alpha follows the fade
-    /// through a material update, and it leaves the scene when spent.
+    /// linearly over its 20 ticks. Drawn as a screen-filling, alpha-blended
+    /// red sprite right in front of the viewmodel camera, stepping through
+    /// pre-made tint levels as it fades. (A retained mesh would be the
+    /// natural quad, but the pinned renderer drops a static mesh's layer and
+    /// draws it in the scene; see docs/gameplay-design.md, Hit feedback.)
     /// </summary>
     private void AddHurtFlash(RunSession session, List<AppearanceFact> facts, HashSet<ulong> live)
     {
-        float alpha = HurtFlashPeak * session.Player.HurtFlashRemaining / RunSession.HurtFlashTicks;
-        if (alpha <= 0f)
+        int remaining = session.Player.HurtFlashRemaining;
+        if (remaining <= 0 || _flashLevels.Count == 0)
         {
             return;
         }
 
-        if (MathF.Abs(alpha - _flashAlpha) > 0.001f)
-        {
-            _engine.Graphics.UpdateMaterial(new MaterialUpdateRequest(_flashMaterial, FlashMaterial(alpha)));
-            _flashAlpha = alpha;
-        }
-
+        // Levels run strongest first; a fresh flash shows level 0.
+        int level = Math.Clamp(
+            (RunSession.HurtFlashTicks - remaining) * _flashLevels.Count / RunSession.HurtFlashTicks,
+            0,
+            _flashLevels.Count - 1);
         live.Add(FlashObjectId);
         facts.Add(new AppearanceFact(
             FlashObjectId,
             false,
             0,
-            new Transform(new Vector3(0f, 0f, -0.1f), Quaternion.Identity, Vector3.One),
-            _flashAppearance,
+            new Transform(new Vector3(0f, 0f, -0.3f), Quaternion.Identity, Vector3.One),
+            _flashLevels[level],
             true,
             RenderLayer.Viewmodel));
     }
 
-    private static MaterialRequest FlashMaterial(float alpha) => new(
-        new Color(1f, 0f, 0f, alpha),
-        default,
-        1f,
-        new Color(1f, 1f, 1f, 1f),
-        new Vector3(1f, 0f, 0f),
-        1f,
-        true,
-        MaterialAlphaMode.Blend,
-        0.5f);
-
-    /// <summary>A quad far larger than the viewmodel camera's view at its distance, facing the camera.</summary>
-    private MeshResource CreateFlashMesh()
+    /// <summary>
+    /// The flash's sprites: the authored white texture tinted red at each
+    /// fade level, unlit and alpha-blended. Without the texture there is no
+    /// flash.
+    /// </summary>
+    private void CreateFlashLevels(Func<string, bool> contentExists)
     {
-        Vector3[] positions = [new(-1f, -1f, 0f), new(1f, -1f, 0f), new(1f, 1f, 0f), new(-1f, 1f, 0f)];
-        Vector3[] normals = [Vector3.UnitZ, Vector3.UnitZ, Vector3.UnitZ, Vector3.UnitZ];
-        Vector2[] uvs = [new(0f, 1f), new(1f, 1f), new(1f, 0f), new(0f, 0f)];
-        Color[] colors = [new(1f, 1f, 1f, 1f), new(1f, 1f, 1f, 1f), new(1f, 1f, 1f, 1f), new(1f, 1f, 1f, 1f)];
-        uint[] indices = [0, 1, 2, 0, 2, 3];
-        return _engine.Graphics.CreateMeshResource(new MeshResourceCreateRequest(
-            positions,
-            normals,
-            uvs,
-            colors,
-            indices,
-            new[] { new MeshGroup(0, 0, 6) },
-            new[] { new MeshMaterialBinding(0, _flashMaterial) }));
+        if (!contentExists(FlashTexturePath))
+        {
+            return;
+        }
+
+        _flashTexture = _engine.Graphics.OpenResource(
+            new RenderResourceRequest(FlashTexturePath, TextureFilter.Nearest, TextureWrap.Clamp)).Handle;
+        _flashAtlas = _engine.Graphics.CreateSpriteAtlas(new SpriteAtlasCreateRequest(
+            _flashTexture,
+            new[] { new SpriteAtlasFrame(0, Vector2.Zero, Vector2.One, false, Vector2.Zero) }));
+        var material = new SpriteMaterialDescriptor(
+            SpriteLightingMode.Unlit,
+            default,
+            default,
+            1f,
+            0f,
+            SpriteAlphaMode.Blend,
+            0.5f,
+            SpriteShadowPolicy.None);
+        for (int i = 0; i < FlashLevels; i++)
+        {
+            float alpha = HurtFlashPeak * (FlashLevels - i) / FlashLevels;
+            _flashLevels.Add(_engine.Graphics.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(
+                _flashAtlas,
+                0,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(2f, 2f),
+                BillboardMode.None,
+                SpriteSizeMode.World,
+                0,
+                SpriteDepthPolicy.Default,
+                new Color(1f, 0f, 0f, alpha),
+                material)));
+        }
     }
 
     /// <summary>The donor's damage-type colours ([donor] game/Colors.java).</summary>
@@ -733,7 +747,8 @@ public sealed class DelveSceneRenderer : IDisposable
     /// The donor's frame choice, hurt over attack over walk
     /// ([donor] entities/Monster.java:873-878): a flinch or the death stagger
     /// plays the hurt cells (held on the last through a long stagger), the
-    /// attack cells play out right after a blow, the walk cycle loops while the
+    /// attack cells play from the start of the wind-up, so the damage cell
+    /// shows as the blow lands, the walk cycle loops while the
     /// monster is on the move, and an idle monster rests on its first cell.
     /// </summary>
     public static uint MonsterFrame(DelveSpriteDefinition definition, MonsterState monster, long elapsedTicks)
@@ -744,13 +759,9 @@ public sealed class DelveSceneRenderer : IDisposable
             return (uint)hurt.FrameOnce(flinched);
         }
 
-        int cooldown = monster.Archetype.AttackCooldownTicks;
-        int sinceBlow = cooldown - monster.Body.AttackCooldownRemaining;
-        if (definition.Attack is DelveSpriteAnimation attack
-            && monster.Body.AttackCooldownRemaining > 0
-            && sinceBlow < Math.Min(attack.Speed, cooldown))
+        if (definition.Attack is DelveSpriteAnimation attack && monster.AttackElapsedTicks < attack.Speed)
         {
-            return (uint)attack.FrameAt(sinceBlow);
+            return (uint)attack.FrameAt(monster.AttackElapsedTicks);
         }
 
         if (definition.Walk is DelveSpriteAnimation walk && monster.BrainState != MonsterBrainState.Idle)
@@ -852,9 +863,20 @@ public sealed class DelveSceneRenderer : IDisposable
 
         _boltLights.Clear();
 
-        TryDispose(_flashAppearance.Dispose, failures);
-        TryDispose(_flashMesh.Dispose, failures);
-        TryDispose(_flashMaterial.Dispose, failures);
+        foreach (Appearance level in _flashLevels)
+        {
+            TryDispose(level.Dispose, failures);
+        }
+
+        if (_flashAtlas is not null)
+        {
+            TryDispose(_flashAtlas.Dispose, failures);
+        }
+
+        if (_flashTexture is not null)
+        {
+            TryDispose(_flashTexture.Dispose, failures);
+        }
         TryDispose(_torch.Dispose, failures);
         TryDispose(_ambient.Dispose, failures);
         TryDispose(() => _engine.CameraView.ClearActiveCamera(new ClearActiveCameraRequest(0)), failures);

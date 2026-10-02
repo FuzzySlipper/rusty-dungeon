@@ -180,11 +180,13 @@ public sealed class RunSessionTests
         RunSession session = Session();
         RunSnapshot snapshot = session.Capture() with
         {
-            Monsters = [new SnapshotMonster("test.monster.rat", session.Player.Body.X + 1f, session.Player.Body.Y, 6, 0f)],
+            Monsters = [new SnapshotMonster("test.monster.rat", session.Player.Body.X + 0.8f, session.Player.Body.Y, 6, 0f)],
         };
 
-        // Seeded draws: no dodge, then the attack roll — a hit is deterministic.
-        RunSession restored = Restored(snapshot, new ScriptedRandom(999_999, 1));
+        // High draws: no dodge and a full attack roll. The first tick alerts
+        // the rat; the second starts its (instant, unwound) blow.
+        RunSession restored = Restored(snapshot, ScriptedRandom.Always(999_999));
+        restored.Tick(RunInput.Idle);
         restored.Tick(RunInput.Idle);
 
         Assert.True(restored.Player.Body.Hp < restored.Player.Body.MaxHp, "the hit did not land");

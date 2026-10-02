@@ -107,7 +107,7 @@ public sealed partial class RunSession
         if (MathF.Abs(monster.VelocityX) + MathF.Abs(monster.VelocityY) > 0.0001f)
         {
             float nextX = body.X + monster.VelocityX;
-            if (MonsterFits(monster, nextX, body.Y))
+            if (MonsterFits(monster, nextX, body.Y) && !CrowdsPlayer(body.X, body.Y, nextX, body.Y))
             {
                 body.X = nextX;
             }
@@ -117,7 +117,7 @@ public sealed partial class RunSession
             }
 
             float nextY = body.Y + monster.VelocityY;
-            if (MonsterFits(monster, body.X, nextY))
+            if (MonsterFits(monster, body.X, nextY) && !CrowdsPlayer(body.X, body.Y, body.X, nextY))
             {
                 body.Y = nextY;
             }
@@ -144,6 +144,15 @@ public sealed partial class RunSession
         }
 
         return monster.StunTicksRemaining == 0;
+    }
+
+    /// <summary>True when a slide ends inside the player's separation and closer than it began.</summary>
+    private bool CrowdsPlayer(float fromX, float fromY, float toX, float toY)
+    {
+        float separation = _tuning.ActorSeparationTiles;
+        float after = DistanceSquared(Player.Body.X, Player.Body.Y, toX, toY);
+        return after < separation * separation
+            && after < DistanceSquared(Player.Body.X, Player.Body.Y, fromX, fromY);
     }
 
     /// <summary>A monster body fits where its centre's tile is open; a shove never carries it into a wall.</summary>

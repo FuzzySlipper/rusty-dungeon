@@ -32,6 +32,21 @@ public sealed record MonsterArchetype(
     /// <summary>How long a flinch holds it still: its hurt animation's length, 0 for none.</summary>
     public int HurtTicks { get; init; } = 22;
 
+    /// <summary>
+    /// Ticks from the start of its melee attack to the blow: its attack
+    /// animation's time to the donor damage frame. 0 hits at once.
+    /// </summary>
+    public int AttackWindupTicks { get; init; }
+
+    /// <summary>How far off it starts an attack, beyond its 0.3 body (donor attackStartDistance).</summary>
+    public float AttackStartDistance { get; init; } = 0.6f;
+
+    /// <summary>A lunge toward the player during the wind-up, in tiles per tick; 0 for none.</summary>
+    public float LungeSpeed { get; init; }
+
+    /// <summary>Ticks into the attack the lunge comes.</summary>
+    public int LungeAtTicks { get; init; }
+
     /// <summary>How hard its landed melee blow shoves the player, in tiles per tick.</summary>
     public float AttackKnockback { get; init; } = 0.05f;
 }

@@ -53,9 +53,11 @@ public sealed class DelveSpriteAssetsTests
         monster.BrainState = MonsterBrainState.Chasing;
         Assert.InRange(DelveSceneRenderer.MonsterFrame(definition, monster, 15), 0u, 3u);
 
-        body.AttackCooldownRemaining = 40; // the blow just landed
+        monster.AttackElapsedTicks = 0; // the wind-up just began
         Assert.Equal(4u, DelveSceneRenderer.MonsterFrame(definition, monster, 15));
-        body.AttackCooldownRemaining = 5;  // long after: back to walking
+        monster.AttackElapsedTicks = 29; // the last cell
+        Assert.Equal(10u, DelveSceneRenderer.MonsterFrame(definition, monster, 15));
+        monster.AttackElapsedTicks = 35;  // played out: back to walking
         Assert.InRange(DelveSceneRenderer.MonsterFrame(definition, monster, 15), 0u, 3u);
     }
 
@@ -73,7 +75,7 @@ public sealed class DelveSpriteAssetsTests
         var monster = new MonsterState(body, new MonsterArchetype(
             "m", "m", body.Stats, 8, 2, 40, 1, 7, "monster.m") { HurtTicks = 22 });
         monster.BrainState = MonsterBrainState.Chasing;
-        body.AttackCooldownRemaining = 40;
+        monster.AttackElapsedTicks = 0;
 
         monster.HurtTicksRemaining = 22; // the flinch just began
         Assert.Equal(11u, DelveSceneRenderer.MonsterFrame(definition, monster, 15));

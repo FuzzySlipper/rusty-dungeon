@@ -52,6 +52,10 @@ public sealed class DelverCatalog : IRulesCatalog
                 PainChance = monster.PainChance,
                 HurtTicks = monster.HurtTicks,
                 AttackKnockback = monster.AttackKnockback,
+                AttackWindupTicks = monster.AttackWindupTicks,
+                AttackStartDistance = monster.AttackStartDistance,
+                LungeSpeed = monster.LungeSpeed,
+                LungeAtTicks = monster.LungeAtTicks,
             },
             StringComparer.Ordinal);
         _items = pack.Items.ToDictionary(

@@ -50,6 +50,19 @@ public sealed class ScriptedCatalog : IRulesCatalog
             ChasesTarget = false,
             Ranged = new MonsterRangedAttack(3, 3, DamageType.Magic, 0.1f, 100, 0f, 30f, "projectile.eyebolt"),
         };
+        _monsters["test.monster.slime"] = _monsters["test.monster.rat"] with
+        {
+            Id = "test.monster.slime",
+            AttackWindupTicks = 28,
+        };
+        _monsters["test.monster.lunger"] = _monsters["test.monster.rat"] with
+        {
+            Id = "test.monster.lunger",
+            AttackWindupTicks = 47,
+            AttackStartDistance = 1.75f,
+            LungeSpeed = 0.09f,
+            LungeAtTicks = 28,
+        };
         _monsters["test.monster.skulker"] = _monsters["test.monster.rat"] with
         {
             Id = "test.monster.skulker",

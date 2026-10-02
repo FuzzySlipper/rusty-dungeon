@@ -182,11 +182,42 @@ golem is the EYE in behaviour too. It does not chase
 alerted and casts its magic missile: 3+3 magic damage at speed 0.1, every 100
 ticks. Our spider and wraith content had been flagged ranged, but their donor
 monsters (SPIDER, GHOST) are melee, so they are melee again.
-**Approximate:** the donor's ±1 random level jitter above difficulty 4 and
-its 0–9 tick attack-timer jitter are left out (a regenerated floor's
-monsters come back at the same level), and movement speed and detect range
+**Approximate:** the donor's ±1 random level jitter above difficulty 4 is
+left out (a regenerated floor's monsters come back at the same level), and movement speed and detect range
 stay authored (the donor's `speed` is an acceleration in a different
 movement model).
+
+**Telegraphed monster attacks — faithful in timing.** Monster blows are no
+longer instant.
+- **Starting.** An alerted monster starts an attack once the player is within
+  its 0.3 body plus `max(reach 0.6, attackStartDistance)` and in sight
+  ([donor] `entities/Monster.java:753-762`). Its next attack waits
+  `attackTime` (60) plus 0–9 ticks of jitter ([donor] `Monster.java`
+  `attack()`, :1093-1132).
+- **Winding up.** The monster stands still and plays its attack cells, as
+  the donor holds it with `postAttackMoveWaitTimer` (:735-750).
+- **Landing.** The blow comes when the animation reaches the donor's
+  `DamageAction` frame: `attackWindupTicks` is that frame's time into the
+  animation ([data] `monsters.dat` attack animations, speed being the whole
+  sequence's ticks). The values are rat 47, slime 28, bat 15, kobold 35,
+  spider 18, skeleton 18, ogre 27 and golem 19; the wraith, the donor GHOST,
+  has no attack animation and strikes at once.
+- **Dodging.** The blow lands only if the player is still within reach plus
+  body (0.9) and in sight, as the donor's `tryDamageHit` re-checks
+  (:1224-1259). Otherwise it "falls short", so stepping back dodges.
+- **Lunging and flinching.** The rat (WORM) and bat start from further off
+  (`attackStartDistance` 1.75 and 1.5) and lunge mid-wind-up (the donor's
+  `ImpulseAction`, 0.09 and 0.07 tiles per tick at ticks 28 and 5). A
+  flinch cancels the blow being wound up.
+- **Separation.** With the blow's reach at 0.9 and the separation at 0.75, a
+  monster holding at separation can hit, and one step back takes the
+  player out of reach.
+
+**Approximate:**
+- The WORM's after-attack `StunAnimationAction` (`attackDelay` 100) is left
+  out.
+- The lunge ignores the impulse's vertical part.
+- A lunge cannot carry a monster into the player's separation.
 
 **Hit feedback — approximate.** A blow that lands does more than change
 numbers.
@@ -218,9 +249,14 @@ numbers.
   [donor] `Monster.java:1245-1250`). Any damage flashes the view red for 20
   ticks, fading linearly ([donor] `game/Game.java:849-854`,
   `gfx/GlRenderer.java:584-586`, `DelverGameMode.java:186-191`). The flash
-  peaks at 0.6 red instead of the donor's full red. It is an emissive,
-  alpha-blended quad in the Engine's viewmodel layer whose material alpha is
-  updated as it fades.
+  peaks at 0.6 red instead of the donor's full red and fades in five steps.
+  It is an unlit, alpha-blended sprite of the authored white texture
+  `content/delve/art/white.png`, tinted red and filling the view in the
+  Engine's viewmodel layer. The natural quad, a retained mesh with a blended
+  material, does not work on the pinned Engine: its renderer creates static
+  mesh instances in the scene layer whatever layer the fact names
+  (`render-wgpu` `apply.rs` `CreateStaticMeshInstance`), so the quad draws
+  at the world origin. Filed upstream as rusty-engine task 9093.
 
 **Approximate:**
 - Knockback ignores monster weight and the stat knockback bonus.

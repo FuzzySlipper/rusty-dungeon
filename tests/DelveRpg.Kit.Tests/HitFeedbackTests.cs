@@ -71,7 +71,8 @@ public sealed class HitFeedbackTests
             playerX: 3.7f);
         int hp = session.Player.Body.Hp;
 
-        session.Tick(RunInput.Idle);
+        session.Tick(RunInput.Idle); // alerted
+        session.Tick(RunInput.Idle); // the instant blow lands
 
         Assert.True(session.Player.Body.Hp < hp);
         Assert.Equal(RunSession.HurtFlashTicks, session.Player.HurtFlashRemaining);
