@@ -343,11 +343,10 @@ numbers.
   peaks at 0.6 red instead of the donor's full red and fades in five steps.
   It is an unlit, alpha-blended sprite of the authored white texture
   `content/delve/art/white.png`, tinted red and filling the view in the
-  Engine's viewmodel layer. The natural quad, a retained mesh with a blended
-  material, does not work on the pinned Engine: its renderer creates static
-  mesh instances in the scene layer whatever layer the fact names
-  (`render-wgpu` `apply.rs` `CreateStaticMeshInstance`), so the quad draws
-  at the world origin. Filed upstream as rusty-engine task 9093.
+  Engine's viewmodel layer. A sprite was chosen because retained meshes once
+  drew in the scene layer whatever layer their fact named (rusty-engine
+  9093). Meshes now honour the layer, but the sprite already does the job,
+  so it stays.
 
 **Approximate:**
 - Knockback ignores monster weight and the stat knockback bonus.
