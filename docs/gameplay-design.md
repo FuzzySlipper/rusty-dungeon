@@ -758,7 +758,8 @@ torches, and a hand light on the held weapon.
   camera-local viewmodel layer (the donor tints the held item by the light
   where the player stands). The Engine requires a light's parent in the
   published scene, so the hand light is made after the weapon's first
-  publish and released before a publish without it.
+  publish and released before a publish without it. Still true on the
+  current pair; asked upstream as rusty-engine 9132.
 **Approximate:** intensities and ranges are tuned by eye for the Engine's
 `1/distance` falloff with a range window; no flicker, no flame particles, no
 baked light maps. Verified in play that the product's settings hold: with
@@ -810,7 +811,8 @@ donor sheets; without them sprites draw unlit. Compared in play under the
 torch: `derived-gradient` (the shader bumps the colour's red channel) embosses
 the pixel grid and dark outlines into grooves; `synthetic` is visually flat
 on atlas sprites, because the Engine's dome spans the whole atlas UV rather
-than the cell; authored normals give the soft rounded volume the donor's
+than the cell (still true on the current pair; asked upstream as
+rusty-engine 9131); authored normals give the soft rounded volume the donor's
 light-mapped billboards suggest. **Deliberate divergences:** lit normals
 rather than the donor's light-map tint, and whole cells rather than the
 donor's alpha-trimmed regions; the giant rat,
