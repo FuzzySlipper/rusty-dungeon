@@ -65,7 +65,7 @@ build targets; generated bindings are ignored output, never edited sources.
 `rusty build --project src/DelveRpg.Host/DelveRpg.Host.csproj` compiles and
 stages CoreCLR through `StageRustyEngineCoreClrProduct`. Staging compiles the
 TypeScript companion into `src/ui/generated` through the SDK's UI build
-(`RustyEngineProductUiBuildCommand`, which runs `scripts/build-ui.sh` against
+(`RustyEngineProductUiBuildCommand`, which runs `scripts/build-ui.mjs` against
 the pair's `RustyEngineProductUiTypes`), and only when a UI input changed; a plain
 `dotnet build` does not stage or compile the UI. `rusty dev` runs the pinned
 pair's runtime and owns staging, watching (the SDK default plus every

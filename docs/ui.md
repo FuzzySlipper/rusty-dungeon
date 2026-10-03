@@ -6,7 +6,7 @@ of a Delver-style descent: phase line, health, messages, the use prompt, the
 flat hotbar, stats, the escape indicator, the explored map window, and the
 level-up chooser. Staging the Host compiles the TypeScript to the ignored
 `src/ui/generated/` through the SDK's UI build (only when a UI input changed)
-and stages that output. `scripts/build-ui.sh` compiles against the pinned
+and stages that output. `scripts/build-ui.mjs` compiles against the pinned
 pair's `@rusty-engine/product-ui` declarations (`RustyEngineProductUiTypes`),
 so the mount context and projection envelope are the Engine's own types.
 

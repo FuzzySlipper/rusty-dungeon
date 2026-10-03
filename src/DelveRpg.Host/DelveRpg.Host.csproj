@@ -20,7 +20,7 @@
          newer than its last build, and `rusty dev` reloads the UI alone when
          only UI sources change. -->
     <RustyEngineProductUiSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'))</RustyEngineProductUiSourceRoot>
-    <RustyEngineProductUiBuildCommand>bash &quot;$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../scripts/build-ui.sh'))&quot; &quot;$(RustyEngineProductUiTypes)&quot;</RustyEngineProductUiBuildCommand>
+    <RustyEngineProductUiBuildCommand>node &quot;$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../scripts/build-ui.mjs'))&quot; &quot;$(RustyEngineProductUiTypes)&quot;</RustyEngineProductUiBuildCommand>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
     <RustyEngineProductUiProjectionStream>delve.hud</RustyEngineProductUiProjectionStream>
     <RustyEngineProductUiProjectionContract>delve.ui.snapshot.v1</RustyEngineProductUiProjectionContract>
@@ -103,6 +103,6 @@
   <!-- UI build inputs outside the UI source root: the compiler, its lockfile,
        the build script, and the pair's declarations (so a pin move rebuilds). -->
   <ItemGroup>
-    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(MSBuildThisFileDirectory)../../scripts/build-ui.sh;$(RustyEngineProductUiTypes)" />
+    <RustyEngineProductUiInput Include="$(MSBuildThisFileDirectory)../../package.json;$(MSBuildThisFileDirectory)../../package-lock.json;$(MSBuildThisFileDirectory)../../scripts/build-ui.mjs;$(RustyEngineProductUiTypes)" />
   </ItemGroup>
 </Project>
